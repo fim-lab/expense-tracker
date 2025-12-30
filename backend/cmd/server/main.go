@@ -21,7 +21,7 @@ func main() {
 	var repo ports.ExpenseRepository
 
 	dbURL := os.Getenv("DATABASE_URL")
-	
+
 	if dbURL == "" || os.Getenv("USE_MEMORY_DB") == "true" {
 		log.Println("Initializing In-Memory Database for local development")
 		repo = memory.NewRepository()
