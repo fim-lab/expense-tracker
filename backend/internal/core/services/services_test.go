@@ -1,36 +1,83 @@
 package services
 
 import (
+	"errors"
 	"testing"
+	"time"
+
 	"github.com/fim-lab/expense-tracker/backend/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 )
 
-func TestCreateAndGetTransactions(t *testing.T) {
+func TestService_CreateTransaction(t *testing.T) {
 	repo := memory.NewRepository()
 	service := NewExpenseService(repo)
 
-	testTx := domain.Transaction{
-		ID:            "123",
-		Description:   "Test Transaction",
-		AmountInCents: 1000,
+	tests := []struct {
+		name    string
+		tx      domain.Transaction
+		wantErr error
+	}{
+		{
+			name: "valid transaction",
+			tx: domain.Transaction{
+				ID:            "valid-1",
+				Description:   "Groceries",
+				AmountInCents: 5000,
+				Budget:        "Food",
+				Date:          time.Now(),
+			},
+			wantErr: nil,
+		},
+		{
+			name: "invalid amount",
+			tx: domain.Transaction{
+				ID:            "invalid-1",
+				Description:   "Free stuff?",
+				AmountInCents: 0,
+				Budget:        "Food",
+			},
+			wantErr: domain.ErrInvalidAmount,
+		},
+		{
+			name: "missing description",
+			tx: domain.Transaction{
+				ID:            "invalid-2",
+				Description:   "",
+				AmountInCents: 100,
+				Budget:        "Food",
+			},
+			wantErr: domain.ErrMissingDescription,
+		},
 	}
 
-	err := service.CreateTransaction(testTx)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := service.CreateTransaction(tt.tx)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("Expected error %v, got %v", tt.wantErr, err)
+				}
+			} else if err != nil {
+				t.Errorf("Expected no error, got %v", err)
+			}
+		})
 	}
+}
 
-	txs, err := service.GetTransactions()
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
+func TestService_GetTransactions(t *testing.T) {
+	repo := memory.NewRepository()
+	service := NewExpenseService(repo)
 
-	if len(txs) != 1 {
-		t.Errorf("Expected 1 transaction, got %d", len(txs))
-	}
+	_ = service.CreateTransaction(domain.Transaction{
+		ID: "1", Description: "A", AmountInCents: 10, Budget: "B",
+	})
+	_ = service.CreateTransaction(domain.Transaction{
+		ID: "2", Description: "B", AmountInCents: 20, Budget: "B",
+	})
 
-	if txs[0].ID != "123" {
-		t.Errorf("Expected ID 123, got %s", txs[0].ID)
+	txs, _ := service.GetTransactions()
+	if len(txs) != 2 {
+		t.Errorf("Expected 2 transactions, got %d", len(txs))
 	}
 }

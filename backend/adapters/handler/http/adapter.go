@@ -2,7 +2,9 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
 )
@@ -20,12 +22,18 @@ func NewAdapter(service ports.ExpenseService) *Adapter {
 func (a *Adapter) CreateTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	var tx domain.Transaction
 	if err := json.NewDecoder(r.Body).Decode(&tx); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	if err := a.service.CreateTransaction(tx); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, domain.ErrInvalidAmount) || 
+		   errors.Is(err, domain.ErrMissingDescription) || 
+		   errors.Is(err, domain.ErrMissingBudget) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -35,7 +43,7 @@ func (a *Adapter) CreateTransactionHandler(w http.ResponseWriter, r *http.Reques
 func (a *Adapter) GetTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	txs, err := a.service.GetTransactions()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Could not fetch transactions", http.StatusInternalServerError)
 		return
 	}
 
@@ -46,12 +54,12 @@ func (a *Adapter) GetTransactionsHandler(w http.ResponseWriter, r *http.Request)
 func (a *Adapter) DeleteTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		http.Error(w, "Missing id parameter", http.StatusBadRequest)
+		http.Error(w, "Missing id", http.StatusBadRequest)
 		return
 	}
 
 	if err := a.service.DeleteTransaction(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Delete failed", http.StatusInternalServerError)
 		return
 	}
 
