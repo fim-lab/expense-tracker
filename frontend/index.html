@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold mb-6">Transactions</h1>
+
+      <!-- Form -->
+      <form
+        id="txForm"
+        class="bg-white p-6 rounded shadow mb-8 grid grid-cols-2 gap-4"
+      >
+        <input type="date" id="date" required class="border p-2 rounded" />
+        <input
+          type="text"
+          id="budget"
+          placeholder="Budget (e.g. Food)"
+          required
+          class="border p-2 rounded"
+        />
+        <input
+          type="text"
+          id="description"
+          placeholder="Description"
+          required
+          class="border p-2 rounded col-span-2"
+        />
+        <input
+          type="number"
+          id="amount"
+          placeholder="Amount (cents)"
+          required
+          class="border p-2 rounded"
+        />
+        <input
+          type="text"
+          id="wallet"
+          placeholder="Wallet (e.g. Cash)"
+          required
+          class="border p-2 rounded"
+        />
+        <select id="type" class="border p-2 rounded">
+          <option value="EXPENSE">Expense</option>
+          <option value="INCOME">Income</option>
+        </select>
+        <button
+          type="submit"
+          class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 col-span-2"
+        >
+          Add Transaction
+        </button>
+      </form>
+
+      <!-- List -->
+      <div id="list" class="space-y-4"></div>
+    </div>
+
+    <script>
+      const API = "";
+
+      async function load() {
+        const res = await fetch("/api/transactions");
+        const data = await res.json();
+        const list = document.getElementById("list");
+        list.innerHTML = data
+          .map(
+            (t) => `
+                <div class="bg-white p-4 rounded shadow flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">${t.description} (${
+              t.amountInCents / 100
+            }€)</p>
+                        <p class="text-sm text-gray-500">${t.budget} | ${
+              t.wallet
+            } | ${new Date(t.date).toLocaleDateString()}</p>
+                    </div>
+                    <button onclick="deleteTx('${
+                      t.id
+                    }')" class="text-red-500 hover:underline">Delete</button>
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      document.getElementById("txForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const payload = {
+          id: crypto.randomUUID(),
+          date: new Date(document.getElementById("date").value).toISOString(),
+          budget: document.getElementById("budget").value,
+          description: document.getElementById("description").value,
+          amountInCents: parseInt(document.getElementById("amount").value),
+          wallet: document.getElementById("wallet").value,
+          type: document.getElementById("type").value,
+          isPending: false,
+        };
+        await fetch("/api/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        e.target.reset();
+        load();
+      };
+
+      async function deleteTx(id) {
+        await fetch(`/api/transactions?id=${id}`, { method: "DELETE" });
+        load();
+      }
+
+      load();
+    </script>
+  </body>
+</html>
