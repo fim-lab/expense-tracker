@@ -8,22 +8,23 @@ import (
 	"net/http"
 	"os"
 
-	_ "github.com/lib/pq"
-	expensetracker "github.com/fim-lab/expense-tracker" 
+	expensetracker "github.com/fim-lab/expense-tracker"
 	httpadapter "github.com/fim-lab/expense-tracker/backend/adapters/handler/http"
 	"github.com/fim-lab/expense-tracker/backend/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/backend/adapters/repository/postgres"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/services"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	var repo ports.ExpenseRepository
 
 	dbURL := os.Getenv("DATABASE_URL")
+	useMemory := os.Getenv("USE_MEMORY_DB") == "true" || dbURL == ""
 
-	if dbURL == "" || os.Getenv("USE_MEMORY_DB") == "true" {
-		log.Println("Initializing In-Memory Database for local development")
+	if useMemory {
+		log.Println("Initializing In-Memory Database")
 		repo = memory.NewRepository()
 	} else {
 		db, err := sql.Open("postgres", dbURL)
