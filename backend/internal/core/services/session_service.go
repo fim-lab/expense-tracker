@@ -1,0 +1,41 @@
+package services
+
+import (
+	"time"
+
+	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
+	"github.com/google/uuid"
+)
+
+type SessionService struct {
+	repo ports.ExpenseRepository
+}
+
+func NewSessionService(repo ports.ExpenseRepository) *SessionService {
+	return &SessionService{repo: repo}
+}
+
+func (s *SessionService) CreateSession(session domain.Session) error {
+	session.ID = uuid.New()
+	session.Expiry = time.Now().Add(time.Hour)
+
+	return s.repo.SaveSession(session)
+}
+
+func (s *SessionService) ValidateSession(token string) (bool, int) {
+	session, err := s.repo.GetSessionByToken(token)
+	if err != nil {
+		return false, 0
+	}
+
+	if session.Expiry.Before(time.Now()) {
+		return false, 0
+	}
+
+	return true, session.UserID
+}
+
+func (s *SessionService) DeleteSession(sessionID string) error {
+	return s.repo.DeleteSession(sessionID)
+}

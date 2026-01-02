@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type TransactionType string
 
@@ -10,9 +14,10 @@ const (
 )
 
 type Transaction struct {
-	ID            string          `json:"id"`
+	ID            uuid.UUID       `json:"id"`
+	UserID        int             `json:"userId"`
 	Date          time.Time       `json:"date"`
-	Budget        string          `json:"budget"`
+	BudgetID      uuid.UUID       `json:"budgetId"`
 	Description   string          `json:"description"`
 	AmountInCents int64           `json:"amountInCents"`
 	Wallet        string          `json:"wallet"`

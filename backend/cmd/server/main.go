@@ -10,6 +10,7 @@ import (
 
 	expensetracker "github.com/fim-lab/expense-tracker"
 	httpadapter "github.com/fim-lab/expense-tracker/backend/adapters/handler/http"
+	"github.com/fim-lab/expense-tracker/backend/adapters/handler/middleware"
 	"github.com/fim-lab/expense-tracker/backend/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/backend/adapters/repository/postgres"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
@@ -40,16 +41,32 @@ func main() {
 		repo = postgres.NewRepository(db)
 	}
 
-	coreService := services.NewExpenseService(repo)
+	transService := services.NewTransactionService(repo)
+	budgetService := services.NewBudgetService(repo)
+	userService := services.NewUserService(repo)
+	sessionService := services.NewSessionService(repo)
 
-	httpHandler := httpadapter.NewAdapter(coreService)
-	
 	staticFiles, err := fs.Sub(expensetracker.StaticAssets, "frontend")
 	if err != nil {
 		log.Fatal("Failed to sub into frontend folder:", err)
 	}
 
-	router := httpadapter.NewRouter(httpHandler, staticFiles)
+	mainMux := http.NewServeMux()
+
+	authHandler := httpadapter.NewAuthHandler(userService, sessionService)
+	mainMux.HandleFunc("/auth/login", authHandler.Login)
+	mainMux.HandleFunc("/auth/logout", authHandler.Logout)
+
+	apiRouter := http.NewServeMux()
+	transactionHandler := httpadapter.NewTransactionHandler(transService)
+	budgetHandler := httpadapter.NewBudgetHandler(budgetService)
+	apiRouter.HandleFunc("/api/transactions", transactionHandler.Handle)
+	apiRouter.HandleFunc("/api/budgets", budgetHandler.Handle)
+
+	authMiddleware := middleware.NewAuthMiddleware(sessionService)
+	mainMux.Handle("/api/", authMiddleware.Handle(apiRouter))
+
+	mainMux.Handle("/", http.FileServer(http.FS(staticFiles)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -57,7 +74,7 @@ func main() {
 	}
 
 	log.Printf("Starting Hexagonal Server on port %s", port)
-	if err := http.ListenAndServe(":"+port, router); err != nil {
+	if err := http.ListenAndServe(":"+port, mainMux); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
