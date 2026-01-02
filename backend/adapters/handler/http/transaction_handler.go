@@ -13,8 +13,8 @@ type TransactionHandler struct {
 	service ports.TransactionService
 }
 
-func NewTransactionHandler(service ports.TransactionService) *TransactionHandler {
-	return &TransactionHandler{service: service}
+func NewTransactionHandler(service *ports.TransactionService) *TransactionHandler {
+	return &TransactionHandler{service: *service}
 }
 
 func (h *TransactionHandler) Handle(w http.ResponseWriter, r *http.Request) {

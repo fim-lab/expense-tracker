@@ -18,10 +18,10 @@ type AuthHandler struct {
 	sessionService ports.SessionService
 }
 
-func NewAuthHandler(userService ports.UserService, sessionService ports.SessionService) *AuthHandler {
+func NewAuthHandler(userService *ports.UserService, sessionService *ports.SessionService) *AuthHandler {
 	return &AuthHandler{
-		userService:    userService,
-		sessionService: sessionService,
+		userService:    *userService,
+		sessionService: *sessionService,
 	}
 }
 

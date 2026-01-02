@@ -14,8 +14,8 @@ type BudgetHandler struct {
 	service ports.BudgetService
 }
 
-func NewBudgetHandler(service ports.BudgetService) *BudgetHandler {
-	return &BudgetHandler{service: service}
+func NewBudgetHandler(service *ports.BudgetService) *BudgetHandler {
+	return &BudgetHandler{service: *service}
 }
 
 func (h *BudgetHandler) Handle(w http.ResponseWriter, r *http.Request) {

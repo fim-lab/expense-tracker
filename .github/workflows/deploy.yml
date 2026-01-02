@@ -23,3 +23,7 @@ jobs:
       - name: Trigger Render Deployment
         if: success()
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+
+      # - name: Trigger Render Demo Deployment
+      #   if: success()
+      #   run: curl -X POST ${{ secrets.RENDER_DEMO_DEPLOY_HOOK }}

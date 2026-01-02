@@ -12,7 +12,7 @@ type SessionService struct {
 	repo ports.ExpenseRepository
 }
 
-func NewSessionService(repo ports.ExpenseRepository) *SessionService {
+func NewSessionService(repo ports.ExpenseRepository) ports.SessionService {
 	return &SessionService{repo: repo}
 }
 

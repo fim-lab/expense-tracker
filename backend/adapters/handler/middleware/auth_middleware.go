@@ -12,9 +12,9 @@ type AuthMiddleware struct {
 	service ports.SessionService
 }
 
-func NewAuthMiddleware(service ports.SessionService) *AuthMiddleware {
+func NewAuthMiddleware(service *ports.SessionService) *AuthMiddleware {
 	return &AuthMiddleware{
-		service: service,
+		service: *service,
 	}
 }
 
