@@ -1,0 +1,84 @@
+# Expense Tracker (Hexagonal Architecture)
+A secure, multi-user financial tracking application built with a focus on clean architecture and high testability.
+This project demonstrates a Hexagonal (Ports and Adapters) structure in Go, coupled with a SvelteKit frontend.
+## Project Overview
+The Expense Tracker allows users to manage transactions, track budgets, and organize financial data.
+It is designed to be lightweight enough for personal use but architecturally robust enough to scale or switch infrastructure (like databases) with minimal effort.
+### Core Design Goals
+ + **Decoupling**: Business logic (Core) has zero dependencies on external frameworks or databases.
+ + **Portability**: The system can run in "Demo Mode" (In-Memory) or "Production Mode" (Postgres) via environment configuration.
+ + **Security** Multi-user isolation enforced at the service layer; passwords managed via Bcrypt hashing.
+## Tech Stack
+ + **Backend**: Go 1.24 (Standard Library for routing, bcrypt for security).
+ + **Frontend** SvelteKit (Single-page CRUD interface).
+ + **Database** Neon (Serverless Postgres) for production; Thread-safe Maps for local/demo.
+ + **Infrastructure** Docker, Render (Hosting), GitHub+Actions (CI/CD).
+ + **Security** Cookie-based session management with HttpOnly/Secure/SameSite flags.
+## Project Structure
+```
+├── backend/
+│   ├── cmd/server/         # Composition Root: Wires dependencies, routes and starts the server
+│   ├── pkg/auth/           # Common Utils (hashing,..)
+│   ├── scripts/            # Common scripts (sql schema for initial db-setup, manual password hash,..)
+│   ├── internal/core/
+│   │   ├── domain/         # Pure Business Objects & Domain Errors
+│   │   ├── ports/          # Interfaces defining Driving (API) and Driven (DB) contracts
+│   │   └── services/       # Implementation of business rules (The "Core")
+│   └── adapters/
+│       ├── handler/
+│       │   ├── http/       # Driving Adapter: Translates HTTP to Core calls
+│       │   └── middleware/ # Middleware to wrap calls to /api/* with authentication
+│       └── repository/     # Driven Adapters: Postgres and In-Memory implementations
+├── frontend/               # SvelteKit application (Static assets embedded in Go)
+├── assets.go               # Go embed configuration for frontend assets
+└── Dockerfile              # Dockerfile (▀̿Ĺ̯▀̿ ̿)
+```
+## Setup & Installation
+### Prerequisites
+ + Go 1.24+
+ + (Optional) Docker
+ + (Optional) A Postgres connection string
+### Local Development (In-Memory)
+Run the application without a database:
+```
+export USE_MEMORY_DB=true
+go run backend/cmd/server/main.go
+```
+The app will be available at `http://localhost:8080`.
+### Production Setup
+1. Set the `DATABASE_URL` environment variable to your Postgres string.
+1. Initialize the schema using `scripts/schema.sql` in your Database.
+2. Manually insert User into DB (you might want to use `scripts/create_password_hash.go`).
+3. Run `go run backend/cmd/server/main.go`.
+## Architecture & Design Notes
+### Dependency Injection
+Dependencies are injected at the Composition Root (`main.go`).
+Services receive a `ports.ExpenseRepository` interface.
+This allows us to swap between `postgres.Repository` and `memory.Repository` without changing a single line of business logic.
+### Authentication & Middleware
+Security is handled via a non-intrusive middleware:
+ 1. **Login**: Verifies credentials against Bcrypt hashes stored in the DB.
+ 2. **Session** Sets a `session_token` cookie with `SameSite=strict`.
+ 3. **Guard** `AuthMiddleware` intercepts protected requests, extracts the `UserID` from the cookie, and injects it into the request Context.
+ 4. **Context** Services pull the `UserID` from the context to ensure a user can only view/edit their own data.
+### "Demo Mode" Strategy
+To facilitate testing and showcases while keeping my own instance encapsulated, there is a Demo-Mode.
+Demo-Mode is set via `.env`-Variable and is therefore separated from production instance.
+In Demo-Mode
+ * the repository falls back to the in-memory implementation (persistence not needed).
+ * DemoAuthMiddleware is injected, bypassing authentication
+ * data can be read by everyone and will be deleted eventually!
+## Testing
+Unit tests are located alongside the services in `backend/internal/core/services/`.
+The goal is to thoroughly unit-test the core and have a few happy-path integration-tests.
+### Running Tests
+`go test ./...`
+The tests utilize the `memory` repository as a natural mock, ensuring fast execution and reliable verification of business rules.
+## Limitations & Known Trade-offs
+ + **Manual User Creation**: There is no public sign-up endpoint.
+ Users must be added to the database manually (Hashed password + Username) to maintain a closed, secure environment.
+## Future Improvements
+ - [ ] Add a "Search" port to enable full-text search on transaction descriptions.
+ - [ ] Integrate a SvelteKit-based dashboard for financial visualizations.
+## License
+Refer to the LICENSE file in the root directory.
