@@ -28,7 +28,7 @@ func NewRepository() *Repository {
 	// Username: demo | Password: demo
 	// "Demo Budget" | 5€ Limit
 	hash, _ := bcrypt.GenerateFromPassword([]byte("demo"), bcrypt.DefaultCost)
-	demoUserId := 23
+	demoUserId := 0
 	demoBudgetId := uuid.New()
 	repo.users["demo"] = domain.User{
 		ID:           demoUserId,

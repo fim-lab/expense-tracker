@@ -41,15 +41,17 @@ It is designed to be lightweight enough for personal use but architecturally rob
 ### Local Development (In-Memory)
 Run the application without a database:
 ```
-export USE_MEMORY_DB=true
+export APP_ENV=demo
 go run backend/cmd/server/main.go
 ```
+Alternatively, if neither `APP_ENV` nor `DATABASE_URL` are set, it will default to demo-mode.
 The app will be available at `http://localhost:8080`.
 ### Production Setup
 1. Set the `DATABASE_URL` environment variable to your Postgres string.
-1. Initialize the schema using `scripts/schema.sql` in your Database.
-2. Manually insert User into DB (you might want to use `scripts/create_password_hash.go`).
-3. Run `go run backend/cmd/server/main.go`.
+2. Set `APP_ENV=production` (or leave blank; if `DATABASE_URL` is set, the default is production mode).
+3. Initialize the schema using `scripts/schema.sql` in your Database.
+4. Manually insert User into DB (you might want to use `scripts/create_password_hash.go`).
+5. Run `go run backend/cmd/server/main.go`.
 ## Architecture & Design Notes
 ### Dependency Injection
 Dependencies are injected at the Composition Root (`main.go`).

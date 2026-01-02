@@ -21,13 +21,20 @@ import (
 func main() {
 	var repo ports.ExpenseRepository
 
+	env := os.Getenv("APP_ENV")
 	dbURL := os.Getenv("DATABASE_URL")
-	useMemory := os.Getenv("USE_MEMORY_DB") == "true" || dbURL == ""
+	if env == "" && dbURL != "" {
+		env = "production"
+	} else if env == "" && dbURL == "" {
+		env = "demo"
+	}
 
-	if useMemory {
-		log.Println("Initializing In-Memory Database")
+	switch env {
+	case "demo":
+		fmt.Println("Running in DEMO mode")
 		repo = memory.NewRepository()
-	} else {
+	case "production":
+		fmt.Println("Running in PRODUCTION mode")
 		db, err := sql.Open("postgres", dbURL)
 		if err != nil {
 			log.Fatalf("Failed to connect to database: %v", err)
@@ -39,6 +46,8 @@ func main() {
 		}
 		fmt.Println("Connected to Postgres DB")
 		repo = postgres.NewRepository(db)
+	default:
+		log.Fatalf("Unknown environment: %s", env)
 	}
 
 	transService := services.NewTransactionService(repo)
@@ -63,8 +72,13 @@ func main() {
 	apiRouter.HandleFunc("/api/transactions", transactionHandler.Handle)
 	apiRouter.HandleFunc("/api/budgets", budgetHandler.Handle)
 
-	authMiddleware := middleware.NewAuthMiddleware(sessionService)
-	mainMux.Handle("/api/", authMiddleware.Handle(apiRouter))
+	if env == "demo" {
+		demoMidlleware := middleware.NewDemoMiddleware()
+		mainMux.Handle("/api/", demoMidlleware.Handle(apiRouter))
+	} else {
+		authMiddleware := middleware.NewAuthMiddleware(sessionService)
+		mainMux.Handle("/api/", authMiddleware.Handle(apiRouter))
+	}
 
 	mainMux.Handle("/", http.FileServer(http.FS(staticFiles)))
 
