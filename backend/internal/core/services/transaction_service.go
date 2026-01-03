@@ -20,7 +20,7 @@ func (s *transactionService) CreateTransaction(userID int, t domain.Transaction)
 
 	budget, err := s.repo.GetBudgetByID(t.BudgetID)
 	if err != nil || budget.UserID != userID {
-		return domain.ErrMissingBudget
+		return domain.ErrBudgetNotFound
 	}
 
 	if t.AmountInCents <= 0 {

@@ -18,6 +18,12 @@ type BudgetService interface {
 	DeleteBudget(userID int, id uuid.UUID) error
 }
 
+type WalletService interface {
+	CreateWallet(userID int, w domain.Wallet) error
+	GetWallets(userID int) ([]domain.Wallet, error)
+	DeleteWallet(userID int, id uuid.UUID) error
+}
+
 type UserService interface {
 	Authenticate(username, password string) (domain.User, error)
 }
@@ -39,6 +45,11 @@ type ExpenseRepository interface {
 	GetBudgetByID(id uuid.UUID) (domain.Budget, error)
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
 	DeleteBudget(id uuid.UUID) error
+
+	SaveWallet(w domain.Wallet) error
+	GetWalletByID(id uuid.UUID) (domain.Wallet, error)
+	FindWalletsByUser(userID int) ([]domain.Wallet, error)
+	DeleteWallet(id uuid.UUID) error
 
 	GetUserByUsername(username string) (domain.User, error)
 	SaveUser(u domain.User) error

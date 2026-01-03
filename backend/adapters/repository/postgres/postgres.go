@@ -85,24 +85,79 @@ func (r *Repository) DeleteBudget(id uuid.UUID) error {
 	return err
 }
 
+// --- Wallet Methods ---
+
+func (r *Repository) SaveWallet(w domain.Wallet) error {
+	query := `INSERT INTO wallets (id, user_id, name) VALUES ($1, $2, $3)
+	          ON CONFLICT (id) DO UPDATE SET name=$3`
+	_, err := r.db.Exec(query, w.ID, w.UserID, w.Name)
+	return err
+}
+
+func (r *Repository) GetWalletByID(id uuid.UUID) (domain.Wallet, error) {
+	var w domain.Wallet
+	query := `SELECT id, user_id, name FROM wallets WHERE id = $1`
+	err := r.db.QueryRow(query, id).Scan(&w.ID, &w.UserID, &w.Name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.Wallet{}, domain.ErrWalletNotFound
+		}
+		return domain.Wallet{}, err
+	}
+	return w, nil
+}
+
+func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
+	query := `
+		SELECT w.id, w.user_id, w.name, 
+		COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount_in_cents 
+		                  WHEN t.type = 'EXPENSE' THEN -t.amount_in_cents 
+		                  ELSE 0 END), 0) as balance
+		FROM wallets w
+		LEFT JOIN transactions t ON w.id = t.wallet_id
+		WHERE w.user_id = $1
+		GROUP BY w.id, w.user_id, w.name`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var res []domain.Wallet
+	for rows.Next() {
+		var w domain.Wallet
+		if err := rows.Scan(&w.ID, &w.UserID, &w.Name, &w.Balance); err != nil {
+			return nil, err
+		}
+		res = append(res, w)
+	}
+	return res, nil
+}
+
+func (r *Repository) DeleteWallet(id uuid.UUID) error {
+	_, err := r.db.Exec("DELETE FROM wallets WHERE id = $1", id)
+	return err
+}
+
 // --- Transaction Methods ---
 
 func (r *Repository) SaveTransaction(t domain.Transaction) error {
 	tags, _ := json.Marshal(t.Tags)
-	query := `INSERT INTO transactions (id, user_id, date, budget_id, description, amount_in_cents, wallet, type, is_pending, is_debt, tags)
+	query := `INSERT INTO transactions (id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	          ON CONFLICT (id) DO UPDATE SET date=$3, budget_id=$4, description=$5, amount_in_cents=$6, wallet=$7, type=$8, is_pending=$9, is_debt=$10, tags=$11`
-	_, err := r.db.Exec(query, t.ID, t.UserID, t.Date, t.BudgetID, t.Description, t.AmountInCents, t.Wallet, t.Type, t.IsPending, t.IsDebt, tags)
+	          ON CONFLICT (id) DO UPDATE SET date=$3, budget_id=$4, wallet_id=$5, description=$6, amount_in_cents=$7, type=$8, is_pending=$9, is_debt=$10, tags=$11`
+	_, err := r.db.Exec(query, t.ID, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
 	return err
 }
 
 func (r *Repository) GetTransactionByID(id uuid.UUID) (domain.Transaction, error) {
 	var t domain.Transaction
 	var tags []byte
-	query := `SELECT id, user_id, date, budget_id, description, amount_in_cents, wallet, type, is_pending, is_debt, tags 
+	query := `SELECT id, user_id, date, budget_id, description, amount_in_cents, wallet_id, type, is_pending, is_debt, tags 
 	          FROM transactions WHERE id = $1`
 	err := r.db.QueryRow(query, id).Scan(
-		&t.ID, &t.UserID, &t.Date, &t.BudgetID, &t.Description, &t.AmountInCents, &t.Wallet, &t.Type, &t.IsPending, &t.IsDebt, &tags,
+		&t.ID, &t.UserID, &t.Date, &t.BudgetID, &t.Description, &t.AmountInCents, &t.WalletID, &t.Type, &t.IsPending, &t.IsDebt, &tags,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -115,7 +170,7 @@ func (r *Repository) GetTransactionByID(id uuid.UUID) (domain.Transaction, error
 }
 
 func (r *Repository) FindTransactionsByUser(userID int) ([]domain.Transaction, error) {
-	query := `SELECT id, user_id, date, budget_id, description, amount_in_cents, wallet, type, is_pending, is_debt, tags 
+	query := `SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 
 	          FROM transactions WHERE user_id = $1 ORDER BY date DESC`
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
@@ -127,7 +182,7 @@ func (r *Repository) FindTransactionsByUser(userID int) ([]domain.Transaction, e
 	for rows.Next() {
 		var t domain.Transaction
 		var tags []byte
-		err := rows.Scan(&t.ID, &t.UserID, &t.Date, &t.BudgetID, &t.Description, &t.AmountInCents, &t.Wallet, &t.Type, &t.IsPending, &t.IsDebt, &tags)
+		err := rows.Scan(&t.ID, &t.UserID, &t.Date, &t.BudgetID, &t.Description, &t.AmountInCents, &t.WalletID, &t.Type, &t.IsPending, &t.IsDebt, &tags)
 		if err != nil {
 			return nil, err
 		}

@@ -29,7 +29,7 @@ func main() {
 	repo, db := getRepo(env)
 	defer db.Close()
 
-	transService, budgetService, userService, sessionService := initializeServices(repo)
+	transService, budgetService, walletService, userService, sessionService := initializeServices(repo)
 
 	staticFiles, err := fs.Sub(expensetracker.StaticAssets, "frontend")
 	if err != nil {
@@ -38,7 +38,7 @@ func main() {
 
 	mainMux := http.NewServeMux()
 	setupAuthRoutes(mainMux, userService, sessionService)
-	setupApiRoutes(env, mainMux, transService, budgetService, sessionService)
+	setupApiRoutes(env, mainMux, transService, budgetService, walletService, sessionService)
 	mainMux.Handle("/", http.FileServer(http.FS(staticFiles)))
 
 	port := getPort()
@@ -90,14 +90,15 @@ func setupPostgresDB() (ports.ExpenseRepository, *sql.DB) {
 }
 
 func initializeServices(repo ports.ExpenseRepository) (
-	*ports.TransactionService, *ports.BudgetService, *ports.UserService, *ports.SessionService) {
+	*ports.TransactionService, *ports.BudgetService, *ports.WalletService, *ports.UserService, *ports.SessionService) {
 
 	transService := services.NewTransactionService(repo)
 	budgetService := services.NewBudgetService(repo)
+	walletService := services.NewWalletService(repo)
 	userService := services.NewUserService(repo)
 	sessionService := services.NewSessionService(repo)
 
-	return &transService, &budgetService, &userService, &sessionService
+	return &transService, &budgetService, &walletService, &userService, &sessionService
 }
 
 func setupAuthRoutes(mainMux *http.ServeMux, userService *ports.UserService, sessionService *ports.SessionService) {
@@ -106,12 +107,14 @@ func setupAuthRoutes(mainMux *http.ServeMux, userService *ports.UserService, ses
 	mainMux.HandleFunc("/auth/logout", authHandler.Logout)
 }
 
-func setupApiRoutes(env string, mainMux *http.ServeMux, transService *ports.TransactionService, budgetService *ports.BudgetService, sessionService *ports.SessionService) {
+func setupApiRoutes(env string, mainMux *http.ServeMux, transService *ports.TransactionService, budgetService *ports.BudgetService, walletService *ports.WalletService, sessionService *ports.SessionService) {
 	apiRouter := http.NewServeMux()
 	transactionHandler := httpadapter.NewTransactionHandler(transService)
 	budgetHandler := httpadapter.NewBudgetHandler(budgetService)
+	walletHandler := httpadapter.NewWalletHandler(walletService)
 	apiRouter.HandleFunc("/api/transactions", transactionHandler.Handle)
 	apiRouter.HandleFunc("/api/budgets", budgetHandler.Handle)
+	apiRouter.HandleFunc("/api/wallets", walletHandler.Handle)
 
 	addMiddleware(env, mainMux, apiRouter, sessionService)
 }

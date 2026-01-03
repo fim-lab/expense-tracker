@@ -18,9 +18,9 @@ type Transaction struct {
 	UserID        int             `json:"userId"`
 	Date          time.Time       `json:"date"`
 	BudgetID      uuid.UUID       `json:"budgetId"`
+	WalletID      uuid.UUID       `json:"walletId"`
 	Description   string          `json:"description"`
 	AmountInCents int64           `json:"amountInCents"`
-	Wallet        string          `json:"wallet"`
 	Type          TransactionType `json:"type"`
 	IsPending     bool            `json:"isPending"`
 	IsDebt        *bool           `json:"isDebt,omitempty"`

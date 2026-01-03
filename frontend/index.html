@@ -52,24 +52,35 @@
       <div id="app-section" class="hidden">
         <div class="flex justify-between items-center mb-6">
           <h1 class="text-3xl font-bold">My Transactions</h1>
-          <button
-            id="logoutBtn"
-            class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
-          >
-            Logout
-          </button>
+          <div class="flex gap-2">
+            <button
+              id="logoutBtn"
+              class="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        <!-- Transaction Form -->
+        <div
+          id="wallet-summary"
+          class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+        ></div>
+
         <form
           id="txForm"
           class="bg-white p-6 rounded shadow mb-8 grid grid-cols-1 md:grid-cols-2 gap-4"
         >
           <input type="date" id="date" required class="border p-2 rounded" />
 
-          <select id="budget-id" required class="border p-2 rounded bg-white">
-            <option value="" disabled selected>Select a Budget</option>
-          </select>
+          <div class="grid grid-cols-2 gap-2">
+            <select id="budget-id" required class="border p-2 rounded bg-white">
+              <option value="" disabled selected>Budget</option>
+            </select>
+            <select id="wallet-id" required class="border p-2 rounded bg-white">
+              <option value="" disabled selected>Wallet</option>
+            </select>
+          </div>
 
           <input
             type="text"
@@ -82,13 +93,6 @@
             type="number"
             id="amount"
             placeholder="Amount (cents)"
-            required
-            class="border p-2 rounded"
-          />
-          <input
-            type="text"
-            id="wallet"
-            placeholder="Wallet (e.g. Cash)"
             required
             class="border p-2 rounded"
           />
@@ -115,14 +119,20 @@
       const authSection = document.getElementById("auth-section");
       const appSection = document.getElementById("app-section");
       let budgets = [];
+      let wallets = [];
 
       async function init() {
+        // Set default date to today
+        document.getElementById("date").value = new Date()
+          .toISOString()
+          .split("T")[0];
+
         const res = await fetch("/api/transactions");
         if (res.status === 401) {
           showLogin();
         } else {
           showApp();
-          await loadBudgets();
+          await Promise.all([loadBudgets(), loadWallets()]);
           loadTransactions();
         }
       }
@@ -151,14 +161,13 @@
         if (res.ok) {
           document.getElementById("login-error").classList.add("hidden");
           showApp();
-          await loadBudgets();
+          await Promise.all([loadBudgets(), loadWallets()]);
           loadTransactions();
         } else {
           document.getElementById("login-error").classList.remove("hidden");
         }
       };
 
-      // NEW SERVER-SIDE LOGOUT LOGIC
       document.getElementById("logoutBtn").onclick = async () => {
         try {
           const res = await fetch("/auth/logout", {
@@ -180,23 +189,49 @@
         }
       };
 
-      // Budget Logic
       async function loadBudgets() {
         const res = await fetch("/api/budgets");
         if (!res.ok) return;
-
         budgets = await res.json();
         const select = document.getElementById("budget-id");
-        select.innerHTML =
-          '<option value="" disabled selected>Select a Budget</option>';
-
+        select.innerHTML = '<option value="" disabled selected>Budget</option>';
         budgets.forEach((b) => {
           const opt = document.createElement("option");
           opt.value = b.id;
-          opt.textContent = `${b.name} (Limit: ${(b.limitCents / 100).toFixed(
-            2
-          )}€)`;
+          opt.textContent = b.name;
           select.appendChild(opt);
+        });
+      }
+
+      async function loadWallets() {
+        const res = await fetch("/api/wallets");
+        if (!res.ok) return;
+        wallets = await res.json();
+
+        const select = document.getElementById("wallet-id");
+        select.innerHTML = '<option value="" disabled selected>Wallet</option>';
+
+        const summary = document.getElementById("wallet-summary");
+        summary.innerHTML = "";
+
+        wallets.forEach((w) => {
+          const opt = document.createElement("option");
+          opt.value = w.id;
+          opt.textContent = w.name;
+          select.appendChild(opt);
+
+          const card = document.createElement("div");
+          card.className =
+            "bg-white p-4 rounded shadow border-b-4 border-blue-500";
+          card.innerHTML = `
+                    <p class="text-xs text-gray-500 uppercase font-bold">${
+                      w.name
+                    }</p>
+                    <p class="text-xl font-mono">${(w.balance / 100).toFixed(
+                      2
+                    )}€</p>
+                `;
+          summary.appendChild(card);
         });
       }
 
@@ -212,19 +247,20 @@
           ? data
               .map((t) => {
                 const budgetName =
-                  budgets.find((b) => b.id === t.budgetId)?.name ||
-                  "Unknown Budget";
+                  budgets.find((b) => b.id === t.budgetId)?.name || "Unknown";
+                const walletName =
+                  wallets.find((w) => w.id === t.walletId)?.name || "Unknown";
+                const isExpense = t.type === "EXPENSE";
+
                 return `
                 <div class="bg-white p-4 rounded shadow flex justify-between items-center border-l-4 ${
-                  t.type === "EXPENSE" ? "border-red-500" : "border-green-500"
+                  isExpense ? "border-red-500" : "border-green-500"
                 }">
                     <div>
-                        <p class="font-bold">${t.description} (${(
-                  t.amountInCents / 100
-                ).toFixed(2)}€)</p>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider">${budgetName} — ${
-                  t.wallet
-                }</p>
+                        <p class="font-bold">${t.description} (${
+                  isExpense ? "-" : "+"
+                }${(t.amountInCents / 100).toFixed(2)}€)</p>
+                        <p class="text-xs text-gray-400 uppercase tracking-wider">${budgetName} • ${walletName}</p>
                         <p class="text-xs text-gray-500">${new Date(
                           t.date
                         ).toLocaleDateString()}</p>
@@ -249,9 +285,9 @@
           id: crypto.randomUUID(),
           date: new Date(document.getElementById("date").value).toISOString(),
           budgetId: document.getElementById("budget-id").value,
+          walletId: document.getElementById("wallet-id").value,
           description: document.getElementById("description").value,
           amountInCents: parseInt(document.getElementById("amount").value),
-          wallet: document.getElementById("wallet").value,
           type: document.getElementById("type").value,
           isPending: false,
           tags: [],
@@ -264,7 +300,11 @@
         });
 
         if (res.ok) {
+          const savedDate = document.getElementById("date").value;
           e.target.reset();
+          document.getElementById("date").value = savedDate;
+
+          await Promise.all([loadWallets(), loadBudgets()]);
           loadTransactions();
         } else {
           const errText = await res.text();
@@ -274,6 +314,7 @@
 
       async function deleteTx(id) {
         await fetch(`/api/transactions?id=${id}`, { method: "DELETE" });
+        await loadWallets();
         loadTransactions();
       }
 

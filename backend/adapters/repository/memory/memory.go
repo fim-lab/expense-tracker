@@ -12,6 +12,7 @@ type Repository struct {
 	mu           sync.RWMutex
 	transactions map[uuid.UUID]domain.Transaction
 	budgets      map[uuid.UUID]domain.Budget
+	wallets      map[uuid.UUID]domain.Wallet
 	users        map[string]domain.User
 	sessions     map[string]domain.Session
 }
@@ -20,6 +21,7 @@ func NewRepository() *Repository {
 	repo := &Repository{
 		transactions: make(map[uuid.UUID]domain.Transaction),
 		budgets:      make(map[uuid.UUID]domain.Budget),
+		wallets:      make(map[uuid.UUID]domain.Wallet),
 		users:        make(map[string]domain.User),
 		sessions:     make(map[string]domain.Session),
 	}
@@ -27,9 +29,11 @@ func NewRepository() *Repository {
 	// SEED DATA
 	// Username: demo | Password: demo
 	// "Demo Budget" | 5€ Limit
+	// "Demo Cash Wallet"
 	hash, _ := bcrypt.GenerateFromPassword([]byte("demo"), bcrypt.DefaultCost)
 	demoUserId := 0
 	demoBudgetId := uuid.New()
+	demoWalletId := uuid.New()
 	repo.users["demo"] = domain.User{
 		ID:           demoUserId,
 		Username:     "demo",
@@ -40,6 +44,11 @@ func NewRepository() *Repository {
 		UserID:     demoUserId,
 		Name:       "Demo Budget",
 		LimitCents: 500,
+	}
+	repo.wallets[demoWalletId] = domain.Wallet{
+		ID:     demoWalletId,
+		UserID: demoUserId,
+		Name:   "Demo Cash Wallet",
 	}
 
 	return repo
@@ -116,7 +125,7 @@ func (r *Repository) GetBudgetByID(id uuid.UUID) (domain.Budget, error) {
 	defer r.mu.RUnlock()
 	b, ok := r.budgets[id]
 	if !ok {
-		return domain.Budget{}, domain.ErrMissingBudget
+		return domain.Budget{}, domain.ErrBudgetNotFound
 	}
 	return b, nil
 }
@@ -161,5 +170,55 @@ func (r *Repository) DeleteSession(sessionID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.sessions, sessionID)
+	return nil
+}
+
+// --- Wallet Methods ---
+
+func (r *Repository) SaveWallet(w domain.Wallet) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.wallets[w.ID] = w
+	return nil
+}
+
+func (r *Repository) GetWalletByID(id uuid.UUID) (domain.Wallet, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	w, ok := r.wallets[id]
+	if !ok {
+		return domain.Wallet{}, domain.ErrWalletNotFound
+	}
+	return w, nil
+}
+
+func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var userWallets []domain.Wallet
+	for _, w := range r.wallets {
+		if w.UserID == userID {
+			var balance int64
+			for _, t := range r.transactions {
+				if t.WalletID == w.ID {
+					if t.Type == domain.Income {
+						balance += t.AmountInCents
+					} else {
+						balance -= t.AmountInCents
+					}
+				}
+			}
+			w.Balance = balance
+			userWallets = append(userWallets, w)
+		}
+	}
+	return userWallets, nil
+}
+
+func (r *Repository) DeleteWallet(id uuid.UUID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.wallets, id)
 	return nil
 }
