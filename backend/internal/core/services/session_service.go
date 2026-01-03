@@ -18,7 +18,6 @@ func NewSessionService(repo ports.ExpenseRepository) ports.SessionService {
 
 func (s *SessionService) CreateSession(session domain.Session) error {
 	session.ID = uuid.New()
-	session.Expiry = time.Now().Add(time.Hour)
 
 	return s.repo.SaveSession(session)
 }
