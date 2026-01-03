@@ -1,0 +1,26 @@
+name: delete-expired-sessions
+on:
+  schedule:
+    - cron: "55 1 * * *"
+  workflow_dispatch:
+jobs:
+  delete-expired-sessions:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DB_CONNECTION }}
+      PG_VERSION: "16"
+    steps:
+      - name: Install PostgreSQL
+        run: |
+          sudo apt update
+          sudo apt install -y postgresql-common
+          yes '' | sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh
+          sudo apt install -y postgresql-${{ env.PG_VERSION }}
+      - name: Run DELETE query to remove expired sessions
+        run: |
+          DB_URL=${{ env.DATABASE_URL }}
+          if [ -n "$DATABASE_URL" ]; then
+            psql "$DATABASE_URL" -c "DELETE FROM sessions WHERE expiry < NOW();" || echo "Cleanup failed, check if table 'sessions' exists with column 'expiry'."
+          fi
