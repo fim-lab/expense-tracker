@@ -5,7 +5,6 @@ import (
 
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	"github.com/google/uuid"
 )
 
 type SessionService struct {
@@ -17,8 +16,6 @@ func NewSessionService(repo ports.ExpenseRepository) ports.SessionService {
 }
 
 func (s *SessionService) CreateSession(session domain.Session) error {
-	session.ID = uuid.New()
-
 	return s.repo.SaveSession(session)
 }
 

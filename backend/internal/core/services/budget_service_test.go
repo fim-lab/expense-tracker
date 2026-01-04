@@ -5,7 +5,6 @@ import (
 
 	"github.com/fim-lab/expense-tracker/backend/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
-	"github.com/google/uuid"
 )
 
 func TestCreateBudget(t *testing.T) {
@@ -13,7 +12,7 @@ func TestCreateBudget(t *testing.T) {
 	svc := NewBudgetService(repo)
 
 	t.Run("Valid budget creation", func(t *testing.T) {
-		testId := uuid.New()
+		testId := 2
 		budget := domain.Budget{
 			ID:         testId,
 			Name:       "Groceries",
@@ -38,7 +37,7 @@ func TestCreateBudget(t *testing.T) {
 	})
 
 	t.Run("Invalid amount", func(t *testing.T) {
-		budget := domain.Budget{ID: uuid.New(), Name: "Rent", LimitCents: -100}
+		budget := domain.Budget{ID: 3, Name: "Rent", LimitCents: -100}
 		err := svc.CreateBudget(3, budget)
 		if err != domain.ErrInvalidAmount {
 			t.Errorf("expected ErrInvalidAmount, got %v", err)

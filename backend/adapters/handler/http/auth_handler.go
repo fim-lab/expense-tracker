@@ -57,7 +57,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	session := domain.Session{
 		UserID:       user.ID,
-		CreatedAt:    time.Now(),
 		SessionToken: authutils.HashSessionToken(sessionToken),
 		Expiry:       expireDate,
 	}
