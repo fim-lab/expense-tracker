@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	"github.com/google/uuid"
 )
 
 type BudgetHandler struct {
@@ -38,6 +38,7 @@ func (h *BudgetHandler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BudgetHandler) getBudgetsHandler(w http.ResponseWriter, r *http.Request, userID int) {
+	log.Print("Get Users with id " + strconv.Itoa(userID))
 	budgets, err := h.service.GetBudgets(userID)
 	if err != nil {
 		log.Printf("Error fetching budgets: %v", err)
@@ -75,16 +76,15 @@ func (h *BudgetHandler) createBudgetHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *BudgetHandler) deleteBudgetHandler(w http.ResponseWriter, r *http.Request, userID int) {
-	budgetIDStr := r.URL.Query().Get("id")
-	if budgetIDStr == "" {
+	budgetID := r.URL.Query().Get("id")
+	if budgetID == "" {
 		http.Error(w, "Missing budget ID", http.StatusBadRequest)
 		return
 	}
 
-	id, err := uuid.Parse(budgetIDStr)
+	id, err := strconv.Atoi(budgetID)
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
-		http.Error(w, "Id is not a valid UUID", http.StatusBadRequest)
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
 		return
 	}
 

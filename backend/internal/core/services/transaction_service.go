@@ -3,7 +3,6 @@ package services
 import (
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	"github.com/google/uuid"
 )
 
 type transactionService struct {
@@ -15,7 +14,6 @@ func NewTransactionService(repo ports.ExpenseRepository) ports.TransactionServic
 }
 
 func (s *transactionService) CreateTransaction(userID int, t domain.Transaction) error {
-	t.ID = uuid.New()
 	t.UserID = userID
 
 	budget, err := s.repo.GetBudgetByID(t.BudgetID)
@@ -36,7 +34,7 @@ func (s *transactionService) GetTransactions(userID int) ([]domain.Transaction, 
 
 // TODO: UpdateTransactions
 
-func (s *transactionService) DeleteTransaction(userID int, id uuid.UUID) error {
+func (s *transactionService) DeleteTransaction(userID int, id int) error {
 	existing, err := s.repo.GetTransactionByID(id)
 	if err != nil || existing.UserID != userID {
 		return domain.ErrUnauthorized

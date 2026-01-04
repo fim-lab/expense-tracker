@@ -4,24 +4,23 @@ import (
 	"sync"
 
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Repository struct {
 	mu           sync.RWMutex
-	transactions map[uuid.UUID]domain.Transaction
-	budgets      map[uuid.UUID]domain.Budget
-	wallets      map[uuid.UUID]domain.Wallet
+	transactions map[int]domain.Transaction
+	budgets      map[int]domain.Budget
+	wallets      map[int]domain.Wallet
 	users        map[string]domain.User
 	sessions     map[string]domain.Session
 }
 
 func NewRepository() *Repository {
 	repo := &Repository{
-		transactions: make(map[uuid.UUID]domain.Transaction),
-		budgets:      make(map[uuid.UUID]domain.Budget),
-		wallets:      make(map[uuid.UUID]domain.Wallet),
+		transactions: make(map[int]domain.Transaction),
+		budgets:      make(map[int]domain.Budget),
+		wallets:      make(map[int]domain.Wallet),
 		users:        make(map[string]domain.User),
 		sessions:     make(map[string]domain.Session),
 	}
@@ -32,8 +31,8 @@ func NewRepository() *Repository {
 	// "Demo Cash Wallet"
 	hash, _ := bcrypt.GenerateFromPassword([]byte("demo"), bcrypt.DefaultCost)
 	demoUserId := 0
-	demoBudgetId := uuid.New()
-	demoWalletId := uuid.New()
+	demoBudgetId := 2
+	demoWalletId := 3
 	repo.users["demo"] = domain.User{
 		ID:           demoUserId,
 		Username:     "demo",
@@ -78,11 +77,12 @@ func (r *Repository) SaveUser(u domain.User) error {
 func (r *Repository) SaveTransaction(t domain.Transaction) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	t.ID = len(r.transactions)
 	r.transactions[t.ID] = t
 	return nil
 }
 
-func (r *Repository) GetTransactionByID(id uuid.UUID) (domain.Transaction, error) {
+func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	t, ok := r.transactions[id]
@@ -104,7 +104,7 @@ func (r *Repository) FindTransactionsByUser(userID int) ([]domain.Transaction, e
 	return res, nil
 }
 
-func (r *Repository) DeleteTransaction(id uuid.UUID) error {
+func (r *Repository) DeleteTransaction(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.transactions, id)
@@ -120,7 +120,7 @@ func (r *Repository) SaveBudget(b domain.Budget) error {
 	return nil
 }
 
-func (r *Repository) GetBudgetByID(id uuid.UUID) (domain.Budget, error) {
+func (r *Repository) GetBudgetByID(id int) (domain.Budget, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	b, ok := r.budgets[id]
@@ -142,7 +142,7 @@ func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
 	return res, nil
 }
 
-func (r *Repository) DeleteBudget(id uuid.UUID) error {
+func (r *Repository) DeleteBudget(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.budgets, id)
@@ -182,7 +182,7 @@ func (r *Repository) SaveWallet(w domain.Wallet) error {
 	return nil
 }
 
-func (r *Repository) GetWalletByID(id uuid.UUID) (domain.Wallet, error) {
+func (r *Repository) GetWalletByID(id int) (domain.Wallet, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	w, ok := r.wallets[id]
@@ -199,7 +199,7 @@ func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
 	var userWallets []domain.Wallet
 	for _, w := range r.wallets {
 		if w.UserID == userID {
-			var balance int64
+			var balance int
 			for _, t := range r.transactions {
 				if t.WalletID == w.ID {
 					if t.Type == domain.Income {
@@ -216,7 +216,7 @@ func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
 	return userWallets, nil
 }
 
-func (r *Repository) DeleteWallet(id uuid.UUID) error {
+func (r *Repository) DeleteWallet(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.wallets, id)

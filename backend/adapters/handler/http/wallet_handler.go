@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	"github.com/google/uuid"
 )
 
 type WalletHandler struct {
@@ -75,16 +75,15 @@ func (h *WalletHandler) createWalletHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *WalletHandler) deleteWalletHandler(w http.ResponseWriter, r *http.Request, userID int) {
-	walletIDStr := r.URL.Query().Get("id")
-	if walletIDStr == "" {
+	walletID := r.URL.Query().Get("id")
+	if walletID == "" {
 		http.Error(w, "Missing wallet ID", http.StatusBadRequest)
 		return
 	}
 
-	id, err := uuid.Parse(walletIDStr)
+	id, err := strconv.Atoi(walletID)
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
-		http.Error(w, "Id is not a valid UUID", http.StatusBadRequest)
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
 		return
 	}
 

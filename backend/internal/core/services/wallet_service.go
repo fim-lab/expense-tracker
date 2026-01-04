@@ -5,7 +5,6 @@ import (
 
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	"github.com/google/uuid"
 )
 
 type walletService struct {
@@ -17,7 +16,6 @@ func NewWalletService(repo ports.ExpenseRepository) ports.WalletService {
 }
 
 func (s *walletService) CreateWallet(userID int, b domain.Wallet) error {
-	b.ID = uuid.New()
 	b.UserID = userID
 
 	if strings.TrimSpace(b.Name) == "" {
@@ -33,7 +31,7 @@ func (s *walletService) GetWallets(userID int) ([]domain.Wallet, error) {
 
 // TODO: func (s *walletService) UpdateWallets(...
 
-func (s *walletService) DeleteWallet(userID int, id uuid.UUID) error {
+func (s *walletService) DeleteWallet(userID int, id int) error {
 	existing, err := s.repo.GetWalletByID(id)
 	if err != nil || existing.UserID != userID {
 		return domain.ErrUnauthorized

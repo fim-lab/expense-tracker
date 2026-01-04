@@ -1,10 +1,6 @@
 package domain
 
-import (
-	"time"
-
-	"github.com/google/uuid"
-)
+import "time"
 
 type TransactionType string
 
@@ -14,13 +10,13 @@ const (
 )
 
 type Transaction struct {
-	ID            uuid.UUID       `json:"id"`
+	ID            int             `json:"id"`
 	UserID        int             `json:"userId"`
 	Date          time.Time       `json:"date"`
-	BudgetID      uuid.UUID       `json:"budgetId"`
-	WalletID      uuid.UUID       `json:"walletId"`
+	BudgetID      int             `json:"budgetId"`
+	WalletID      int             `json:"walletId"`
 	Description   string          `json:"description"`
-	AmountInCents int64           `json:"amountInCents"`
+	AmountInCents int             `json:"amountInCents"`
 	Type          TransactionType `json:"type"`
 	IsPending     bool            `json:"isPending"`
 	IsDebt        *bool           `json:"isDebt,omitempty"`

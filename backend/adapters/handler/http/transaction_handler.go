@@ -3,10 +3,10 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	"github.com/google/uuid"
 )
 
 type TransactionHandler struct {
@@ -72,9 +72,9 @@ func (h *TransactionHandler) deleteTransactionHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	uuid, err := uuid.Parse(transactionID)
+	uuid, err := strconv.Atoi(transactionID)
 	if err != nil {
-		http.Error(w, "Id is not a valid UUID", http.StatusInternalServerError)
+		http.Error(w, "Id is not valid", http.StatusInternalServerError)
 	}
 
 	err = h.service.DeleteTransaction(userID, uuid)

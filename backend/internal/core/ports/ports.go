@@ -1,27 +1,24 @@
 package ports
 
-import (
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
-	"github.com/google/uuid"
-)
+import "github.com/fim-lab/expense-tracker/backend/internal/core/domain"
 
 // --- Driving Ports ---
 type TransactionService interface {
 	CreateTransaction(userID int, t domain.Transaction) error
 	GetTransactions(userID int) ([]domain.Transaction, error)
-	DeleteTransaction(userID int, id uuid.UUID) error
+	DeleteTransaction(userID int, id int) error
 }
 
 type BudgetService interface {
 	CreateBudget(userID int, b domain.Budget) error
 	GetBudgets(userID int) ([]domain.Budget, error)
-	DeleteBudget(userID int, id uuid.UUID) error
+	DeleteBudget(userID int, id int) error
 }
 
 type WalletService interface {
 	CreateWallet(userID int, w domain.Wallet) error
 	GetWallets(userID int) ([]domain.Wallet, error)
-	DeleteWallet(userID int, id uuid.UUID) error
+	DeleteWallet(userID int, id int) error
 }
 
 type UserService interface {
@@ -37,19 +34,19 @@ type SessionService interface {
 // --- Driven Ports  ---
 type ExpenseRepository interface {
 	SaveTransaction(t domain.Transaction) error
-	GetTransactionByID(id uuid.UUID) (domain.Transaction, error)
+	GetTransactionByID(id int) (domain.Transaction, error)
 	FindTransactionsByUser(userID int) ([]domain.Transaction, error)
-	DeleteTransaction(id uuid.UUID) error
+	DeleteTransaction(id int) error
 
 	SaveBudget(b domain.Budget) error
-	GetBudgetByID(id uuid.UUID) (domain.Budget, error)
+	GetBudgetByID(id int) (domain.Budget, error)
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
-	DeleteBudget(id uuid.UUID) error
+	DeleteBudget(id int) error
 
 	SaveWallet(w domain.Wallet) error
-	GetWalletByID(id uuid.UUID) (domain.Wallet, error)
+	GetWalletByID(id int) (domain.Wallet, error)
 	FindWalletsByUser(userID int) ([]domain.Wallet, error)
-	DeleteWallet(id uuid.UUID) error
+	DeleteWallet(id int) error
 
 	GetUserByUsername(username string) (domain.User, error)
 	SaveUser(u domain.User) error

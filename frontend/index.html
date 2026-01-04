@@ -282,10 +282,9 @@
       document.getElementById("txForm").onsubmit = async (e) => {
         e.preventDefault();
         const payload = {
-          id: crypto.randomUUID(),
           date: new Date(document.getElementById("date").value).toISOString(),
-          budgetId: document.getElementById("budget-id").value,
-          walletId: document.getElementById("wallet-id").value,
+          budgetId: parseInt(document.getElementById("budget-id").value),
+          walletId: parseInt(document.getElementById("wallet-id").value),
           description: document.getElementById("description").value,
           amountInCents: parseInt(document.getElementById("amount").value),
           type: document.getElementById("type").value,

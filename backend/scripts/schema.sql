@@ -1,53 +1,44 @@
 CREATE TABLE IF NOT EXISTS users (
-    id INT PRIMARY KEY,
-    username TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
-    id UUID PRIMARY KEY,
-    user_id INT NOT NULL,
-    session_token VARCHAR(512) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expiry TIMESTAMP NOT NULL,
-    UNIQUE(session_token),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    token TEXT PRIMARY KEY UNIQUE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expiry TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS budgets (
-    id UUID PRIMARY KEY,
-    user_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     limit_cents BIGINT NOT NULL,
-    UNIQUE(user_id, name),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    UNIQUE(user_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS wallets (
-    id UUID PRIMARY KEY,
-    user_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    UNIQUE(user_id, name),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    UNIQUE(user_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
-    id UUID PRIMARY KEY,
-    user_id INT NOT NULL,
-    date TIMESTAMP WITH TIME ZONE NOT NULL,
-    budget_id UUID NOT NULL,
-    wallet_id UUID NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    budget_id INT NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,
+    wallet_id INT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
     description TEXT NOT NULL,
     amount_in_cents BIGINT NOT NULL,
     type TEXT NOT NULL,
-    is_pending BOOLEAN NOT NULL,
-    is_debt BOOLEAN,
+    is_pending BOOLEAN NOT NULL DEFAULT FALSE,
+    is_debt BOOLEAN DEFAULT FALSE,
     tags JSONB,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (budget_id) REFERENCES budgets(id),
-    FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
