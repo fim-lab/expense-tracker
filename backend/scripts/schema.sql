@@ -41,8 +41,30 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS depots (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    wallet_id INT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    UNIQUE(user_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS stocks (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    depot_id INT NOT NULL REFERENCES depots(id) ON DELETE CASCADE,
+    date_of_purchase DATE NOT NULL,
+    wkn TEXT NOT NULL,
+    amount DOUBLE PRECISION NOT NULL,
+    price_in_cents BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_wallet_id ON transactions(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_budget_id ON transactions(budget_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id);
 CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets(user_id);
+CREATE INDEX IF NOT EXISTS idx_depots_user_id ON depots(user_id);
+CREATE INDEX IF NOT EXISTS idx_stocks_user_id ON stocks(user_id);
+CREATE INDEX IF NOT EXISTS idx_stocks_depot_id ON stocks(depot_id);

@@ -31,12 +31,26 @@ type SessionService interface {
 	DeleteSession(sessionID string) error
 }
 
+type DepotService interface {
+	CreateDepot(userID int, d domain.Depot) error
+	GetDepots(userID int) ([]domain.Depot, error)
+	DeleteDepot(userID int, id int) error
+}
+
+type StockService interface {
+	CreateStock(userID int, s domain.Stock) error
+	GetStocks(userID int) ([]domain.Stock, error)
+	DeleteStock(userID int, id int) error
+}
+
 // --- Driven Ports  ---
 type ExpenseRepository interface {
-	SaveTransaction(t domain.Transaction) error
-	GetTransactionByID(id int) (domain.Transaction, error)
-	FindTransactionsByUser(userID int) ([]domain.Transaction, error)
-	DeleteTransaction(id int) error
+	GetUserByUsername(username string) (domain.User, error)
+	SaveUser(u domain.User) error
+
+	SaveSession(s domain.Session) error
+	GetSessionByToken(token string) (domain.Session, error)
+	DeleteSession(sessionId string) error
 
 	SaveBudget(b domain.Budget) error
 	GetBudgetByID(id int) (domain.Budget, error)
@@ -48,10 +62,18 @@ type ExpenseRepository interface {
 	FindWalletsByUser(userID int) ([]domain.Wallet, error)
 	DeleteWallet(id int) error
 
-	GetUserByUsername(username string) (domain.User, error)
-	SaveUser(u domain.User) error
+	SaveDepot(d domain.Depot) error
+	GetDepotByID(id int) (domain.Depot, error)
+	FindDepotsByUser(userID int) ([]domain.Depot, error)
+	DeleteDepot(id int) error
 
-	SaveSession(s domain.Session) error
-	GetSessionByToken(token string) (domain.Session, error)
-	DeleteSession(sessionId string) error
+	SaveTransaction(t domain.Transaction) error
+	GetTransactionByID(id int) (domain.Transaction, error)
+	FindTransactionsByUser(userID int) ([]domain.Transaction, error)
+	DeleteTransaction(id int) error
+
+	SaveStock(s domain.Stock) error
+	GetStockByID(id int) (domain.Stock, error)
+	FindStocksByUser(userID int) ([]domain.Stock, error)
+	DeleteStock(id int) error
 }

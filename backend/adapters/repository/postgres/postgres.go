@@ -267,3 +267,85 @@ func (r *Repository) DeleteSession(token string) error {
 	_, err := r.db.Exec(query, token)
 	return err
 }
+
+// --- Depot Methods ---
+
+func (r *Repository) SaveDepot(d domain.Depot) error {
+	query := `INSERT INTO depots (user_id, wallet_id, name) VALUES ($1, $2, $3)`
+	_, err := r.db.Exec(query, d.UserID, d.WalletID, d.Name)
+	return err
+}
+
+func (r *Repository) GetDepotByID(id int) (domain.Depot, error) {
+	var d domain.Depot
+	query := `SELECT id, user_id, wallet_id, name FROM depots WHERE id = $1`
+	err := r.db.QueryRow(query, id).Scan(&d.ID, &d.UserID, &d.WalletID, &d.Name)
+	return d, err
+}
+
+func (r *Repository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
+	query := `SELECT id, user_id, wallet_id, name FROM depots WHERE user_id = $1`
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var depots []domain.Depot
+	for rows.Next() {
+		var d domain.Depot
+		if err := rows.Scan(&d.ID, &d.UserID, &d.WalletID, &d.Name); err != nil {
+			return nil, err
+		}
+		depots = append(depots, d)
+	}
+	return depots, nil
+}
+
+func (r *Repository) DeleteDepot(id int) error {
+	_, err := r.db.Exec("DELETE FROM depots WHERE id = $1", id)
+	return err
+}
+
+// --- Stock Methods ---
+
+func (r *Repository) SaveStock(s domain.Stock) error {
+	query := `INSERT INTO stocks (user_id, depot_id, date_of_purchase, wkn, amount, price_in_cents) 
+	          VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err := r.db.Exec(query, s.UserID, s.DepotID, s.DateOfPurchase, s.WKN, s.Amount, s.PriceInCents)
+	return err
+}
+
+func (r *Repository) GetStockByID(id int) (domain.Stock, error) {
+	var s domain.Stock
+	query := `SELECT id, user_id, depot_id, date_of_purchase, wkn, amount, price_in_cents 
+	          FROM stocks WHERE id = $1`
+	err := r.db.QueryRow(query, id).Scan(&s.ID, &s.UserID, &s.DepotID, &s.DateOfPurchase, &s.WKN, &s.Amount, &s.PriceInCents)
+	return s, err
+}
+
+func (r *Repository) FindStocksByUser(userID int) ([]domain.Stock, error) {
+	query := `SELECT id, user_id, depot_id, date_of_purchase, wkn, amount, price_in_cents 
+	          FROM stocks WHERE user_id = $1`
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stocks []domain.Stock
+	for rows.Next() {
+		var s domain.Stock
+		if err := rows.Scan(&s.ID, &s.UserID, &s.DepotID, &s.DateOfPurchase, &s.WKN, &s.Amount, &s.PriceInCents); err != nil {
+			return nil, err
+		}
+		stocks = append(stocks, s)
+	}
+	return stocks, nil
+}
+
+func (r *Repository) DeleteStock(id int) error {
+	query := `DELETE FROM stocks WHERE id = $1`
+	_, err := r.db.Exec(query, id)
+	return err
+}

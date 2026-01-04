@@ -27,7 +27,7 @@ func (h *WalletHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		h.getWalletsHandler(w, r, userID)
+		h.getWalletsHandler(w, userID)
 	case http.MethodPost:
 		h.createWalletHandler(w, r, userID)
 	case http.MethodDelete:
@@ -37,7 +37,7 @@ func (h *WalletHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *WalletHandler) getWalletsHandler(w http.ResponseWriter, r *http.Request, userID int) {
+func (h *WalletHandler) getWalletsHandler(w http.ResponseWriter, userID int) {
 	wallets, err := h.service.GetWallets(userID)
 	if err != nil {
 		log.Printf("Error fetching wallets: %v", err)

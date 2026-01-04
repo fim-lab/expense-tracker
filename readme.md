@@ -2,7 +2,7 @@
 A secure, multi-user financial tracking application built with a focus on clean architecture and high testability.
 This project demonstrates a Hexagonal (Ports and Adapters) structure in Go, coupled with a SvelteKit frontend.
 ## Project Overview
-The Expense Tracker allows users to manage transactions, track budgets, and organize financial data.
+The Expense Tracker allows users to manage transactions, track budgets, keep an eye on wallets and on depots (including stocks).
 It is designed to be lightweight enough for personal use but architecturally robust enough to scale or switch infrastructure (like databases) with minimal effort.
 ### Core Design Goals
  + **Decoupling**: Business logic (Core) has zero dependencies on external frameworks or databases.
@@ -12,7 +12,7 @@ It is designed to be lightweight enough for personal use but architecturally rob
  + **Backend**: Go 1.24 (Standard Library for routing, bcrypt for security).
  + **Frontend** SvelteKit (Single-page CRUD interface).
  + **Database** Neon (Serverless Postgres) for production; Thread-safe Maps for local/demo.
- + **Infrastructure** Docker, Render (Hosting), GitHub+Actions (CI/CD).
+ + **Infrastructure** Docker, Render (Hosting), Neon (Postgresql DB), GitHub+Actions (CI/CD).
  + **Security** Cookie-based session management with HttpOnly/Secure/SameSite flags.
 ## Project Structure
 ```
@@ -57,6 +57,13 @@ The app will be available at `http://localhost:8080`.
 Dependencies are injected at the Composition Root (`main.go`).
 Services receive a `ports.ExpenseRepository` interface.
 This allows us to swap between `postgres.Repository` and `memory.Repository` without changing a single line of business logic.
+### API Design
+Login/Logout is handled via the `/auth`-Route.
+Other than that, the API follows a resource-oriented RESTful structure under the `/api/` prefix (e.g. `GET` on `/api/transactions` returns all transaction tied to the active user if there is a valid session).
+ * **Separation of Concerns**: Handlers (adapters/handler/http) are responsible for parsing JSON and managing HTTP status codes, while the Service layer handles ownership checks and business rules.
+ * **Stateless Communication**: Aside from the session cookie, the API remains stateless. Each request carries the user context required to perform isolated operations.
+ * **Response Pattern**: Successful mutations return 201 Created or 204 No Content. Error handling is unified; domain-specific errors (e.g., ErrBudgetNotFound) are mapped to appropriate HTTP status codes (e.g., 400 Bad Request) at the adapter level.
+ There shouldn't be any surprises here.
 ### Authentication & Middleware
 Security is handled via a non-intrusive middleware:
  1. **Login**: Verifies credentials against Bcrypt hashes stored in the DB.
