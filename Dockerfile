@@ -21,7 +21,7 @@ COPY --from=frontend-builder /app/package.json ./
 COPY --from=frontend-builder /app/package-lock.json ./
 RUN npm ci --omit=dev
 COPY Caddyfile /etc/caddy/Caddyfile
-EXPOSE 80
+EXPOSE 10000
 
 RUN echo "#!/bin/sh" > start.sh && \
     echo "./backend-server &" >> start.sh && \
