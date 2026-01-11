@@ -128,9 +128,5 @@ func addMiddleware(env string, mainMux *http.ServeMux, apiRouter *http.ServeMux,
 }
 
 func getPort() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = DefaultPort
-	}
-	return port
+	return DefaultPort
 }
