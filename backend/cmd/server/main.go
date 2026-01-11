@@ -3,12 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
 
-	expensetracker "github.com/fim-lab/expense-tracker"
 	httpadapter "github.com/fim-lab/expense-tracker/backend/adapters/handler/http"
 	"github.com/fim-lab/expense-tracker/backend/adapters/handler/middleware"
 	"github.com/fim-lab/expense-tracker/backend/adapters/repository/memory"
@@ -31,15 +29,9 @@ func main() {
 
 	userService, sessionService, budgetService, walletService, depotService, transactionService, stockService := initializeServices(repo)
 
-	staticFiles, err := fs.Sub(expensetracker.StaticAssets, "frontend")
-	if err != nil {
-		log.Fatal("Failed to sub into frontend folder:", err)
-	}
-
 	mainMux := http.NewServeMux()
 	setupAuthRoutes(mainMux, userService, sessionService)
 	setupApiRoutes(env, mainMux, sessionService, budgetService, walletService, depotService, transactionService, stockService)
-	mainMux.Handle("/", http.FileServer(http.FS(staticFiles)))
 
 	port := getPort()
 
