@@ -1,10 +1,10 @@
 FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
-COPY . .
-RUN go build -o main ./backend/cmd/server/main.go
+COPY backend/ .
+RUN go build -o main ./cmd/server/main.go
 
 FROM alpine:3.18
 WORKDIR /root/

@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"golang.org/x/crypto/bcrypt"
 )
 

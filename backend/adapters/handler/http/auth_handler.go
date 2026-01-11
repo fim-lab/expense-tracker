@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
-	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	authutils "github.com/fim-lab/expense-tracker/backend/pkg/auth"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	authutils "github.com/fim-lab/expense-tracker/pkg/auth"
 )
 
 type AuthHandler struct {

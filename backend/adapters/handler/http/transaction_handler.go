@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
-	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
 type TransactionHandler struct {

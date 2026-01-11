@@ -1,6 +1,6 @@
 package ports
 
-import "github.com/fim-lab/expense-tracker/backend/internal/core/domain"
+import "github.com/fim-lab/expense-tracker/internal/core/domain"
 
 // --- Driving Ports ---
 type TransactionService interface {

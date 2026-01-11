@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
 
 type Repository struct {

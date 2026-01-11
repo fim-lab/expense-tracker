@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fim-lab/expense-tracker/backend/adapters/repository/memory"
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
 
 func TestTransactionOwnership(t *testing.T) {

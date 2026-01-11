@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	authutils "github.com/fim-lab/expense-tracker/backend/pkg/auth"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	authutils "github.com/fim-lab/expense-tracker/pkg/auth"
 )
 
 type AuthMiddleware struct {
