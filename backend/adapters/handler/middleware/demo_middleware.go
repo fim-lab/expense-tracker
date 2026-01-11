@@ -13,7 +13,7 @@ func NewDemoMiddleware() *DemoMiddleware {
 
 func (dm *DemoMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		demoUserId := 0
+		demoUserId := 1
 
 		ctx := context.WithValue(r.Context(), "userID", demoUserId)
 		r = r.WithContext(ctx)
