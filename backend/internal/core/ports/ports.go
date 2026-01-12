@@ -5,7 +5,7 @@ import "github.com/fim-lab/expense-tracker/internal/core/domain"
 // --- Driving Ports ---
 type TransactionService interface {
 	CreateTransaction(userID int, t domain.Transaction) error
-	GetTransactions(userID int) ([]domain.Transaction, error)
+	GetTransactions(userID int) ([]domain.TransactionDTO, error)
 	DeleteTransaction(userID int, id int) error
 }
 
