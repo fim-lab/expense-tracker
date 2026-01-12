@@ -28,8 +28,8 @@ func (s *transactionService) CreateTransaction(userID int, t domain.Transaction)
 	return s.repo.SaveTransaction(t)
 }
 
-func (s *transactionService) GetTransactions(userID int) ([]domain.TransactionDTO, error) {
-	txs, err := s.repo.FindTransactionsByUser(userID)
+func (s *transactionService) GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
+	txs, err := s.repo.FindTransactionsByUser(userID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
