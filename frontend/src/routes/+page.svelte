@@ -1,11 +1,24 @@
 <script lang="ts">
-	import type { PageData } from './$types';
-	import TransactionTable from '$lib/components/TransactionTable.svelte';
-
+	import { invalidateAll } from '$app/navigation';
+	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	let { data } = $props();
 
-	// We initialize a reactive state with the data from the server load
-	let transactions = $state(data.transactions);
+	const pageCount = $derived(Math.ceil(data.total / data.limit));
+	const pages = $derived(Array.from({ length: pageCount }, (_, i) => i + 1));
+
+	async function deleteTransaction(id: number) {
+		if (!confirm('Are you sure you want to delete this transaction?')) return;
+
+		const res = await fetch(`/api/transactions?id=${id}`, {
+			method: 'DELETE'
+		});
+
+		if (res.ok) {
+			await invalidateAll();
+		} else {
+			alert('Failed to delete transaction');
+		}
+	}
 </script>
 
 <div class="grid">
@@ -20,7 +33,34 @@
 		</article>
 	</aside>
 
-	<section>
-		<TransactionTable bind:transactions />
-	</section>
+	<article>
+		<header><strong>Recent Transactions</strong></header>
+
+		<div class="transaction-list">
+			{#each data.transactions as tx (tx.id)}
+				<TransactionCard transaction={tx} ondelete={deleteTransaction} />
+			{/each}
+		</div>
+
+		<nav aria-label="Pagination">
+			<ul>
+				{#each pages as p}
+					<li>
+						<a href={`?page=${p}`} aria-current={p === data.page ? 'page' : undefined}>
+							{p}
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</nav>
+	</article>
 </div>
+
+<style>
+	.full-width {
+		width: 100%;
+	}
+	.transaction-list {
+		margin-bottom: 1rem;
+	}
+</style>
