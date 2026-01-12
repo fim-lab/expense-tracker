@@ -73,6 +73,7 @@ func TestGetTransactions_PaginationAndMapping(t *testing.T) {
 		{Date: now.Add(-3 * time.Hour), BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Older", UserID: testUser.ID},
 		{Date: now.Add(-1 * time.Hour), BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Middle", UserID: testUser.ID},
 		{Date: now, BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: testUser.ID},
+		{Date: now, BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: 99},
 	}
 	for _, tx := range txs {
 		repo.SaveTransaction(tx)
@@ -122,6 +123,16 @@ func TestGetTransactions_PaginationAndMapping(t *testing.T) {
 		}
 		if len(results) != 0 {
 			t.Errorf("Expected 0 results for huge offset, got %d", len(results))
+		}
+	})
+
+	t.Run("Verify total count of transactions", func(t *testing.T) {
+		results, err := svc.GetTransactionCount(testUser.ID)
+		if err != nil {
+			t.Fatalf("Failed: %v", err)
+		}
+		if results != 3 {
+			t.Errorf("Expected 3 transactions for testUser, got %d", results)
 		}
 	})
 }

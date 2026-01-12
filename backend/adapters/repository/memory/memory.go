@@ -116,7 +116,6 @@ func (r *Repository) SaveTransaction(t domain.Transaction) error {
 	if t.ID == 0 {
 		t.ID = r.nextID()
 	}
-	t.ID = len(r.transactions)
 	r.transactions[t.ID] = t
 	return nil
 }
@@ -129,6 +128,18 @@ func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
 		return domain.Transaction{}, domain.ErrTransactionNotFound
 	}
 	return t, nil
+}
+
+func (r *Repository) GetTransactionCount(userID int) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var res []domain.Transaction
+	for _, t := range r.transactions {
+		if t.UserID == userID {
+			res = append(res, t)
+		}
+	}
+	return len(res), nil
 }
 
 func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {

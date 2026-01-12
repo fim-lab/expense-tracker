@@ -64,6 +64,10 @@ func (s *transactionService) GetTransactions(userID int, limit int, offset int) 
 	return dtos, nil
 }
 
+func (s *transactionService) GetTransactionCount(userID int) (int, error) {
+	return s.repo.GetTransactionCount(userID)
+}
+
 // TODO: UpdateTransactions
 
 func (s *transactionService) DeleteTransaction(userID int, id int) error {

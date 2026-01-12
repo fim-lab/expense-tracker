@@ -201,6 +201,16 @@ func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
 	return t, nil
 }
 
+func (r *Repository) GetTransactionCount(userID int) (int, error) {
+	query := `SELECT COUNT(*) FROM transactions WHERE user_id = $1`
+	var count int
+	err := r.db.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {
 	query := `
 		SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 

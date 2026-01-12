@@ -56,8 +56,22 @@ func (h *TransactionHandler) getTransactionsHandler(w http.ResponseWriter, r *ht
 		return
 	}
 
+	total, err := h.service.GetTransactionCount(userID)
+	if err != nil {
+		http.Error(w, "Fetch failed", http.StatusInternalServerError)
+		return
+	}
+
+	response := struct {
+		Data  []domain.TransactionDTO `json:"data"`
+		Total int                     `json:"total"`
+	}{
+		Data:  txs,
+		Total: total,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(txs)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *TransactionHandler) createTransactionHandler(w http.ResponseWriter, r *http.Request, userID int) {
