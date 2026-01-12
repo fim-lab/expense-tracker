@@ -90,7 +90,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.sessionService.DeleteSession(sessionCookie.Value)
+	err = h.sessionService.DeleteSession(authutils.HashSessionToken(sessionCookie.Value))
 	if err != nil {
 		http.Error(w, "Could not log out", http.StatusInternalServerError)
 		return
