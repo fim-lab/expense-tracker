@@ -5,7 +5,7 @@ const LIMIT = 5;
 
 export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
     const page = Number(url.searchParams.get('page') ?? '1');
-  const offset = (page - 1) * LIMIT;
+    const offset = (page - 1) * LIMIT;
 
     const API_URL = 'http://localhost:8080/api';
     const cookieHeader = cookies.getAll().map(c => `${c.name}=${c.value}`).join('; ');

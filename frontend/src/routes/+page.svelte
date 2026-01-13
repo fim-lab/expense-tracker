@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
-	let { data } = $props();
+	import Pagination from '$lib/components/Pagination.svelte';
 
-	const pageCount = $derived(Math.ceil(data.total / data.limit));
-	const pages = $derived(Array.from({ length: pageCount }, (_, i) => i + 1));
+	const totalPages = $derived(Math.ceil(page.data.total / page.data.limit));
 
 	async function deleteTransaction(id: number) {
 		if (!confirm('Are you sure you want to delete this transaction?')) return;
@@ -26,7 +26,7 @@
 		<article>
 			<header><strong>Wallets</strong></header>
 			<ul>
-				{#each data.wallets as wallet}
+				{#each page.data.wallets as wallet}
 					<li>{wallet.name}</li>
 				{/each}
 			</ul>
@@ -37,30 +37,12 @@
 		<header><strong>Recent Transactions</strong></header>
 
 		<div class="transaction-list">
-			{#each data.transactions as tx (tx.id)}
+			{#each page.data.transactions as tx (tx.id)}
 				<TransactionCard transaction={tx} ondelete={deleteTransaction} />
 			{/each}
 		</div>
-
-		<nav aria-label="Pagination">
-			<ul>
-				{#each pages as p}
-					<li>
-						<a href={`?page=${p}`} aria-current={p === data.page ? 'page' : undefined}>
-							{p}
-						</a>
-					</li>
-				{/each}
-			</ul>
-		</nav>
+		{#if totalPages > 1}
+			<Pagination page={page.data.page} {totalPages} />
+		{/if}
 	</article>
 </div>
-
-<style>
-	.full-width {
-		width: 100%;
-	}
-	.transaction-list {
-		margin-bottom: 1rem;
-	}
-</style>
