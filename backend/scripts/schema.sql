@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS budgets (
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     limit_cents BIGINT NOT NULL,
+    balance_cents BIGINT,
     UNIQUE(user_id, name)
 );
 
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS wallets (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
+    balance_cents BIGINT,
     UNIQUE(user_id, name)
 );
 
