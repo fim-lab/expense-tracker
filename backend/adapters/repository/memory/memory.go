@@ -273,17 +273,6 @@ func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
 	var userWallets []domain.Wallet
 	for _, w := range r.wallets {
 		if w.UserID == userID {
-			var balance int
-			for _, t := range r.transactions {
-				if t.WalletID == w.ID {
-					if t.Type == domain.Income {
-						balance += t.AmountInCents
-					} else {
-						balance -= t.AmountInCents
-					}
-				}
-			}
-			w.Balance = balance
 			userWallets = append(userWallets, w)
 		}
 	}

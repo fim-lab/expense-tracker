@@ -12,11 +12,10 @@ func TestCreateBudget(t *testing.T) {
 	svc := NewBudgetService(repo)
 
 	t.Run("Valid budget creation", func(t *testing.T) {
-		testId := 2
 		budget := domain.Budget{
-			ID:         testId,
-			Name:       "Groceries",
-			LimitCents: 50000,
+			Name:         "Groceries",
+			LimitCents:   50000,
+			BalanceCents: 100,
 		}
 		err := svc.CreateBudget(23, budget)
 		if err != nil {
@@ -33,6 +32,39 @@ func TestCreateBudget(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("could not retreive correct budget for UserId 23, got %v", saved[0])
+		}
+	})
+
+	t.Run("Sums totals correct", func(t *testing.T) {
+		budget1 := domain.Budget{
+			Name:         "More",
+			LimitCents:   10,
+			BalanceCents: 20,
+		}
+		err := svc.CreateBudget(23, budget1)
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+		budget2 := domain.Budget{
+			Name:         "Others",
+			LimitCents:   50000,
+			BalanceCents: -49,
+		}
+		err = svc.CreateBudget(23, budget2)
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+
+		total, _ := svc.GetTotalOfBudgets(23)
+
+		if total != (100 + 20 - 49) {
+			t.Errorf("expected 71 cents total for budgets for UserId 23, got %v", total)
+		}
+
+		total, _ = svc.GetTotalOfBudgets(27)
+
+		if total != 0 {
+			t.Errorf("expected 0 balance for unknown user, but got %v", total)
 		}
 	})
 

@@ -33,6 +33,20 @@ func (s *budgetService) GetBudgets(userID int) ([]domain.Budget, error) {
 	return s.repo.FindBudgetsByUser(userID)
 }
 
+func (s *budgetService) GetTotalOfBudgets(userID int) (int, error) {
+	budgets, err := s.repo.FindBudgetsByUser(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalBalance int
+	for _, b := range budgets {
+		totalBalance += b.BalanceCents
+	}
+
+	return totalBalance, nil
+}
+
 // TODO: func (s *budgetService) UpdateBudgets(...
 
 func (s *budgetService) DeleteBudget(userID int, id int) error {

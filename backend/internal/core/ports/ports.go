@@ -13,12 +13,14 @@ type TransactionService interface {
 type BudgetService interface {
 	CreateBudget(userID int, b domain.Budget) error
 	GetBudgets(userID int) ([]domain.Budget, error)
+	GetTotalOfBudgets(userID int) (int, error)
 	DeleteBudget(userID int, id int) error
 }
 
 type WalletService interface {
 	CreateWallet(userID int, w domain.Wallet) error
 	GetWallets(userID int) ([]domain.Wallet, error)
+	GetTotalOfWallets(userID int) (int, error)
 	DeleteWallet(userID int, id int) error
 }
 

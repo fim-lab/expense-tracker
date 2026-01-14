@@ -150,7 +150,7 @@ func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
 	var res []domain.Wallet
 	for rows.Next() {
 		var w domain.Wallet
-		if err := rows.Scan(&w.ID, &w.UserID, &w.Name, &w.Balance); err != nil {
+		if err := rows.Scan(&w.ID, &w.UserID, &w.Name, &w.BalanceCents); err != nil {
 			return nil, err
 		}
 		res = append(res, w)
