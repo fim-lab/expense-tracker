@@ -88,7 +88,7 @@ func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
 	var res []domain.Budget
 	for rows.Next() {
 		var b domain.Budget
-		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents); err != nil {
+		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &b.BalanceCents); err != nil {
 			return nil, err
 		}
 		res = append(res, b)
