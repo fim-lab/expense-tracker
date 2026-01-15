@@ -3,33 +3,39 @@
 	let { data } = $props();
 
 	let description = $state('');
-	let amountInCents = $state(0);
+	let amount = $state(0);
 	let date = $state(new Date().toISOString().split('T')[0]);
 	let walletId = $state(0);
 	let budgetId = $state(0);
 	let type = $state('EXPENSE');
+	let errorMessage = $state('');
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
+		errorMessage = '';
 
 		// 1. Convert YYYY-MM-DD to RFC3339 for Go's time.Time
 		const rfc3339Date = new Date(date).toISOString();
 
 		const payload = {
-			// ID is 0 for new records (Go ignores it or uses it as 'unset')
-			id: 0,
-			// UserID is usually handled by the backend session,
-			// but if the struct requires it, we send 0
-			userId: 0,
 			date: rfc3339Date,
 			description: description,
-			amountInCents: Math.round(amountInCents * 100),
+			amountInCents: Math.round(amount * 100),
 			walletId: Number(walletId),
 			budgetId: Number(budgetId),
 			type: type,
-			isPending: false, // Explicitly send boolean
-			tags: [] // Send empty array to match []string
+			isPending: false,
+			tags: []
 		};
+
+		if (payload.amountInCents <= 0) {
+			errorMessage = 'Amount must be greater than zero.';
+			return;
+		}
+		if (payload.walletId === 0 || payload.budgetId === 0) {
+			errorMessage = 'Please select a wallet and a budget.';
+			return;
+		}
 
 		const res = await fetch('/api/transactions', {
 			method: 'POST',
@@ -42,7 +48,7 @@
 		} else {
 			const errorText = await res.text();
 			console.error('Backend Error:', errorText);
-			alert('Failed to save: ' + errorText);
+			errorMessage = `Failed to save transaction: ${errorText}`;
 		}
 	}
 </script>
@@ -72,7 +78,7 @@
 		<div class="grid">
 			<label>
 				Amount (EUR)
-				<input type="number" step="0.01" bind:value={amountInCents} required />
+				<input type="number" step="0.01" bind:value={amount} required />
 			</label>
 			<label>
 				Wallet
@@ -95,6 +101,18 @@
 			</select>
 		</label>
 
+		{#if errorMessage}
+			<p class="error-message">{errorMessage}</p>
+		{/if}
+
 		<button type="submit">Save Transaction</button>
 	</form>
 </article>
+
+<style>
+	.error-message {
+		color: var(--pico-del-color);
+		margin-top: 1rem;
+		margin-bottom: 0;
+	}
+</style>
