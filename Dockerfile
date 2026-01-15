@@ -1,13 +1,31 @@
-FROM golang:1.25-alpine AS builder
-
+FROM golang:1.25-alpine AS backend-builder
 WORKDIR /app
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
-COPY . .
-RUN go build -o main ./backend/cmd/server/main.go
+COPY backend/ .
+RUN go build -o main ./cmd/server/main.go
 
-FROM alpine:3.18
-WORKDIR /root/
-COPY --from=builder /app/main .
-EXPOSE 8080
-CMD ["./main"]
+FROM node:25-alpine AS frontend-builder
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
+FROM node:25-alpine
+RUN apk add --no-cache caddy
+WORKDIR /app
+COPY --from=backend-builder /app/main ./backend-server
+COPY --from=frontend-builder /app/build ./build
+COPY --from=frontend-builder /app/package.json ./
+COPY --from=frontend-builder /app/package-lock.json ./
+RUN npm ci --omit=dev
+COPY Caddyfile /etc/caddy/Caddyfile
+EXPOSE 10000
+
+RUN echo "#!/bin/sh" > start.sh && \
+    echo "./backend-server &" >> start.sh && \
+    echo "PORT=3000 node build &" >> start.sh && \
+    echo "caddy run --config /etc/caddy/Caddyfile --adapter caddyfile" >> start.sh && \
+    chmod +x start.sh
+CMD ["./start.sh"]

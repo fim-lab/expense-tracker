@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
 
 type Repository struct {
@@ -201,16 +201,30 @@ func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
 	return t, nil
 }
 
-func (r *Repository) FindTransactionsByUser(userID int) ([]domain.Transaction, error) {
-	query := `SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 
-	          FROM transactions WHERE user_id = $1 ORDER BY date DESC`
-	rows, err := r.db.Query(query, userID)
+func (r *Repository) GetTransactionCount(userID int) (int, error) {
+	query := `SELECT COUNT(*) FROM transactions WHERE user_id = $1`
+	var count int
+	err := r.db.QueryRow(query, userID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {
+	query := `
+		SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 
+		FROM transactions
+		WHERE user_id = $1
+		ORDER BY date DESC, id DESC
+		LIMIT $2 OFFSET $3`
+	rows, err := r.db.Query(query, userID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var res []domain.Transaction
+	var txs []domain.Transaction
 	for rows.Next() {
 		var t domain.Transaction
 		var tags []byte
@@ -219,9 +233,9 @@ func (r *Repository) FindTransactionsByUser(userID int) ([]domain.Transaction, e
 			return nil, err
 		}
 		json.Unmarshal(tags, &t.Tags)
-		res = append(res, t)
+		txs = append(txs, t)
 	}
-	return res, nil
+	return txs, nil
 }
 
 func (r *Repository) DeleteTransaction(id int) error {

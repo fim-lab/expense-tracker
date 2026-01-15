@@ -2,9 +2,11 @@ package memory
 
 import (
 	"log"
+	"sort"
 	"sync"
+	"time"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -52,9 +54,28 @@ func NewRepository() *Repository {
 		Name:       "Demo Budget",
 		LimitCents: 500,
 	})
+	budgets, err := repo.FindBudgetsByUser(demoUser.ID)
+	if err != nil {
+		log.Fatal("Could not initiate demo Budget", err)
+	}
+	demoBudget := budgets[0]
 	repo.SaveWallet(domain.Wallet{
 		UserID: demoUser.ID,
 		Name:   "Demo Cash Wallet",
+	})
+	wallets, err := repo.FindWalletsByUser(demoUser.ID)
+	if err != nil {
+		log.Fatal("Could not initiate demo Wallet", err)
+	}
+	demoWallet := wallets[0]
+	repo.SaveTransaction(domain.Transaction{
+		UserID:        demoUser.ID,
+		Date:          time.Now(),
+		BudgetID:      demoBudget.ID,
+		WalletID:      demoWallet.ID,
+		Description:   "Test Transaction",
+		AmountInCents: 500,
+		Type:          domain.Expense,
 	})
 
 	return repo
@@ -95,7 +116,6 @@ func (r *Repository) SaveTransaction(t domain.Transaction) error {
 	if t.ID == 0 {
 		t.ID = r.nextID()
 	}
-	t.ID = len(r.transactions)
 	r.transactions[t.ID] = t
 	return nil
 }
@@ -110,7 +130,7 @@ func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
 	return t, nil
 }
 
-func (r *Repository) FindTransactionsByUser(userID int) ([]domain.Transaction, error) {
+func (r *Repository) GetTransactionCount(userID int) (int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var res []domain.Transaction
@@ -119,7 +139,37 @@ func (r *Repository) FindTransactionsByUser(userID int) ([]domain.Transaction, e
 			res = append(res, t)
 		}
 	}
-	return res, nil
+	return len(res), nil
+}
+
+func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var res []domain.Transaction
+	for _, t := range r.transactions {
+		if t.UserID == userID {
+			res = append(res, t)
+		}
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		if res[i].Date.Equal(res[j].Date) {
+			return res[i].ID > res[j].ID
+		}
+		return res[i].Date.After(res[j].Date)
+	})
+
+	start := offset
+	if start >= len(res) {
+		return []domain.Transaction{}, nil
+	}
+
+	end := offset + limit
+	if end > len(res) || limit <= 0 {
+		end = len(res)
+	}
+
+	return res[start:end], nil
 }
 
 func (r *Repository) DeleteTransaction(id int) error {

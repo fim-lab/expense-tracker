@@ -3,18 +3,16 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
 
-	expensetracker "github.com/fim-lab/expense-tracker"
-	httpadapter "github.com/fim-lab/expense-tracker/backend/adapters/handler/http"
-	"github.com/fim-lab/expense-tracker/backend/adapters/handler/middleware"
-	"github.com/fim-lab/expense-tracker/backend/adapters/repository/memory"
-	"github.com/fim-lab/expense-tracker/backend/adapters/repository/postgres"
-	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	"github.com/fim-lab/expense-tracker/backend/internal/core/services"
+	httpadapter "github.com/fim-lab/expense-tracker/adapters/handler/http"
+	"github.com/fim-lab/expense-tracker/adapters/handler/middleware"
+	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
+	"github.com/fim-lab/expense-tracker/adapters/repository/postgres"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	"github.com/fim-lab/expense-tracker/internal/core/services"
 	_ "github.com/lib/pq"
 )
 
@@ -31,15 +29,9 @@ func main() {
 
 	userService, sessionService, budgetService, walletService, depotService, transactionService, stockService := initializeServices(repo)
 
-	staticFiles, err := fs.Sub(expensetracker.StaticAssets, "frontend")
-	if err != nil {
-		log.Fatal("Failed to sub into frontend folder:", err)
-	}
-
 	mainMux := http.NewServeMux()
 	setupAuthRoutes(mainMux, userService, sessionService)
 	setupApiRoutes(env, mainMux, sessionService, budgetService, walletService, depotService, transactionService, stockService)
-	mainMux.Handle("/", http.FileServer(http.FS(staticFiles)))
 
 	port := getPort()
 
@@ -136,9 +128,5 @@ func addMiddleware(env string, mainMux *http.ServeMux, apiRouter *http.ServeMux,
 }
 
 func getPort() string {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = DefaultPort
-	}
-	return port
+	return DefaultPort
 }

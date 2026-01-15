@@ -3,8 +3,8 @@ package services
 import (
 	"strings"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
-	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
 type budgetService struct {

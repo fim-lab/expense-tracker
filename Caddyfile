@@ -1,0 +1,8 @@
+:{$PORT} {
+    # Go backend
+    reverse_proxy /api/* localhost:8080
+    reverse_proxy /auth/* localhost:8080
+
+    # SvelteKit Frontend
+    reverse_proxy /* localhost:3000
+}

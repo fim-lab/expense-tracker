@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fim-lab/expense-tracker/backend/internal/core/domain"
-	"github.com/fim-lab/expense-tracker/backend/internal/core/ports"
-	authutils "github.com/fim-lab/expense-tracker/backend/pkg/auth"
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	authutils "github.com/fim-lab/expense-tracker/pkg/auth"
 )
 
 type AuthHandler struct {
@@ -90,7 +90,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.sessionService.DeleteSession(sessionCookie.Value)
+	err = h.sessionService.DeleteSession(authutils.HashSessionToken(sessionCookie.Value))
 	if err != nil {
 		http.Error(w, "Could not log out", http.StatusInternalServerError)
 		return
