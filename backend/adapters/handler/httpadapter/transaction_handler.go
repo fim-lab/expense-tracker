@@ -1,4 +1,4 @@
-package http
+package httpadapter
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	"github.com/go-chi/chi/v5"
 )
 
 type TransactionHandler struct {
@@ -17,22 +18,8 @@ func NewTransactionHandler(service *ports.TransactionService) *TransactionHandle
 	return &TransactionHandler{service: *service}
 }
 
-func (h *TransactionHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *TransactionHandler) GetTransactions(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(int)
-
-	switch r.Method {
-	case http.MethodGet:
-		h.getTransactionsHandler(w, r, userID)
-	case http.MethodPost:
-		h.createTransactionHandler(w, r, userID)
-	case http.MethodDelete:
-		h.deleteTransactionHandler(w, r, userID)
-	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *TransactionHandler) getTransactionsHandler(w http.ResponseWriter, r *http.Request, userID int) {
 	limit := 20
 	offset := 0
 
@@ -74,7 +61,8 @@ func (h *TransactionHandler) getTransactionsHandler(w http.ResponseWriter, r *ht
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *TransactionHandler) createTransactionHandler(w http.ResponseWriter, r *http.Request, userID int) {
+func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
 	var transaction domain.Transaction
 
 	err := json.NewDecoder(r.Body).Decode(&transaction)
@@ -95,19 +83,21 @@ func (h *TransactionHandler) createTransactionHandler(w http.ResponseWriter, r *
 	json.NewEncoder(w).Encode(transaction)
 }
 
-func (h *TransactionHandler) deleteTransactionHandler(w http.ResponseWriter, r *http.Request, userID int) {
-	transactionID := r.URL.Query().Get("id")
-	if transactionID == "" {
+func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+	transactionIDStr := chi.URLParam(r, "id")
+	if transactionIDStr == "" {
 		http.Error(w, "Missing transaction ID", http.StatusBadRequest)
 		return
 	}
 
-	uuid, err := strconv.Atoi(transactionID)
+	transactionID, err := strconv.Atoi(transactionIDStr)
 	if err != nil {
-		http.Error(w, "Id is not valid", http.StatusInternalServerError)
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
 	}
 
-	err = h.service.DeleteTransaction(userID, uuid)
+	err = h.service.DeleteTransaction(userID, transactionID)
 	if err != nil {
 		http.Error(w, "Error deleting transaction", http.StatusInternalServerError)
 		return

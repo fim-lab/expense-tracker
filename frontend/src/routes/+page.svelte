@@ -10,7 +10,7 @@
 	async function deleteTransaction(id: number) {
 		if (!confirm('Are you sure you want to delete this transaction?')) return;
 
-		const res = await fetch(`/api/transactions?id=${id}`, {
+		const res = await fetch(`/api/transactions/${id}`, {
 			method: 'DELETE'
 		});
 
