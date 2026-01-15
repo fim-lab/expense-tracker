@@ -312,6 +312,9 @@ func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
 			res = append(res, b)
 		}
 	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].ID < res[j].ID
+	})
 	return res, nil
 }
 
@@ -378,6 +381,9 @@ func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
 			userWallets = append(userWallets, w)
 		}
 	}
+	sort.Slice(userWallets, func(i, j int) bool {
+		return userWallets[i].ID < userWallets[j].ID
+	})
 	return userWallets, nil
 }
 

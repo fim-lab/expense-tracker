@@ -79,7 +79,7 @@ func (r *Repository) GetBudgetByID(id int) (domain.Budget, error) {
 }
 
 func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
-	rows, err := r.db.Query("SELECT id, user_id, name, limit_cents FROM budgets WHERE user_id = $1", userID)
+	rows, err := r.db.Query("SELECT id, user_id, name, limit_cents, balance_cents FROM budgets WHERE user_id = $1 ORDER BY id ASC", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (r *Repository) GetWalletByID(id int) (domain.Wallet, error) {
 }
 
 func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
-	query := `SELECT id, user_id, name, balance_cents FROM wallets WHERE user_id = $1`
+	query := `SELECT id, user_id, name, balance_cents FROM wallets WHERE user_id = $1 ORDER BY id ASC`
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
 		return nil, err
