@@ -166,7 +166,7 @@ func (r *Repository) DeleteWallet(id int) error {
 
 // --- Transaction Methods ---
 
-func (r *Repository) SaveTransactionAndUpdateBalance(t domain.Transaction) error {
+func (r *Repository) SaveTransaction(t domain.Transaction) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
@@ -240,12 +240,14 @@ func (r *Repository) GetTransactionCount(userID int) (int, error) {
 	return count, nil
 }
 
-func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {
+func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
 	query := `
-		SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 
-		FROM transactions
-		WHERE user_id = $1
-		ORDER BY date DESC, id DESC
+		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, b.name as budget_name, w.name as wallet_name
+		FROM transactions t
+		LEFT JOIN budgets b ON t.budget_id = b.id
+		LEFT JOIN wallets w ON t.wallet_id = w.id
+		WHERE t.user_id = $1
+		ORDER BY t.date DESC, t.id DESC
 		LIMIT $2 OFFSET $3`
 	rows, err := r.db.Query(query, userID, limit, offset)
 	if err != nil {
@@ -253,21 +255,19 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 	}
 	defer rows.Close()
 
-	var txs []domain.Transaction
+	var txs []domain.TransactionDTO
 	for rows.Next() {
-		var t domain.Transaction
-		var tags []byte
-		err := rows.Scan(&t.ID, &t.UserID, &t.Date, &t.BudgetID, &t.WalletID, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.IsDebt, &tags)
+		var t domain.TransactionDTO
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.BudgetName, &t.WalletName)
 		if err != nil {
 			return nil, err
 		}
-		json.Unmarshal(tags, &t.Tags)
 		txs = append(txs, t)
 	}
 	return txs, nil
 }
 
-func (r *Repository) DeleteTransactionAndUpdateBalance(id int) error {
+func (r *Repository) DeleteTransaction(id int) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -277,8 +277,9 @@ func (r *Repository) DeleteTransactionAndUpdateBalance(id int) error {
 	var amount int
 	var tType domain.TransactionType
 	var budgetID int
-	queryFetch := `SELECT amount_cents, type, budget_id FROM transactions WHERE id = $1`
-	err = tx.QueryRow(queryFetch, id).Scan(&amount, &tType, &budgetID)
+	var userID int
+	queryFetch := `SELECT amount_in_cents, type, budget_id, user_id FROM transactions WHERE id = $1`
+	err = tx.QueryRow(queryFetch, id).Scan(&amount, &tType, &budgetID, &userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.ErrTransactionNotFound
@@ -291,12 +292,13 @@ func (r *Repository) DeleteTransactionAndUpdateBalance(id int) error {
 		adjustment = amount
 	}
 
-	_, err = tx.Exec(`DELETE FROM transactions WHERE id = $1`, id)
+	queryBudget := `UPDATE budgets SET balance_cents = COALESCE(balance_cents, 0) + $1 WHERE id = $2 AND user_id = $3`
+	_, err = tx.Exec(queryBudget, adjustment, budgetID, userID)
 	if err != nil {
 		return err
 	}
 
-	result, err := r.db.Exec("DELETE FROM transactions WHERE id = $1", id)
+	result, err := tx.Exec("DELETE FROM transactions WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -305,11 +307,7 @@ func (r *Repository) DeleteTransactionAndUpdateBalance(id int) error {
 	if rows == 0 {
 		return domain.ErrTransactionNotFound
 	}
-	queryBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
-	_, err = tx.Exec(queryBudget, adjustment, budgetID)
-	if err != nil {
-		return err
-	}
+
 	return tx.Commit()
 }
 

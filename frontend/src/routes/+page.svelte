@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
+	import { formatCurrency } from '$lib/utils';
 
 	const totalPages = $derived(Math.ceil(page.data.total / page.data.limit));
 
@@ -27,7 +28,13 @@
 			<header><strong>Wallets</strong></header>
 			<ul>
 				{#each page.data.wallets as wallet}
-					<li>{wallet.name}</li>
+					<li>{wallet.name}, {formatCurrency(wallet.balanceCents)}</li>
+				{/each}
+			</ul>
+			<header><strong>Budgets</strong></header>
+			<ul>
+				{#each page.data.budgets as budget}
+					<li>{budget.name}, {formatCurrency(budget.balanceCents)}</li>
 				{/each}
 			</ul>
 		</article>

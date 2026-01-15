@@ -110,7 +110,7 @@ func (r *Repository) SaveUser(u domain.User) error {
 
 // --- Transaction Methods ---
 
-func (r *Repository) SaveTransactionAndUpdateBalance(t domain.Transaction) error {
+func (r *Repository) SaveTransaction(t domain.Transaction) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if t.ID == 0 {
@@ -153,7 +153,7 @@ func (r *Repository) GetTransactionCount(userID int) (int, error) {
 	return len(res), nil
 }
 
-func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {
+func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var res []domain.Transaction
@@ -172,7 +172,7 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 
 	start := offset
 	if start >= len(res) {
-		return []domain.Transaction{}, nil
+		return []domain.TransactionDTO{}, nil
 	}
 
 	end := offset + limit
@@ -180,10 +180,28 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 		end = len(res)
 	}
 
-	return res[start:end], nil
+	paginatedTxs := res[start:end]
+
+	dtos := make([]domain.TransactionDTO, 0, len(paginatedTxs))
+	for _, t := range paginatedTxs {
+		budget := r.budgets[t.BudgetID]
+		wallet := r.wallets[t.WalletID]
+		dtos = append(dtos, domain.TransactionDTO{
+			ID:            t.ID,
+			Date:          t.Date,
+			Description:   t.Description,
+			AmountInCents: t.AmountInCents,
+			Type:          t.Type,
+			BudgetName:    budget.Name,
+			WalletName:    wallet.Name,
+			IsPending:     t.IsPending,
+		})
+	}
+
+	return dtos, nil
 }
 
-func (r *Repository) DeleteTransactionAndUpdateBalance(id int) error {
+func (r *Repository) DeleteTransaction(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
