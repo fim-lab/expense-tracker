@@ -83,6 +83,44 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(transaction)
 }
 
+func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+	transactionIDStr := chi.URLParam(r, "id")
+	if transactionIDStr == "" {
+		http.Error(w, "Missing transaction ID", http.StatusBadRequest)
+		return
+	}
+
+	transactionID, err := strconv.Atoi(transactionIDStr)
+	if err != nil {
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
+	}
+
+	var transaction domain.Transaction
+	err = json.NewDecoder(r.Body).Decode(&transaction)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	transaction.ID = transactionID
+	transaction.UserID = userID
+
+	err = h.service.UpdateTransaction(userID, transaction)
+	if err != nil {
+		if err == domain.ErrUnauthorized {
+			http.Error(w, "Unauthorized", http.StatusForbidden)
+			return
+		}
+		http.Error(w, "Error updating transaction", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(transaction)
+}
+
 func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(int)
 	transactionIDStr := chi.URLParam(r, "id")
