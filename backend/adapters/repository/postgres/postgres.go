@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -165,12 +166,40 @@ func (r *Repository) DeleteWallet(id int) error {
 
 // --- Transaction Methods ---
 
-func (r *Repository) SaveTransaction(t domain.Transaction) error {
+func (r *Repository) SaveTransactionAndUpdateBalance(t domain.Transaction) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not start transaction: %w", err)
+	}
+	defer tx.Rollback()
 	tags, _ := json.Marshal(t.Tags)
+
 	query := `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err := r.db.Exec(query, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
-	return err
+	_, err = tx.Exec(query, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
+	if err != nil {
+		return fmt.Errorf("failed to insert transaction: %w", err)
+	}
+	adjustment := t.AmountInCents
+	if t.Type == domain.Expense {
+		adjustment = -t.AmountInCents
+	}
+
+	queryBudget := `
+		UPDATE budgets 
+		SET balance_cents = COALESCE(balance_cents, 0) + $1 
+		WHERE id = $2 AND user_id = $3
+	`
+	_, err = tx.Exec(queryBudget, adjustment, t.BudgetID, t.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update budget balance: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Repository) UpdateTransaction(t domain.Transaction) error {
@@ -238,16 +267,50 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 	return txs, nil
 }
 
-func (r *Repository) DeleteTransaction(id int) error {
+func (r *Repository) DeleteTransactionAndUpdateBalance(id int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var amount int
+	var tType domain.TransactionType
+	var budgetID int
+	queryFetch := `SELECT amount_cents, type, budget_id FROM transactions WHERE id = $1`
+	err = tx.QueryRow(queryFetch, id).Scan(&amount, &tType, &budgetID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.ErrTransactionNotFound
+		}
+		return err
+	}
+
+	adjustment := -amount
+	if tType == domain.Expense {
+		adjustment = amount
+	}
+
+	_, err = tx.Exec(`DELETE FROM transactions WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+
 	result, err := r.db.Exec("DELETE FROM transactions WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
+
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
 		return domain.ErrTransactionNotFound
 	}
-	return nil
+	queryBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
+	_, err = tx.Exec(queryBudget, adjustment, budgetID)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // --- Session Methods ---

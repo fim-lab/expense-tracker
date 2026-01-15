@@ -70,11 +70,11 @@ type ExpenseRepository interface {
 	FindDepotsByUser(userID int) ([]domain.Depot, error)
 	DeleteDepot(id int) error
 
-	SaveTransaction(t domain.Transaction) error
+	SaveTransactionAndUpdateBalance(t domain.Transaction) error
 	GetTransactionByID(id int) (domain.Transaction, error)
 	GetTransactionCount(userId int) (int, error)
 	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error)
-	DeleteTransaction(id int) error
+	DeleteTransactionAndUpdateBalance(id int) error
 
 	SaveStock(s domain.Stock) error
 	GetStockByID(id int) (domain.Stock, error)

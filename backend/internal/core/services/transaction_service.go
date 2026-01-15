@@ -25,7 +25,7 @@ func (s *transactionService) CreateTransaction(userID int, t domain.Transaction)
 		return domain.ErrInvalidAmount
 	}
 
-	return s.repo.SaveTransaction(t)
+	return s.repo.SaveTransactionAndUpdateBalance(t)
 }
 
 func (s *transactionService) GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
@@ -75,5 +75,5 @@ func (s *transactionService) DeleteTransaction(userID int, id int) error {
 	if err != nil || existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
-	return s.repo.DeleteTransaction(id)
+	return s.repo.DeleteTransactionAndUpdateBalance(id)
 }

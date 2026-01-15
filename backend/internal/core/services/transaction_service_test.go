@@ -19,7 +19,7 @@ func TestTransactionOwnership(t *testing.T) {
 		AmountInCents: 500,
 		Date:          time.Now(),
 	}
-	repo.SaveTransaction(tx)
+	repo.SaveTransactionAndUpdateBalance(tx)
 
 	t.Run("User 3 cannot delete User 2's transaction", func(t *testing.T) {
 		tx, err := svc.GetTransactions(2, 2, 0)
@@ -76,7 +76,7 @@ func TestGetTransactions_PaginationAndMapping(t *testing.T) {
 		{Date: now, BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: 99},
 	}
 	for _, tx := range txs {
-		repo.SaveTransaction(tx)
+		repo.SaveTransactionAndUpdateBalance(tx)
 	}
 
 	t.Run("Verify Sorting and DTO Mapping", func(t *testing.T) {

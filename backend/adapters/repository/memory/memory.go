@@ -110,13 +110,24 @@ func (r *Repository) SaveUser(u domain.User) error {
 
 // --- Transaction Methods ---
 
-func (r *Repository) SaveTransaction(t domain.Transaction) error {
+func (r *Repository) SaveTransactionAndUpdateBalance(t domain.Transaction) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if t.ID == 0 {
 		t.ID = r.nextID()
 	}
 	r.transactions[t.ID] = t
+
+	budget, ok := r.budgets[t.BudgetID]
+	if ok {
+		adjustment := t.AmountInCents
+		if t.Type == domain.Expense {
+			adjustment = -t.AmountInCents
+		}
+		budget.BalanceCents += adjustment
+		r.budgets[t.BudgetID] = budget
+	}
+
 	return nil
 }
 
@@ -172,9 +183,26 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 	return res[start:end], nil
 }
 
-func (r *Repository) DeleteTransaction(id int) error {
+func (r *Repository) DeleteTransactionAndUpdateBalance(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	tx, exists := r.transactions[id]
+	if !exists {
+		return domain.ErrTransactionNotFound
+	}
+
+	adjustment := -tx.AmountInCents
+	if tx.Type == domain.Expense {
+		adjustment = tx.AmountInCents
+	}
+
+	budget, ok := r.budgets[tx.BudgetID]
+	if ok {
+		budget.BalanceCents += adjustment
+		r.budgets[tx.BudgetID] = budget
+	}
+
 	delete(r.transactions, id)
 	return nil
 }
@@ -286,7 +314,7 @@ func (r *Repository) DeleteWallet(id int) error {
 	return nil
 }
 
-// --- Wallet Methods ---
+// --- Depot Methods ---
 
 func (r *Repository) SaveDepot(d domain.Depot) error {
 	r.mu.Lock()
