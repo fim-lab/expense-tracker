@@ -21,7 +21,9 @@ jobs:
           go-version: "1.23"
 
       - name: Run Unit Tests
-        run: go test ./...
+        run: |
+          cd backend
+          go test ./...
 
       - name: Trigger Render Deployment
         if: success()
