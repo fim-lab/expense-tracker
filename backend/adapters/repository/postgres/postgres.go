@@ -132,7 +132,7 @@ func (r *Repository) GetWalletByID(id int) (domain.Wallet, error) {
 }
 
 func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
-	query := `SELECT id, user_id, name, COALESCE(balance_cents, 0) as balance_cents FROM wallets WHERE user_id = $1`
+	query := `SELECT id, user_id, name, balance_cents FROM wallets WHERE user_id = $1`
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -178,7 +178,7 @@ func (r *Repository) SaveTransaction(t domain.Transaction) error {
 
 	queryBudget := `
 		UPDATE budgets 
-		SET balance_cents = COALESCE(balance_cents, 0) + $1 
+		SET balance_cents = balance_cents + $1 
 		WHERE id = $2 AND user_id = $3
 	`
 	_, err = tx.Exec(queryBudget, adjustment, t.BudgetID, t.UserID)
@@ -188,7 +188,7 @@ func (r *Repository) SaveTransaction(t domain.Transaction) error {
 
 	queryWallet := `
 		UPDATE wallets
-		SET balance_cents = COALESCE(balance_cents, 0) + $1
+		SET balance_cents = balance_cents + $1
 		WHERE id = $2 AND user_id = $3
 	`
 	_, err = tx.Exec(queryWallet, adjustment, t.WalletID, t.UserID)
@@ -225,13 +225,13 @@ func (r *Repository) UpdateTransaction(t domain.Transaction) error {
 		oldAdjustment = -oldT.AmountInCents
 	}
 
-	queryRevertBudget := `UPDATE budgets SET balance_cents = COALESCE(balance_cents, 0) + $1 WHERE id = $2`
+	queryRevertBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
 	_, err = tx.Exec(queryRevertBudget, oldAdjustment, oldT.BudgetID)
 	if err != nil {
 		return fmt.Errorf("failed to revert budget balance: %w", err)
 	}
 
-	queryRevertWallet := `UPDATE wallets SET balance_cents = COALESCE(balance_cents, 0) + $1 WHERE id = $2`
+	queryRevertWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2`
 	_, err = tx.Exec(queryRevertWallet, oldAdjustment, oldT.WalletID)
 	if err != nil {
 		return fmt.Errorf("failed to revert wallet balance: %w", err)
@@ -252,13 +252,13 @@ func (r *Repository) UpdateTransaction(t domain.Transaction) error {
 		newAdjustment = -t.AmountInCents
 	}
 
-	queryApplyBudget := `UPDATE budgets SET balance_cents = COALESCE(balance_cents, 0) + $1 WHERE id = $2`
+	queryApplyBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
 	_, err = tx.Exec(queryApplyBudget, newAdjustment, t.BudgetID)
 	if err != nil {
 		return fmt.Errorf("failed to apply new budget balance: %w", err)
 	}
 
-	queryApplyWallet := `UPDATE wallets SET balance_cents = COALESCE(balance_cents, 0) + $1 WHERE id = $2`
+	queryApplyWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2`
 	_, err = tx.Exec(queryApplyWallet, newAdjustment, t.WalletID)
 	if err != nil {
 		return fmt.Errorf("failed to apply new wallet balance: %w", err)
@@ -348,13 +348,13 @@ func (r *Repository) DeleteTransaction(id int) error {
 		adjustment = amount
 	}
 
-	queryBudget := `UPDATE budgets SET balance_cents = COALESCE(balance_cents, 0) + $1 WHERE id = $2 AND user_id = $3`
+	queryBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
 	_, err = tx.Exec(queryBudget, adjustment, budgetID, userID)
 	if err != nil {
 		return err
 	}
 
-	queryWallet := `UPDATE wallets SET balance_cents = COALESCE(balance_cents, 0) + $1 WHERE id = $2 AND user_id = $3`
+	queryWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
 	_, err = tx.Exec(queryWallet, adjustment, walletID, userID)
 	if err != nil {
 		return err
