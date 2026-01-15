@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -78,7 +79,7 @@ func (r *Repository) GetBudgetByID(id int) (domain.Budget, error) {
 }
 
 func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
-	rows, err := r.db.Query("SELECT id, user_id, name, limit_cents FROM budgets WHERE user_id = $1", userID)
+	rows, err := r.db.Query("SELECT id, user_id, name, limit_cents, balance_cents FROM budgets WHERE user_id = $1 ORDER BY id ASC", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
 	var res []domain.Budget
 	for rows.Next() {
 		var b domain.Budget
-		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents); err != nil {
+		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &b.BalanceCents); err != nil {
 			return nil, err
 		}
 		res = append(res, b)
@@ -131,16 +132,7 @@ func (r *Repository) GetWalletByID(id int) (domain.Wallet, error) {
 }
 
 func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
-	query := `
-		SELECT w.id, w.user_id, w.name, 
-		COALESCE(SUM(CASE WHEN t.type = 'INCOME' THEN t.amount_in_cents 
-		                  WHEN t.type = 'EXPENSE' THEN -t.amount_in_cents 
-		                  ELSE 0 END), 0) as balance
-		FROM wallets w
-		LEFT JOIN transactions t ON w.id = t.wallet_id
-		WHERE w.user_id = $1
-		GROUP BY w.id, w.user_id, w.name`
-
+	query := `SELECT id, user_id, name, balance_cents FROM wallets WHERE user_id = $1 ORDER BY id ASC`
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -150,7 +142,7 @@ func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
 	var res []domain.Wallet
 	for rows.Next() {
 		var w domain.Wallet
-		if err := rows.Scan(&w.ID, &w.UserID, &w.Name, &w.Balance); err != nil {
+		if err := rows.Scan(&w.ID, &w.UserID, &w.Name, &w.BalanceCents); err != nil {
 			return nil, err
 		}
 		res = append(res, w)
@@ -166,21 +158,113 @@ func (r *Repository) DeleteWallet(id int) error {
 // --- Transaction Methods ---
 
 func (r *Repository) SaveTransaction(t domain.Transaction) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not start transaction: %w", err)
+	}
+	defer tx.Rollback()
 	tags, _ := json.Marshal(t.Tags)
+
 	query := `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err := r.db.Exec(query, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
-	return err
+	_, err = tx.Exec(query, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
+	if err != nil {
+		return fmt.Errorf("failed to insert transaction: %w", err)
+	}
+	adjustment := t.AmountInCents
+	if t.Type == domain.Expense {
+		adjustment = -t.AmountInCents
+	}
+
+	queryBudget := `
+		UPDATE budgets 
+		SET balance_cents = balance_cents + $1 
+		WHERE id = $2 AND user_id = $3
+	`
+	_, err = tx.Exec(queryBudget, adjustment, t.BudgetID, t.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update budget balance: %w", err)
+	}
+
+	queryWallet := `
+		UPDATE wallets
+		SET balance_cents = balance_cents + $1
+		WHERE id = $2 AND user_id = $3
+	`
+	_, err = tx.Exec(queryWallet, adjustment, t.WalletID, t.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update wallet balance: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Repository) UpdateTransaction(t domain.Transaction) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	var oldT domain.Transaction
+	queryFetch := `SELECT amount_in_cents, type, budget_id, wallet_id FROM transactions WHERE id = $1 AND user_id = $2`
+	err = tx.QueryRow(queryFetch, t.ID, t.UserID).Scan(&oldT.AmountInCents, &oldT.Type, &oldT.BudgetID, &oldT.WalletID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.ErrTransactionNotFound
+		}
+		return fmt.Errorf("could not find original transaction: %w", err)
+	}
+
+	oldAdjustment := oldT.AmountInCents
+	if oldT.Type == domain.Income {
+		oldAdjustment = -oldT.AmountInCents
+	}
+
+	queryRevertBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
+	_, err = tx.Exec(queryRevertBudget, oldAdjustment, oldT.BudgetID)
+	if err != nil {
+		return fmt.Errorf("failed to revert budget balance: %w", err)
+	}
+
+	queryRevertWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2`
+	_, err = tx.Exec(queryRevertWallet, oldAdjustment, oldT.WalletID)
+	if err != nil {
+		return fmt.Errorf("failed to revert wallet balance: %w", err)
+	}
+
 	tags, _ := json.Marshal(t.Tags)
 	query := `
 		UPDATE transactions
 		SET date = $2, budget_id = $3, wallet_id = $4, description = $5, amount_in_cents = $6, type = $7, is_pending = $8, is_debt = $9, tags = $10
-	    WHERE id = $1`
-	_, err := r.db.Exec(query, t.ID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
-	return err
+	    WHERE id = $1 AND user_id = $11`
+	_, err = tx.Exec(query, t.ID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags, t.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update transaction record: %w", err)
+	}
+
+	newAdjustment := t.AmountInCents
+	if t.Type == domain.Expense {
+		newAdjustment = -t.AmountInCents
+	}
+
+	queryApplyBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
+	_, err = tx.Exec(queryApplyBudget, newAdjustment, t.BudgetID)
+	if err != nil {
+		return fmt.Errorf("failed to apply new budget balance: %w", err)
+	}
+
+	queryApplyWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2`
+	_, err = tx.Exec(queryApplyWallet, newAdjustment, t.WalletID)
+	if err != nil {
+		return fmt.Errorf("failed to apply new wallet balance: %w", err)
+	}
+
+	return tx.Commit()
 }
 
 func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
@@ -211,12 +295,14 @@ func (r *Repository) GetTransactionCount(userID int) (int, error) {
 	return count, nil
 }
 
-func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {
+func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
 	query := `
-		SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 
-		FROM transactions
-		WHERE user_id = $1
-		ORDER BY date DESC, id DESC
+		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, b.name as budget_name, w.name as wallet_name
+		FROM transactions t
+		LEFT JOIN budgets b ON t.budget_id = b.id
+		LEFT JOIN wallets w ON t.wallet_id = w.id
+		WHERE t.user_id = $1
+		ORDER BY t.date DESC, t.id DESC
 		LIMIT $2 OFFSET $3`
 	rows, err := r.db.Query(query, userID, limit, offset)
 	if err != nil {
@@ -224,30 +310,67 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 	}
 	defer rows.Close()
 
-	var txs []domain.Transaction
+	var txs []domain.TransactionDTO
 	for rows.Next() {
-		var t domain.Transaction
-		var tags []byte
-		err := rows.Scan(&t.ID, &t.UserID, &t.Date, &t.BudgetID, &t.WalletID, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.IsDebt, &tags)
+		var t domain.TransactionDTO
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.BudgetName, &t.WalletName)
 		if err != nil {
 			return nil, err
 		}
-		json.Unmarshal(tags, &t.Tags)
 		txs = append(txs, t)
 	}
 	return txs, nil
 }
 
 func (r *Repository) DeleteTransaction(id int) error {
-	result, err := r.db.Exec("DELETE FROM transactions WHERE id = $1", id)
+	tx, err := r.db.Begin()
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	var amount int
+	var tType domain.TransactionType
+	var budgetID int
+	var walletID int
+	var userID int
+	queryFetch := `SELECT amount_in_cents, type, budget_id, wallet_id, user_id FROM transactions WHERE id = $1`
+	err = tx.QueryRow(queryFetch, id).Scan(&amount, &tType, &budgetID, &walletID, &userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.ErrTransactionNotFound
+		}
+		return err
+	}
+
+	adjustment := -amount
+	if tType == domain.Expense {
+		adjustment = amount
+	}
+
+	queryBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
+	_, err = tx.Exec(queryBudget, adjustment, budgetID, userID)
+	if err != nil {
+		return err
+	}
+
+	queryWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
+	_, err = tx.Exec(queryWallet, adjustment, walletID, userID)
+	if err != nil {
+		return err
+	}
+
+	result, err := tx.Exec("DELETE FROM transactions WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
 		return domain.ErrTransactionNotFound
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 // --- Session Methods ---

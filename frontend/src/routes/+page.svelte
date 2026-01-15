@@ -1,15 +1,25 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
+	import BudgetCard from '$lib/components/BudgetCard.svelte';
+	import WalletCard from '$lib/components/WalletCard.svelte';
 
 	const totalPages = $derived(Math.ceil(page.data.total / page.data.limit));
+
+	$effect(() => {
+		const { total, limit, page: currentPage } = page.data;
+		const newTotalPages = Math.ceil(total / limit) || 1;
+		if (currentPage > newTotalPages) {
+			goto(`/?page=${newTotalPages}`, { invalidateAll: true, replaceState: true });
+		}
+	});
 
 	async function deleteTransaction(id: number) {
 		if (!confirm('Are you sure you want to delete this transaction?')) return;
 
-		const res = await fetch(`/api/transactions?id=${id}`, {
+		const res = await fetch(`/api/transactions/${id}`, {
 			method: 'DELETE'
 		});
 
@@ -25,11 +35,13 @@
 	<aside>
 		<article>
 			<header><strong>Wallets</strong></header>
-			<ul>
-				{#each page.data.wallets as wallet}
-					<li>{wallet.name}</li>
-				{/each}
-			</ul>
+			{#each page.data.wallets as wallet}
+				<WalletCard {wallet} />
+			{/each}
+			<header><strong>Budgets</strong></header>
+			{#each page.data.budgets as budget}
+				<BudgetCard {budget} />
+			{/each}
 		</article>
 	</aside>
 

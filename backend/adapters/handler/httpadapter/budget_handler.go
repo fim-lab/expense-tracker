@@ -1,4 +1,4 @@
-package http
+package httpadapter
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	"github.com/go-chi/chi/v5"
 )
 
 type BudgetHandler struct {
@@ -18,26 +19,13 @@ func NewBudgetHandler(service *ports.BudgetService) *BudgetHandler {
 	return &BudgetHandler{service: *service}
 }
 
-func (h *BudgetHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *BudgetHandler) GetBudgets(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
 		return
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		h.getBudgetsHandler(w, r, userID)
-	case http.MethodPost:
-		h.createBudgetHandler(w, r, userID)
-	case http.MethodDelete:
-		h.deleteBudgetHandler(w, r, userID)
-	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *BudgetHandler) getBudgetsHandler(w http.ResponseWriter, r *http.Request, userID int) {
 	budgets, err := h.service.GetBudgets(userID)
 	if err != nil {
 		log.Printf("Error fetching budgets: %v", err)
@@ -50,7 +38,13 @@ func (h *BudgetHandler) getBudgetsHandler(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(budgets)
 }
 
-func (h *BudgetHandler) createBudgetHandler(w http.ResponseWriter, r *http.Request, userID int) {
+func (h *BudgetHandler) CreateBudget(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
 	var budget domain.Budget
 
 	err := json.NewDecoder(r.Body).Decode(&budget)
@@ -74,8 +68,14 @@ func (h *BudgetHandler) createBudgetHandler(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(budget)
 }
 
-func (h *BudgetHandler) deleteBudgetHandler(w http.ResponseWriter, r *http.Request, userID int) {
-	budgetID := r.URL.Query().Get("id")
+func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	budgetID := chi.URLParam(r, "id")
 	if budgetID == "" {
 		http.Error(w, "Missing budget ID", http.StatusBadRequest)
 		return

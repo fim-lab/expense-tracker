@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log"
 	"strings"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
@@ -27,6 +28,21 @@ func (s *walletService) CreateWallet(userID int, b domain.Wallet) error {
 
 func (s *walletService) GetWallets(userID int) ([]domain.Wallet, error) {
 	return s.repo.FindWalletsByUser(userID)
+}
+
+func (s *walletService) GetTotalOfWallets(userID int) (int, error) {
+	wallets, err := s.repo.FindWalletsByUser(userID)
+	if err != nil {
+		return 0, err
+	}
+	log.Print("LOG")
+
+	var totalBalance int
+	for _, w := range wallets {
+		totalBalance += w.BalanceCents
+	}
+
+	return totalBalance, nil
 }
 
 // TODO: func (s *walletService) UpdateWallets(...

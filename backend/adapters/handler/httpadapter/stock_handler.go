@@ -1,4 +1,4 @@
-package http
+package httpadapter
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	"github.com/go-chi/chi/v5"
 )
 
 type StockHandler struct {
@@ -18,26 +19,13 @@ func NewStockHandler(service *ports.StockService) *StockHandler {
 	return &StockHandler{service: *service}
 }
 
-func (h *StockHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *StockHandler) GetStocks(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		h.getStocksHandler(w, userID)
-	case http.MethodPost:
-		h.createStockHandler(w, r, userID)
-	case http.MethodDelete:
-		h.deleteStockHandler(w, r, userID)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *StockHandler) getStocksHandler(w http.ResponseWriter, userID int) {
 	stocks, err := h.service.GetStocks(userID)
 	if err != nil {
 		log.Printf("Error fetching stocks: %v", err)
@@ -49,7 +37,13 @@ func (h *StockHandler) getStocksHandler(w http.ResponseWriter, userID int) {
 	json.NewEncoder(w).Encode(stocks)
 }
 
-func (h *StockHandler) createStockHandler(w http.ResponseWriter, r *http.Request, userID int) {
+func (h *StockHandler) CreateStock(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var stock domain.Stock
 	if err := json.NewDecoder(r.Body).Decode(&stock); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -67,8 +61,14 @@ func (h *StockHandler) createStockHandler(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(stock)
 }
 
-func (h *StockHandler) deleteStockHandler(w http.ResponseWriter, r *http.Request, userID int) {
-	stockID := r.URL.Query().Get("id")
+func (h *StockHandler) DeleteStock(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	stockID := chi.URLParam(r, "id")
 	if stockID == "" {
 		http.Error(w, "Missing stock ID", http.StatusBadRequest)
 		return
@@ -82,8 +82,8 @@ func (h *StockHandler) deleteStockHandler(w http.ResponseWriter, r *http.Request
 
 	err = h.service.DeleteStock(userID, id)
 	if err != nil {
-		log.Printf("Error deleting wallet: %v", err)
-		http.Error(w, "Error deleting wallet", http.StatusInternalServerError)
+		log.Printf("Error deleting stock: %v", err)
+		http.Error(w, "Error deleting stock", http.StatusInternalServerError)
 		return
 	}
 

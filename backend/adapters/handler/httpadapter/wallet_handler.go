@@ -1,4 +1,4 @@
-package http
+package httpadapter
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	"github.com/go-chi/chi/v5"
 )
 
 type WalletHandler struct {
@@ -18,26 +19,13 @@ func NewWalletHandler(service *ports.WalletService) *WalletHandler {
 	return &WalletHandler{service: *service}
 }
 
-func (h *WalletHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *WalletHandler) GetWallets(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
 		return
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		h.getWalletsHandler(w, userID)
-	case http.MethodPost:
-		h.createWalletHandler(w, r, userID)
-	case http.MethodDelete:
-		h.deleteWalletHandler(w, r, userID)
-	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *WalletHandler) getWalletsHandler(w http.ResponseWriter, userID int) {
 	wallets, err := h.service.GetWallets(userID)
 	if err != nil {
 		log.Printf("Error fetching wallets: %v", err)
@@ -50,7 +38,13 @@ func (h *WalletHandler) getWalletsHandler(w http.ResponseWriter, userID int) {
 	json.NewEncoder(w).Encode(wallets)
 }
 
-func (h *WalletHandler) createWalletHandler(w http.ResponseWriter, r *http.Request, userID int) {
+func (h *WalletHandler) CreateWallet(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
 	var wallet domain.Wallet
 
 	err := json.NewDecoder(r.Body).Decode(&wallet)
@@ -74,8 +68,14 @@ func (h *WalletHandler) createWalletHandler(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(wallet)
 }
 
-func (h *WalletHandler) deleteWalletHandler(w http.ResponseWriter, r *http.Request, userID int) {
-	walletID := r.URL.Query().Get("id")
+func (h *WalletHandler) DeleteWallet(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	walletID := chi.URLParam(r, "id")
 	if walletID == "" {
 		http.Error(w, "Missing wallet ID", http.StatusBadRequest)
 		return

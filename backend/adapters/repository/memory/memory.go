@@ -117,6 +117,27 @@ func (r *Repository) SaveTransaction(t domain.Transaction) error {
 		t.ID = r.nextID()
 	}
 	r.transactions[t.ID] = t
+
+	budget, ok := r.budgets[t.BudgetID]
+	if ok {
+		adjustment := t.AmountInCents
+		if t.Type == domain.Expense {
+			adjustment = -t.AmountInCents
+		}
+		budget.BalanceCents += adjustment
+		r.budgets[t.BudgetID] = budget
+	}
+
+	wallet, ok := r.wallets[t.WalletID]
+	if ok {
+		adjustment := t.AmountInCents
+		if t.Type == domain.Expense {
+			adjustment = -t.AmountInCents
+		}
+		wallet.BalanceCents += adjustment
+		r.wallets[t.WalletID] = wallet
+	}
+
 	return nil
 }
 
@@ -142,7 +163,7 @@ func (r *Repository) GetTransactionCount(userID int) (int, error) {
 	return len(res), nil
 }
 
-func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error) {
+func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var res []domain.Transaction
@@ -161,7 +182,7 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 
 	start := offset
 	if start >= len(res) {
-		return []domain.Transaction{}, nil
+		return []domain.TransactionDTO{}, nil
 	}
 
 	end := offset + limit
@@ -169,13 +190,94 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 		end = len(res)
 	}
 
-	return res[start:end], nil
+	paginatedTxs := res[start:end]
+
+	dtos := make([]domain.TransactionDTO, 0, len(paginatedTxs))
+	for _, t := range paginatedTxs {
+		budget := r.budgets[t.BudgetID]
+		wallet := r.wallets[t.WalletID]
+		dtos = append(dtos, domain.TransactionDTO{
+			ID:            t.ID,
+			Date:          t.Date,
+			Description:   t.Description,
+			AmountInCents: t.AmountInCents,
+			Type:          t.Type,
+			BudgetName:    budget.Name,
+			WalletName:    wallet.Name,
+			IsPending:     t.IsPending,
+		})
+	}
+
+	return dtos, nil
 }
 
 func (r *Repository) DeleteTransaction(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	tx, exists := r.transactions[id]
+	if !exists {
+		return domain.ErrTransactionNotFound
+	}
+
+	adjustment := -tx.AmountInCents
+	if tx.Type == domain.Expense {
+		adjustment = tx.AmountInCents
+	}
+
+	budget, ok := r.budgets[tx.BudgetID]
+	if ok {
+		budget.BalanceCents += adjustment
+		r.budgets[tx.BudgetID] = budget
+	}
+
+	wallet, ok := r.wallets[tx.WalletID]
+	if ok {
+		wallet.BalanceCents += adjustment
+		r.wallets[tx.WalletID] = wallet
+	}
+
 	delete(r.transactions, id)
+	return nil
+}
+
+func (r *Repository) UpdateTransaction(t domain.Transaction) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	oldT, ok := r.transactions[t.ID]
+	if !ok {
+		return domain.ErrTransactionNotFound
+	}
+
+	oldAdjustment := oldT.AmountInCents
+	if oldT.Type == domain.Income {
+		oldAdjustment = -oldT.AmountInCents
+	}
+	if budget, ok := r.budgets[oldT.BudgetID]; ok {
+		budget.BalanceCents += oldAdjustment
+		r.budgets[oldT.BudgetID] = budget
+	}
+	if wallet, ok := r.wallets[oldT.WalletID]; ok {
+		wallet.BalanceCents += oldAdjustment
+		r.wallets[oldT.WalletID] = wallet
+	}
+
+	r.transactions[t.ID] = t
+
+	newAdjustment := t.AmountInCents
+	if t.Type == domain.Expense {
+		newAdjustment = -t.AmountInCents
+	}
+	if budget, ok := r.budgets[t.BudgetID]; ok {
+		budget.BalanceCents += newAdjustment
+		r.budgets[t.BudgetID] = budget
+	}
+	if wallet, ok := r.wallets[t.WalletID]; ok {
+		wallet.BalanceCents += newAdjustment
+		r.wallets[t.WalletID] = wallet
+	}
+
 	return nil
 }
 
@@ -210,6 +312,9 @@ func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
 			res = append(res, b)
 		}
 	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].ID < res[j].ID
+	})
 	return res, nil
 }
 
@@ -273,20 +378,12 @@ func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
 	var userWallets []domain.Wallet
 	for _, w := range r.wallets {
 		if w.UserID == userID {
-			var balance int
-			for _, t := range r.transactions {
-				if t.WalletID == w.ID {
-					if t.Type == domain.Income {
-						balance += t.AmountInCents
-					} else {
-						balance -= t.AmountInCents
-					}
-				}
-			}
-			w.Balance = balance
 			userWallets = append(userWallets, w)
 		}
 	}
+	sort.Slice(userWallets, func(i, j int) bool {
+		return userWallets[i].ID < userWallets[j].ID
+	})
 	return userWallets, nil
 }
 
@@ -297,7 +394,7 @@ func (r *Repository) DeleteWallet(id int) error {
 	return nil
 }
 
-// --- Wallet Methods ---
+// --- Depot Methods ---
 
 func (r *Repository) SaveDepot(d domain.Depot) error {
 	r.mu.Lock()

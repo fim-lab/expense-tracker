@@ -7,18 +7,21 @@ type TransactionService interface {
 	CreateTransaction(userID int, t domain.Transaction) error
 	GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
 	GetTransactionCount(userID int) (int, error)
+	UpdateTransaction(userID int, t domain.Transaction) error
 	DeleteTransaction(userID int, id int) error
 }
 
 type BudgetService interface {
 	CreateBudget(userID int, b domain.Budget) error
 	GetBudgets(userID int) ([]domain.Budget, error)
+	GetTotalOfBudgets(userID int) (int, error)
 	DeleteBudget(userID int, id int) error
 }
 
 type WalletService interface {
 	CreateWallet(userID int, w domain.Wallet) error
 	GetWallets(userID int) ([]domain.Wallet, error)
+	GetTotalOfWallets(userID int) (int, error)
 	DeleteWallet(userID int, id int) error
 }
 
@@ -71,7 +74,8 @@ type ExpenseRepository interface {
 	SaveTransaction(t domain.Transaction) error
 	GetTransactionByID(id int) (domain.Transaction, error)
 	GetTransactionCount(userId int) (int, error)
-	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.Transaction, error)
+	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
+	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
 
 	SaveStock(s domain.Stock) error

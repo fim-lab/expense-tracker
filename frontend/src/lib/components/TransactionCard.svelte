@@ -1,13 +1,7 @@
 <script lang="ts">
+	import { formatCurrency } from '$lib/utils';
+
 	let { transaction, ondelete } = $props();
-
-	const formatCurrency = (cents: number) => {
-		return (cents / 100).toLocaleString('de-DE', {
-			style: 'currency',
-			currency: 'EUR'
-		});
-	};
-
 	const isExpense = $derived(transaction.type === 'EXPENSE');
 </script>
 

@@ -1,4 +1,4 @@
-package http
+package httpadapter
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	"github.com/go-chi/chi/v5"
 )
 
 type DepotHandler struct {
@@ -18,26 +19,13 @@ func NewDepotHandler(service *ports.DepotService) *DepotHandler {
 	return &DepotHandler{service: *service}
 }
 
-func (h *DepotHandler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *DepotHandler) GetDepots(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
 		return
 	}
 
-	switch r.Method {
-	case http.MethodGet:
-		h.getDepotsHandler(w, userID)
-	case http.MethodPost:
-		h.createDepotHandler(w, r, userID)
-	case http.MethodDelete:
-		h.deleteDepotHandler(w, r, userID)
-	default:
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (h *DepotHandler) getDepotsHandler(w http.ResponseWriter, userID int) {
 	depots, err := h.service.GetDepots(userID)
 	if err != nil {
 		log.Printf("Error fetching depots: %v", err)
@@ -50,7 +38,13 @@ func (h *DepotHandler) getDepotsHandler(w http.ResponseWriter, userID int) {
 	json.NewEncoder(w).Encode(depots)
 }
 
-func (h *DepotHandler) createDepotHandler(w http.ResponseWriter, r *http.Request, userID int) {
+func (h *DepotHandler) CreateDepot(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
 	var depot domain.Depot
 
 	err := json.NewDecoder(r.Body).Decode(&depot)
@@ -74,8 +68,14 @@ func (h *DepotHandler) createDepotHandler(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(depot)
 }
 
-func (h *DepotHandler) deleteDepotHandler(w http.ResponseWriter, r *http.Request, userID int) {
-	depotID := r.URL.Query().Get("id")
+func (h *DepotHandler) DeleteDepot(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	depotID := chi.URLParam(r, "id")
 	if depotID == "" {
 		http.Error(w, "Missing depot ID", http.StatusBadRequest)
 		return
