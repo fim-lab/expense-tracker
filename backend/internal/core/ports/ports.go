@@ -7,6 +7,7 @@ type TransactionService interface {
 	CreateTransaction(userID int, t domain.Transaction) error
 	GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
 	GetTransactionCount(userID int) (int, error)
+	UpdateTransaction(userID int, t domain.Transaction) error
 	DeleteTransaction(userID int, id int) error
 }
 
@@ -74,6 +75,7 @@ type ExpenseRepository interface {
 	GetTransactionByID(id int) (domain.Transaction, error)
 	GetTransactionCount(userId int) (int, error)
 	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
+	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
 
 	SaveStock(s domain.Stock) error

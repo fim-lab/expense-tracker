@@ -128,6 +128,16 @@ func (r *Repository) SaveTransaction(t domain.Transaction) error {
 		r.budgets[t.BudgetID] = budget
 	}
 
+	wallet, ok := r.wallets[t.WalletID]
+	if ok {
+		adjustment := t.AmountInCents
+		if t.Type == domain.Expense {
+			adjustment = -t.AmountInCents
+		}
+		wallet.BalanceCents += adjustment
+		r.wallets[t.WalletID] = wallet
+	}
+
 	return nil
 }
 
@@ -221,7 +231,53 @@ func (r *Repository) DeleteTransaction(id int) error {
 		r.budgets[tx.BudgetID] = budget
 	}
 
+	wallet, ok := r.wallets[tx.WalletID]
+	if ok {
+		wallet.BalanceCents += adjustment
+		r.wallets[tx.WalletID] = wallet
+	}
+
 	delete(r.transactions, id)
+	return nil
+}
+
+func (r *Repository) UpdateTransaction(t domain.Transaction) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	oldT, ok := r.transactions[t.ID]
+	if !ok {
+		return domain.ErrTransactionNotFound
+	}
+
+	oldAdjustment := oldT.AmountInCents
+	if oldT.Type == domain.Income {
+		oldAdjustment = -oldT.AmountInCents
+	}
+	if budget, ok := r.budgets[oldT.BudgetID]; ok {
+		budget.BalanceCents += oldAdjustment
+		r.budgets[oldT.BudgetID] = budget
+	}
+	if wallet, ok := r.wallets[oldT.WalletID]; ok {
+		wallet.BalanceCents += oldAdjustment
+		r.wallets[oldT.WalletID] = wallet
+	}
+
+	r.transactions[t.ID] = t
+
+	newAdjustment := t.AmountInCents
+	if t.Type == domain.Expense {
+		newAdjustment = -t.AmountInCents
+	}
+	if budget, ok := r.budgets[t.BudgetID]; ok {
+		budget.BalanceCents += newAdjustment
+		r.budgets[t.BudgetID] = budget
+	}
+	if wallet, ok := r.wallets[t.WalletID]; ok {
+		wallet.BalanceCents += newAdjustment
+		r.wallets[t.WalletID] = wallet
+	}
+
 	return nil
 }
 

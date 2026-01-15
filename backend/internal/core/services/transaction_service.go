@@ -36,7 +36,14 @@ func (s *transactionService) GetTransactionCount(userID int) (int, error) {
 	return s.repo.GetTransactionCount(userID)
 }
 
-// TODO: UpdateTransactions
+func (s *transactionService) UpdateTransaction(userID int, t domain.Transaction) error {
+	existing, err := s.repo.GetTransactionByID(t.ID)
+	if err != nil || existing.UserID != userID {
+		return domain.ErrUnauthorized
+	}
+	t.UserID = userID
+	return s.repo.UpdateTransaction(t)
+}
 
 func (s *transactionService) DeleteTransaction(userID int, id int) error {
 	existing, err := s.repo.GetTransactionByID(id)
