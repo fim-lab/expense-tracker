@@ -322,6 +322,117 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 	return txs, nil
 }
 
+func (r *Repository) SearchTransactions(userID int, criteria domain.TransactionSearchCriteria) ([]domain.TransactionDTO, error) {
+	query := `
+		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, b.name as budget_name, w.name as wallet_name
+		FROM transactions t
+		LEFT JOIN budgets b ON t.budget_id = b.id
+		LEFT JOIN wallets w ON t.wallet_id = w.id
+	`
+	whereClause := " WHERE t.user_id = $1"
+	args := []interface{}{userID}
+	argID := 2
+
+	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
+		args = append(args, "%"+*criteria.SearchTerm+"%")
+		argID++
+	}
+	if criteria.FromDate != nil {
+		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)
+		args = append(args, *criteria.FromDate)
+		argID++
+	}
+	if criteria.UntilDate != nil {
+		whereClause += fmt.Sprintf(" AND t.date <= $%d", argID)
+		args = append(args, *criteria.UntilDate)
+		argID++
+	}
+	if criteria.BudgetID != nil {
+		whereClause += fmt.Sprintf(" AND t.budget_id = $%d", argID)
+		args = append(args, *criteria.BudgetID)
+		argID++
+	}
+	if criteria.WalletID != nil {
+		whereClause += fmt.Sprintf(" AND t.wallet_id = $%d", argID)
+		args = append(args, *criteria.WalletID)
+		argID++
+	}
+	if criteria.Type != nil {
+		whereClause += fmt.Sprintf(" AND t.type = $%d", argID)
+		args = append(args, *criteria.Type)
+		argID++
+	}
+
+	query += whereClause
+	query += " ORDER BY t.date DESC, t.id DESC"
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argID, argID+1)
+	args = append(args, criteria.PageSize, (criteria.Page-1)*criteria.PageSize)
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var txs []domain.TransactionDTO
+	for rows.Next() {
+		var t domain.TransactionDTO
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.BudgetName, &t.WalletName)
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, t)
+	}
+	return txs, nil
+}
+
+func (r *Repository) CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error) {
+	query := `SELECT COUNT(t.id) FROM transactions t`
+	whereClause := " WHERE t.user_id = $1"
+	args := []interface{}{userID}
+	argID := 2
+
+	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
+		args = append(args, "%"+*criteria.SearchTerm+"%")
+		argID++
+	}
+	if criteria.FromDate != nil {
+		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)
+		args = append(args, *criteria.FromDate)
+		argID++
+	}
+	if criteria.UntilDate != nil {
+		whereClause += fmt.Sprintf(" AND t.date <= $%d", argID)
+		args = append(args, *criteria.UntilDate)
+		argID++
+	}
+	if criteria.BudgetID != nil {
+		whereClause += fmt.Sprintf(" AND t.budget_id = $%d", argID)
+		args = append(args, *criteria.BudgetID)
+		argID++
+	}
+	if criteria.WalletID != nil {
+		whereClause += fmt.Sprintf(" AND t.wallet_id = $%d", argID)
+		args = append(args, *criteria.WalletID)
+		argID++
+	}
+	if criteria.Type != nil {
+		whereClause += fmt.Sprintf(" AND t.type = $%d", argID)
+		args = append(args, *criteria.Type)
+		argID++
+	}
+
+	query += whereClause
+	var count int
+	err := r.db.QueryRow(query, args...).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *Repository) DeleteTransaction(id int) error {
 	tx, err := r.db.Begin()
 	if err != nil {

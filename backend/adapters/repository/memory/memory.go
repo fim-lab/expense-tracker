@@ -3,6 +3,7 @@ package memory
 import (
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -209,6 +210,125 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 	}
 
 	return dtos, nil
+}
+
+func (r *Repository) SearchTransactions(userID int, criteria domain.TransactionSearchCriteria) ([]domain.TransactionDTO, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var filtered []domain.Transaction
+	for _, t := range r.transactions {
+		if t.UserID != userID {
+			continue
+		}
+
+		if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+			term := strings.ToLower(*criteria.SearchTerm)
+			if !strings.Contains(strings.ToLower(t.Description), term) {
+				continue
+			}
+		}
+
+		if criteria.FromDate != nil && t.Date.Before(*criteria.FromDate) {
+			continue
+		}
+		if criteria.UntilDate != nil && t.Date.After(*criteria.UntilDate) {
+			continue
+		}
+
+		if criteria.BudgetID != nil && t.BudgetID != *criteria.BudgetID {
+			continue
+		}
+
+		if criteria.WalletID != nil && t.WalletID != *criteria.WalletID {
+			continue
+		}
+
+		if criteria.Type != nil && t.Type != *criteria.Type {
+			continue
+		}
+
+		filtered = append(filtered, t)
+	}
+
+	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].Date.Equal(filtered[j].Date) {
+			return filtered[i].ID > filtered[j].ID
+		}
+		return filtered[i].Date.After(filtered[j].Date)
+	})
+
+	start := (criteria.Page - 1) * criteria.PageSize
+	if start >= len(filtered) {
+		return []domain.TransactionDTO{}, nil
+	}
+
+	end := start + criteria.PageSize
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+
+	paginatedTxs := filtered[start:end]
+
+	dtos := make([]domain.TransactionDTO, 0, len(paginatedTxs))
+	for _, t := range paginatedTxs {
+		budget := r.budgets[t.BudgetID]
+		wallet := r.wallets[t.WalletID]
+		dtos = append(dtos, domain.TransactionDTO{
+			ID:            t.ID,
+			Date:          t.Date,
+			Description:   t.Description,
+			AmountInCents: t.AmountInCents,
+			Type:          t.Type,
+			BudgetName:    budget.Name,
+			WalletName:    wallet.Name,
+			IsPending:     t.IsPending,
+		})
+	}
+
+	return dtos, nil
+}
+
+func (r *Repository) CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var count int
+	for _, t := range r.transactions {
+		if t.UserID != userID {
+			continue
+		}
+
+		if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+			term := strings.ToLower(*criteria.SearchTerm)
+			if !strings.Contains(strings.ToLower(t.Description), term) {
+				continue
+			}
+		}
+
+		if criteria.FromDate != nil && t.Date.Before(*criteria.FromDate) {
+			continue
+		}
+		if criteria.UntilDate != nil && t.Date.After(*criteria.UntilDate) {
+			continue
+		}
+
+		if criteria.BudgetID != nil && t.BudgetID != *criteria.BudgetID {
+			continue
+		}
+
+		if criteria.WalletID != nil && t.WalletID != *criteria.WalletID {
+			continue
+		}
+
+		if criteria.Type != nil && t.Type != *criteria.Type {
+			continue
+		}
+
+		count++
+	}
+
+	return count, nil
 }
 
 func (r *Repository) DeleteTransaction(id int) error {
