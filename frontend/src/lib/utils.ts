@@ -1,4 +1,29 @@
-import type { Transaction, TransactionSearchCriteria } from "./types";
+import type { PaginatedTransactions, Transaction, TransactionSearchCriteria } from "./types";
+
+import { goto } from '$app/navigation';
+import { page } from '$app/state';
+
+export function updateParams(
+	updates: Partial<TransactionSearchCriteria>,
+	resetPage = true
+) {
+	const params = new URLSearchParams(page.url.searchParams);
+
+	for (const [key, value] of Object.entries(updates)) {
+		if (value === undefined || value === null || value === '') {
+			params.delete(key);
+		} else {
+			params.set(key, String(value));
+		}
+	}
+
+
+	if (resetPage) {
+		params.set('page', '1');
+	}
+
+	goto(`?${params.toString()}`, { keepFocus: true, replaceState: true });
+}
 
 export const formatCurrency = (cents: number) => {
 	return (cents / 100).toLocaleString('de-DE', {
@@ -9,7 +34,7 @@ export const formatCurrency = (cents: number) => {
 
 export async function searchTransactions(
 	criteria: TransactionSearchCriteria
-): Promise<Transaction[]> {
+): Promise<PaginatedTransactions> {
 	const params = new URLSearchParams();
 
 	if (criteria.q) {
