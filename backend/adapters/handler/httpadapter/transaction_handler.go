@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
@@ -59,6 +60,68 @@ func (h *TransactionHandler) GetTransactions(w http.ResponseWriter, r *http.Requ
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func (h *TransactionHandler) SearchTransactions(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+	query := r.URL.Query()
+
+	var criteria domain.TransactionSearchCriteria
+
+	if pageStr := query.Get("page"); pageStr != "" {
+		if page, err := strconv.Atoi(pageStr); err == nil {
+			criteria.Page = page
+		}
+	}
+	if pageSizeStr := query.Get("pageSize"); pageSizeStr != "" {
+		if pageSize, err := strconv.Atoi(pageSizeStr); err == nil {
+			criteria.PageSize = pageSize
+		}
+	}
+
+	if searchTerm := query.Get("q"); searchTerm != "" {
+		criteria.SearchTerm = &searchTerm
+	}
+
+	if fromDateStr := query.Get("from"); fromDateStr != "" {
+		if fromDate, err := time.Parse("2006-01-02", fromDateStr); err == nil {
+			criteria.FromDate = &fromDate
+		}
+	}
+
+	if untilDateStr := query.Get("until"); untilDateStr != "" {
+		if untilDate, err := time.Parse("2006-01-02", untilDateStr); err == nil {
+			criteria.UntilDate = &untilDate
+		}
+	}
+
+	if budgetIDStr := query.Get("budget_id"); budgetIDStr != "" {
+		if budgetID, err := strconv.Atoi(budgetIDStr); err == nil {
+			criteria.BudgetID = &budgetID
+		}
+	}
+
+	if walletIDStr := query.Get("wallet_id"); walletIDStr != "" {
+		if walletID, err := strconv.Atoi(walletIDStr); err == nil {
+			criteria.WalletID = &walletID
+		}
+	}
+
+	if typeStr := query.Get("type"); typeStr != "" {
+		transactionType := domain.TransactionType(typeStr)
+		if transactionType == domain.Income || transactionType == domain.Expense {
+			criteria.Type = &transactionType
+		}
+	}
+
+	result, err := h.service.Search(userID, criteria)
+	if err != nil {
+		http.Error(w, "Failed to search transactions", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }
 
 func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {

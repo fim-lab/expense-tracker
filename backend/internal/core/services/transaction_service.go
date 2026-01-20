@@ -32,6 +32,34 @@ func (s *transactionService) GetTransactions(userID int, limit int, offset int) 
 	return s.repo.FindTransactionsByUser(userID, limit, offset)
 }
 
+func (s *transactionService) Search(userID int, criteria domain.TransactionSearchCriteria) (*domain.PaginatedTransactions, error) {
+	if criteria.Page <= 0 {
+		criteria.Page = 1
+	}
+	if criteria.PageSize <= 0 {
+		criteria.PageSize = 10
+	} else if criteria.PageSize > 100 {
+		criteria.PageSize = 100
+	}
+
+	transactions, err := s.repo.SearchTransactions(userID, criteria)
+	if err != nil {
+		return nil, err
+	}
+
+	total, err := s.repo.CountSearchedTransactions(userID, criteria)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.PaginatedTransactions{
+		Transactions: transactions,
+		Total:        total,
+		Page:         criteria.Page,
+		PageSize:     criteria.PageSize,
+	}, nil
+}
+
 func (s *transactionService) GetTransactionCount(userID int) (int, error) {
 	return s.repo.GetTransactionCount(userID)
 }

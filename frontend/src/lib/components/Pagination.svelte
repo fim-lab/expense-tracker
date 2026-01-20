@@ -1,20 +1,22 @@
 <script lang="ts">
-	const props = $props();
+	import { page } from '$app/state';
+	let { ...props } = $props();
 
-	const page = $derived(props.page);
-	const totalPages = $derived(props.totalPages);
+	const pageNr = $derived(Number(page.url.searchParams.get("page")));
 
 	const delta = 1;
 
-	function createPageUrl(p: number) {
-		return `?page=${p}`;
-	}
+	const pageUrl = (p: number) => {
+		const url = new URL(page.url);
+		url.searchParams.set('page', p.toString());
+		return url.toString();
+	};
 
 	function pages() {
 		const range: (number | '…')[] = [];
 
-		const start = Math.max(1, page - delta);
-		const end = Math.min(totalPages, page + delta);
+		const start = Math.max(1, pageNr - delta);
+		const end = Math.min(props.totalPages, pageNr + delta);
 
 		if (start > 1) {
 			range.push(1);
@@ -25,9 +27,9 @@
 			range.push(i);
 		}
 
-		if (end < totalPages) {
-			if (end < totalPages - 1) range.push('…');
-			range.push(totalPages);
+		if (end < props.totalPages) {
+			if (end < props.totalPages - 1) range.push('…');
+			range.push(props.totalPages);
 		}
 
 		return range;
@@ -36,9 +38,9 @@
 
 <nav aria-label="Pagination">
 	<ul>
-		{#if page > 1}
+		{#if pageNr > 1}
 			<li>
-				<a href={createPageUrl(page - 1)} class="secondary"> ← Prev </a>
+				<a href={pageUrl(pageNr - 1)} class="secondary"> ← Prev </a>
 			</li>
 		{:else}
 			<li>
@@ -46,26 +48,25 @@
 			</li>
 		{/if}
 
-		<!-- Page numbers -->
 		{#each pages() as p}
 			<li>
 				{#if p === '…'}
 					<span aria-hidden="true">…</span>
-				{:else if p === page}
-					<a href={createPageUrl(p)} aria-current="page" style="font-weight: 600;">
+				{:else if p === pageNr}
+					<a href={pageUrl(p)} aria-current="page" style="font-weight: 600;">
 						{p}
 					</a>
 				{:else}
-					<a href={createPageUrl(p)}>
+					<a href={pageUrl(p)}>
 						{p}
 					</a>
 				{/if}
 			</li>
 		{/each}
 
-		{#if page < totalPages}
+		{#if pageNr < props.totalPages}
 			<li>
-				<a href={createPageUrl(page + 1)} class="secondary"> Next → </a>
+				<a href={pageUrl(pageNr + 1)} class="secondary"> Next → </a>
 			</li>
 		{:else}
 			<li>

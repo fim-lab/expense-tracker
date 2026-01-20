@@ -6,6 +6,7 @@ import "github.com/fim-lab/expense-tracker/internal/core/domain"
 type TransactionService interface {
 	CreateTransaction(userID int, t domain.Transaction) error
 	GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
+	Search(userID int, criteria domain.TransactionSearchCriteria) (*domain.PaginatedTransactions, error)
 	GetTransactionCount(userID int) (int, error)
 	UpdateTransaction(userID int, t domain.Transaction) error
 	DeleteTransaction(userID int, id int) error
@@ -75,6 +76,8 @@ type ExpenseRepository interface {
 	GetTransactionByID(id int) (domain.Transaction, error)
 	GetTransactionCount(userId int) (int, error)
 	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
+	SearchTransactions(userID int, criteria domain.TransactionSearchCriteria) ([]domain.TransactionDTO, error)
+	CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error)
 	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
 
