@@ -2,34 +2,45 @@ import { error, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
-	const API_URL = '/api';
-	const cookieHeader = cookies.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
+	const cookieHeader = cookies
+		.getAll()
+		.map((c) => `${c.name}=${c.value}`)
+		.join('; ');
 
-	const [walletsRes, budgetsRes, transactionRes] = await Promise.all([
-		fetch(`${API_URL}/wallets`, { headers: { Cookie: cookieHeader } }),
-		fetch(`${API_URL}/budgets`, { headers: { Cookie: cookieHeader } }),
-		fetch(`${API_URL}/transactions/${params.id}`, { headers: { Cookie: cookieHeader } })
-	]);
+	const authedApiFetch = async (path: string) => {
+		const res = await fetch(`/api${path}`, {
+			headers: { Cookie: cookieHeader }
+		});
 
-	if (walletsRes.status === 401 || budgetsRes.status === 401 || transactionRes.status === 401) {
-		throw error(401, 'Unauthorized');
-	}
+		if (res.status === 401) {
+			throw redirect(302, '/login');
+		}
 
-	if (!transactionRes.ok) {
-		throw error(transactionRes.status, 'Failed to load transaction');
+		if (!res.ok) return null;
+		return res.json();
+	};
+
+	const wallets = (await authedApiFetch('/wallets')) || [];
+	const budgets = (await authedApiFetch('/budgets')) || [];
+	const transaction = (await authedApiFetch(`/transactions/${params.id}`)) || {};
+
+	if (!transaction.ok) {
+		throw error(transaction.status, 'Failed to load transaction');
 	}
 
 	return {
-		wallets: walletsRes.ok ? await walletsRes.json() : [],
-		budgets: budgetsRes.ok ? await budgetsRes.json() : [],
-		transaction: await transactionRes.json()
+		wallets,
+		budgets,
+		transaction
 	};
 };
 
 export const actions: Actions = {
 	default: async ({ request, fetch, cookies, params }) => {
-		const API_URL = '/api';
-		const cookieHeader = cookies.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
+		const cookieHeader = cookies
+			.getAll()
+			.map((c) => `${c.name}=${c.value}`)
+			.join('; ');
 		const data = await request.formData();
 
 		const rfc3339Date = new Date(data.get('date') as string).toISOString();
@@ -43,7 +54,7 @@ export const actions: Actions = {
 			type: data.get('type')
 		};
 
-		const response = await fetch(`${API_URL}/transactions/${params.id}`, {
+		const response = await fetch(`/api/transactions/${params.id}`, {
 			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
@@ -59,8 +70,10 @@ export const actions: Actions = {
 			};
 		}
 
-        const redirectParam = new URL(request.url).searchParams.get('redirect');
-		if (!redirectParam) {throw redirect(303, '/')}
+		const redirectParam = new URL(request.url).searchParams.get('redirect');
+		if (!redirectParam) {
+			throw redirect(303, '/');
+		}
 		const redirectUrl = decodeURIComponent(redirectParam);
 		throw redirect(303, `/${redirectUrl}`);
 	}
