@@ -1,12 +1,9 @@
-import type { PaginatedTransactions, Transaction, TransactionSearchCriteria } from "./types";
+import type { PaginatedTransactions, TransactionSearchCriteria } from './types';
 
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
 
-export function updateParams(
-	updates: Partial<TransactionSearchCriteria>,
-	resetPage = true
-) {
+export function updateParams(updates: Partial<TransactionSearchCriteria>, resetPage = true) {
 	const params = new URLSearchParams(page.url.searchParams);
 
 	for (const [key, value] of Object.entries(updates)) {
@@ -16,7 +13,6 @@ export function updateParams(
 			params.set(key, String(value));
 		}
 	}
-
 
 	if (resetPage) {
 		params.set('page', '1');
@@ -38,28 +34,28 @@ export async function searchTransactions(
 	const params = new URLSearchParams();
 
 	if (criteria.q) {
-		params.append("q", criteria.q);
+		params.append('q', criteria.q);
 	}
 	if (criteria.from) {
-		params.append("from", criteria.from);
+		params.append('from', criteria.from);
 	}
 	if (criteria.until) {
-		params.append("until", criteria.until);
+		params.append('until', criteria.until);
 	}
 	if (criteria.budget_id) {
-		params.append("budget_id", String(criteria.budget_id));
+		params.append('budget_id', String(criteria.budget_id));
 	}
 	if (criteria.wallet_id) {
-		params.append("wallet_id", String(criteria.wallet_id));
+		params.append('wallet_id', String(criteria.wallet_id));
 	}
 	if (criteria.type) {
-		params.append("type", criteria.type);
+		params.append('type', criteria.type);
 	}
 	if (criteria.page) {
-		params.append("page", String(criteria.page));
+		params.append('page', String(criteria.page));
 	}
 	if (criteria.pageSize) {
-		params.append("pageSize", String(criteria.pageSize));
+		params.append('pageSize', String(criteria.pageSize));
 	}
 
 	const response = await fetch(`/api/transactions/search?${params.toString()}`);
@@ -71,11 +67,10 @@ export async function searchTransactions(
 }
 
 export function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
-    let timeout: ReturnType<typeof setTimeout>;
+	let timeout: ReturnType<typeof setTimeout>;
 
-    return function(this: ThisParameterType<T>, ...args: Parameters<T>) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
+	return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
+		clearTimeout(timeout);
+		timeout = setTimeout(() => func.apply(this, args), delay);
+	};
 }
-
