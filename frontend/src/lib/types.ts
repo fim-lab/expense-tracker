@@ -42,3 +42,18 @@ export interface PaginatedTransactions {
 	page: number;
 	pageSize: number;
 }
+
+export interface Wallet {
+	id: number;
+	userId: number;
+	name: string;
+	balanceCents: number;
+}
+
+export interface Budget {
+	id: number;
+	userId: number;
+	name: string;
+	limitCents: number;
+	balanceCents: number;
+}
