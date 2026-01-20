@@ -59,7 +59,8 @@ export const actions: Actions = {
 			};
 		}
 
-        const redirectParam = new URL(request.url).searchParams.get('redirect') || '/';
+        const redirectParam = new URL(request.url).searchParams.get('redirect');
+		if (!redirectParam) {throw redirect(303, '/')}
 		const redirectUrl = decodeURIComponent(redirectParam);
 		throw redirect(303, `/${redirectUrl}`);
 	}
