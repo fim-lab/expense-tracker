@@ -78,6 +78,116 @@ func TestCreateBudget(t *testing.T) {
 	})
 }
 
+func TestGetBudgetCanDelete(t *testing.T) {
+	userID := 1
+
+	t.Run("CanDelete is false when BalanceCents is not zero", func(t *testing.T) {
+		repo := memory.NewCleanRepository()
+		svc := NewBudgetService(repo)
+		budget := domain.Budget{UserID: userID, Name: "Non-Zero Balance", LimitCents: 10000, BalanceCents: 500}
+		svc.CreateBudget(userID, budget)
+		budgets, _ := repo.FindBudgetsByUser(userID)
+		createdBudget := budgets[0]
+
+		fetchedBudget, err := svc.GetBudget(userID, createdBudget.ID)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		if fetchedBudget.CanDelete {
+			t.Errorf("Expected CanDelete to be false, got true")
+		}
+	})
+
+	t.Run("CanDelete is false when BalanceCents is zero but transactions exist", func(t *testing.T) {
+		repo := memory.NewCleanRepository()
+		svc := NewBudgetService(repo)
+		budget := domain.Budget{UserID: userID, Name: "Zero Balance, Has Transactions", LimitCents: 10000, BalanceCents: -100}
+		svc.CreateBudget(userID, budget)
+		budgets, _ := repo.FindBudgetsByUser(userID)
+		createdBudget := budgets[0]
+
+		_ = repo.SaveTransaction(domain.Transaction{
+			UserID:        userID,
+			BudgetID:      createdBudget.ID,
+			AmountInCents: 100,
+			Description:   "Test Transaction",
+			Date:          time.Now(),
+		})
+
+		fetchedBudget, err := svc.GetBudget(userID, createdBudget.ID)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		if fetchedBudget.CanDelete {
+			t.Errorf("Expected CanDelete to be false, got true")
+		}
+	})
+
+	t.Run("CanDelete is true when BalanceCents is zero and no transactions exist", func(t *testing.T) {
+		repo := memory.NewCleanRepository()
+		svc := NewBudgetService(repo)
+		budget := domain.Budget{UserID: userID, Name: "Zero Balance, No Transactions", LimitCents: 10000, BalanceCents: 0}
+		svc.CreateBudget(userID, budget)
+		budgets, _ := repo.FindBudgetsByUser(userID)
+		createdBudget := budgets[0]
+
+		fetchedBudget, err := svc.GetBudget(userID, createdBudget.ID)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		if !fetchedBudget.CanDelete {
+			t.Errorf("Expected CanDelete to be true, got false")
+		}
+	})
+}
+
+func TestGetBudgetsCanDelete(t *testing.T) {
+	userID := 1
+	repo := memory.NewCleanRepository()
+	svc := NewBudgetService(repo)
+
+	budget1 := domain.Budget{UserID: userID, Name: "Budget 1", LimitCents: 10000, BalanceCents: 500}
+	svc.CreateBudget(userID, budget1)
+
+	budget2 := domain.Budget{UserID: userID, Name: "Budget 2", LimitCents: 10000, BalanceCents: -100}
+	svc.CreateBudget(userID, budget2)
+	budgets, _ := repo.FindBudgetsByUser(userID)
+	createdBudget2 := budgets[1]
+
+	_ = repo.SaveTransaction(domain.Transaction{
+		UserID:        userID,
+		BudgetID:      createdBudget2.ID,
+		AmountInCents: 100,
+		Description:   "Test Transaction",
+		Date:          time.Now(),
+	})
+
+	budget3 := domain.Budget{UserID: userID, Name: "Budget 3", LimitCents: 10000, BalanceCents: 0}
+	svc.CreateBudget(userID, budget3)
+
+	fetchedBudgets, err := svc.GetBudgets(userID)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	for _, b := range fetchedBudgets {
+		switch b.Name {
+		case "Budget 1":
+			if b.CanDelete {
+				t.Errorf("Budget 1: Expected CanDelete to be false, got true")
+			}
+		case "Budget 2":
+			if b.CanDelete {
+				t.Errorf("Budget 2: Expected CanDelete to be false, got true")
+			}
+		case "Budget 3":
+			if !b.CanDelete {
+				t.Errorf("Budget 3: Expected CanDelete to be true, got false")
+			}
+		}
+	}
+}
+
 func TestDeleteBudget(t *testing.T) {
 	userID := 1
 

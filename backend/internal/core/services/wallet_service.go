@@ -1,7 +1,6 @@
 package services
 
 import (
-	"log"
 	"strings"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
@@ -36,11 +35,44 @@ func (s *walletService) GetWallet(userID int, id int) (domain.Wallet, error) {
 		return domain.Wallet{}, domain.ErrUnauthorized
 	}
 
+	wallet.CanDelete = true
+	if wallet.BalanceCents != 0 {
+		wallet.CanDelete = false
+	} else {
+		count, err := s.repo.CountTransactionsByWalletID(wallet.ID)
+		if err != nil {
+			return domain.Wallet{}, err
+		}
+		if count > 0 {
+			wallet.CanDelete = false
+		}
+	}
+
 	return wallet, nil
 }
 
 func (s *walletService) GetWallets(userID int) ([]domain.Wallet, error) {
-	return s.repo.FindWalletsByUser(userID)
+	wallets, err := s.repo.FindWalletsByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range wallets {
+		wallets[i].CanDelete = true
+		if wallets[i].BalanceCents != 0 {
+			wallets[i].CanDelete = false
+		} else {
+			count, err := s.repo.CountTransactionsByWalletID(wallets[i].ID)
+			if err != nil {
+				return nil, err
+			}
+			if count > 0 {
+				wallets[i].CanDelete = false
+			}
+		}
+	}
+
+	return wallets, nil
 }
 
 func (s *walletService) GetTotalOfWallets(userID int) (int, error) {
@@ -48,7 +80,6 @@ func (s *walletService) GetTotalOfWallets(userID int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	log.Print("LOG")
 
 	var totalBalance int
 	for _, w := range wallets {
