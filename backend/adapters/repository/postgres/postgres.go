@@ -670,3 +670,23 @@ func (r *Repository) DeleteStock(id int) error {
 	_, err := r.db.Exec(query, id)
 	return err
 }
+
+func (r *Repository) CountTransactionsByBudgetID(budgetID int) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM transactions WHERE budget_id = $1`
+	err := r.db.QueryRow(query, budgetID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count transactions for budget ID %d: %w", budgetID, err)
+	}
+	return count, nil
+}
+
+func (r *Repository) CountTransactionsByWalletID(walletID int) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM transactions WHERE wallet_id = $1`
+	err := r.db.QueryRow(query, walletID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count transactions for wallet ID %d: %w", walletID, err)
+	}
+	return count, nil
+}

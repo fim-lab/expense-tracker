@@ -667,3 +667,27 @@ func (r *Repository) DeleteStock(id int) error {
 	delete(r.stocks, id)
 	return nil
 }
+
+func (r *Repository) CountTransactionsByBudgetID(budgetID int) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for _, t := range r.transactions {
+		if t.BudgetID == budgetID {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *Repository) CountTransactionsByWalletID(walletID int) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for _, t := range r.transactions {
+		if t.WalletID == walletID {
+			count++
+		}
+	}
+	return count, nil
+}

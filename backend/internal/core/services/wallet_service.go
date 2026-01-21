@@ -77,8 +77,19 @@ func (s *walletService) UpdateWallet(userID int, wallet domain.Wallet) error {
 
 func (s *walletService) DeleteWallet(userID int, id int) error {
 	existing, err := s.repo.GetWalletByID(id)
-	if err != nil || existing.UserID != userID {
+	if err != nil {
+		return err
+	}
+	if existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
+	transactionCount, err := s.repo.CountTransactionsByWalletID(id)
+	if err != nil {
+		return err
+	}
+	if transactionCount > 0 {
+		return domain.ErrNotEmpty
+	}
+
 	return s.repo.DeleteWallet(id)
 }

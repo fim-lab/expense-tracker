@@ -90,6 +90,9 @@ type ExpenseRepository interface {
 	DeleteTransaction(id int) error
 	CreateTransfer(from, to domain.Transaction) error
 
+	CountTransactionsByBudgetID(budgetID int) (int, error)
+	CountTransactionsByWalletID(walletID int) (int, error)
+
 	SaveStock(s domain.Stock) error
 	GetStockByID(id int) (domain.Stock, error)
 	FindStocksByUser(userID int) ([]domain.Stock, error)

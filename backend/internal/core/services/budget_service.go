@@ -82,8 +82,19 @@ func (s *budgetService) UpdateBudget(userID int, budget domain.Budget) error {
 
 func (s *budgetService) DeleteBudget(userID int, id int) error {
 	existing, err := s.repo.GetBudgetByID(id)
-	if err != nil || existing.UserID != userID {
+	if err != nil {
+		return err
+	}
+	if existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
+	transactionCount, err := s.repo.CountTransactionsByBudgetID(id)
+	if err != nil {
+		return err
+	}
+	if transactionCount > 0 {
+		return domain.ErrNotEmpty
+	}
+
 	return s.repo.DeleteBudget(id)
 }
