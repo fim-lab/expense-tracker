@@ -492,6 +492,19 @@ func (r *Repository) DeleteBudget(id int) error {
 	return nil
 }
 
+func (r *Repository) UpdateBudget(b domain.Budget) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	existingBudget, ok := r.budgets[b.ID]
+	if !ok {
+		return domain.ErrBudgetNotFound
+	}
+	existingBudget.Name = b.Name
+	existingBudget.LimitCents = b.LimitCents
+	r.budgets[b.ID] = existingBudget
+	return nil
+}
+
 func (r *Repository) SaveSession(session domain.Session) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -558,6 +571,18 @@ func (r *Repository) DeleteWallet(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.wallets, id)
+	return nil
+}
+
+func (r *Repository) UpdateWallet(w domain.Wallet) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	existingWallet, ok := r.wallets[w.ID]
+	if !ok {
+		return domain.ErrWalletNotFound
+	}
+	existingWallet.Name = w.Name
+	r.wallets[w.ID] = existingWallet
 	return nil
 }
 

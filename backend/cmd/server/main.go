@@ -84,11 +84,15 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 
 	// Routes
 	r.Get("/budgets", budgetHandler.GetBudgets)
+	r.Get("/budgets/{id}", budgetHandler.GetBudget)
 	r.Post("/budgets", budgetHandler.CreateBudget)
+	r.Put("/budgets/{id}", budgetHandler.UpdateBudget)
 	r.Delete("/budgets/{id}", budgetHandler.DeleteBudget)
 
 	r.Get("/wallets", walletHandler.GetWallets)
+	r.Get("/wallets/{id}", walletHandler.GetWallet)
 	r.Post("/wallets", walletHandler.CreateWallet)
+	r.Put("/wallets/{id}", walletHandler.UpdateWallet)
 	r.Delete("/wallets/{id}", walletHandler.DeleteWallet)
 
 	r.Get("/depots", depotHandler.GetDepots)

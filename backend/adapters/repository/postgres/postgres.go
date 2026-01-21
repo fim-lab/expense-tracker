@@ -109,15 +109,14 @@ func (r *Repository) SaveWallet(w domain.Wallet) error {
 	return err
 }
 
-func (r *Repository) UpdateWallet(b domain.Wallet) error {
+func (r *Repository) UpdateWallet(w domain.Wallet) error {
 	query := `
 		UPDATE wallets
-		SET name = $2 
+		SET name = $2
 	    WHERE id = $1`
-	_, err := r.db.Exec(query, b.ID, b.Name)
+	_, err := r.db.Exec(query, w.ID, w.Name)
 	return err
 }
-
 func (r *Repository) GetWalletByID(id int) (domain.Wallet, error) {
 	var w domain.Wallet
 	query := `SELECT id, user_id, name FROM wallets WHERE id = $1`
