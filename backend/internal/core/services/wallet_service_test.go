@@ -8,7 +8,7 @@ import (
 )
 
 func TestCreateWallet(t *testing.T) {
-	repo := memory.NewRepository()
+	repo := memory.NewSeededRepository()
 	svc := NewWalletService(repo)
 
 	t.Run("Valid wallet creation", func(t *testing.T) {
@@ -62,6 +62,69 @@ func TestCreateWallet(t *testing.T) {
 
 		if total != 0 {
 			t.Errorf("expected 0 balance for unknown user, but got %v", total)
+		}
+	})
+}
+
+func TestDeleteWallet(t *testing.T) {
+	userID := 1
+
+	t.Run("Successfully delete empty wallet", func(t *testing.T) {
+		repo := memory.NewCleanRepository()
+		svc := NewWalletService(repo)
+		wallet := domain.Wallet{UserID: userID, Name: "Test Wallet"}
+		svc.CreateWallet(userID, wallet)
+		wallets, _ := repo.FindWalletsByUser(userID)
+		testWallet := wallets[0]
+
+		err := svc.DeleteWallet(userID, testWallet.ID)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+
+		_, err = svc.GetWallet(userID, testWallet.ID)
+		if err != domain.ErrWalletNotFound {
+			t.Errorf("Expected ErrWalletNotFound, got %v", err)
+		}
+	})
+
+	t.Run("Fail to delete wallet with transactions", func(t *testing.T) {
+		repo := memory.NewCleanRepository()
+		svc := NewWalletService(repo)
+		wallet := domain.Wallet{UserID: userID, Name: "Test Wallet"}
+		svc.CreateWallet(userID, wallet)
+		wallets, _ := repo.FindWalletsByUser(userID)
+		testWallet := wallets[0]
+
+		_ = repo.SaveTransaction(domain.Transaction{
+			UserID:        userID,
+			WalletID:      testWallet.ID,
+			AmountInCents: 100,
+			Description:   "Test Transaction",
+		})
+
+		err := svc.DeleteWallet(userID, testWallet.ID)
+		if err != domain.ErrNotEmpty {
+			t.Errorf("Expected ErrNotEmpty, got %v", err)
+		}
+
+		_, err = svc.GetWallet(userID, testWallet.ID)
+		if err != nil {
+			t.Errorf("Expected wallet to exist, got error %v", err)
+		}
+	})
+
+	t.Run("Unauthorized deletion", func(t *testing.T) {
+		repo := memory.NewCleanRepository()
+		svc := NewWalletService(repo)
+		wallet := domain.Wallet{UserID: userID, Name: "Test Wallet"}
+		svc.CreateWallet(userID, wallet)
+		wallets, _ := repo.FindWalletsByUser(userID)
+		testWallet := wallets[0]
+
+		err := svc.DeleteWallet(999, testWallet.ID)
+		if err != domain.ErrUnauthorized {
+			t.Errorf("Expected ErrUnauthorized, got %v", err)
 		}
 	})
 }

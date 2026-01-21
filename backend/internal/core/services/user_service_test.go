@@ -9,7 +9,7 @@ import (
 )
 
 func TestAuthentication(t *testing.T) {
-	repo := memory.NewRepository()
+	repo := memory.NewSeededRepository()
 	svc := NewUserService(repo)
 
 	pass := "secret"

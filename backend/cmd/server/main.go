@@ -126,7 +126,7 @@ func getRepo(env string) (ports.ExpenseRepository, *sql.DB) {
 	if env == EnvProduction {
 		return setupPostgresDB()
 	}
-	return memory.NewRepository(), nil
+	return memory.NewSeededRepository(), nil
 }
 
 func setupPostgresDB() (ports.ExpenseRepository, *sql.DB) {

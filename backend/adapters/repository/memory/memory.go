@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -23,7 +24,15 @@ type Repository struct {
 	lastID       int
 }
 
-func NewRepository() *Repository {
+func NewSeededRepository() *Repository {
+	return NewRepository(true)
+}
+
+func NewCleanRepository() *Repository {
+	return NewRepository(false)
+}
+
+func NewRepository(initWithSeedData bool) *Repository {
 	repo := &Repository{
 		transactions: make(map[int]domain.Transaction),
 		budgets:      make(map[int]domain.Budget),
@@ -35,50 +44,59 @@ func NewRepository() *Repository {
 		lastID:       0,
 	}
 
-	// SEED DATA
-	// Username: demo | Password: demo
-	demoUsername := "demo"
-	// "Demo Budget" | 5€ Limit
-	// "Demo Cash Wallet"
-	hash, _ := bcrypt.GenerateFromPassword([]byte(demoUsername), bcrypt.DefaultCost)
-	repo.SaveUser(domain.User{
-		Username:     demoUsername,
-		PasswordHash: string(hash),
-	})
-	demoUser, err := repo.GetUserByUsername(demoUsername)
-	if err != nil {
-		log.Fatal("Could not initiate demo User", err)
-	}
+	if initWithSeedData {
+		const AMOUNT_OF_SEEDED_TX = 21
+		// SEED DATA
+		// Username: demo | Password: demo
+		demoUsername := "demo"
+		// "Demo Budget" | 5€ Limit
+		// "Demo Cash Wallet"
+		hash, _ := bcrypt.GenerateFromPassword([]byte(demoUsername), bcrypt.DefaultCost)
+		repo.SaveUser(domain.User{
+			Username:     demoUsername,
+			PasswordHash: string(hash),
+		})
+		demoUser, err := repo.GetUserByUsername(demoUsername)
+		if err != nil {
+			log.Fatal("Could not initiate demo User", err)
+		}
 
-	repo.SaveBudget(domain.Budget{
-		UserID:     demoUser.ID,
-		Name:       "Demo Budget",
-		LimitCents: 500,
-	})
-	budgets, err := repo.FindBudgetsByUser(demoUser.ID)
-	if err != nil {
-		log.Fatal("Could not initiate demo Budget", err)
+		repo.SaveBudget(domain.Budget{
+			UserID:     demoUser.ID,
+			Name:       "Demo Budget",
+			LimitCents: 500,
+		})
+		budgets, err := repo.FindBudgetsByUser(demoUser.ID)
+		if err != nil {
+			log.Fatal("Could not initiate demo Budget", err)
+		}
+		demoBudget := budgets[0]
+		repo.SaveWallet(domain.Wallet{
+			UserID: demoUser.ID,
+			Name:   "Demo Cash Wallet",
+		})
+		wallets, err := repo.FindWalletsByUser(demoUser.ID)
+		if err != nil {
+			log.Fatal("Could not initiate demo Wallet", err)
+		}
+		demoWallet := wallets[0]
+		for i := 0; i < AMOUNT_OF_SEEDED_TX; i++ {
+			repo.SaveTransaction(domain.Transaction{
+				UserID:        demoUser.ID,
+				Date:          time.Now().AddDate(0, 0, -i),
+				BudgetID:      &demoBudget.ID,
+				WalletID:      demoWallet.ID,
+				Description:   fmt.Sprintf("Transaction%v%v", i%2, i%3),
+				AmountInCents: 104 * i,
+				Type: func() domain.TransactionType {
+					if i%4 == 0 {
+						return domain.Expense
+					}
+					return domain.Income
+				}(),
+			})
+		}
 	}
-	demoBudget := budgets[0]
-	repo.SaveWallet(domain.Wallet{
-		UserID: demoUser.ID,
-		Name:   "Demo Cash Wallet",
-	})
-	wallets, err := repo.FindWalletsByUser(demoUser.ID)
-	if err != nil {
-		log.Fatal("Could not initiate demo Wallet", err)
-	}
-	demoWallet := wallets[0]
-	repo.SaveTransaction(domain.Transaction{
-		UserID:        demoUser.ID,
-		Date:          time.Now(),
-		BudgetID:      &demoBudget.ID,
-		WalletID:      demoWallet.ID,
-		Description:   "Test Transaction",
-		AmountInCents: 500,
-		Type:          domain.Expense,
-	})
-
 	return repo
 }
 
