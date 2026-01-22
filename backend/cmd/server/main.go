@@ -46,7 +46,7 @@ func main() {
 
 	// Mount routers
 	router.Mount("/auth", authRouter(&userService, &sessionService))
-	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &walletService, &depotService, &transactionService, &stockService))
+	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &walletService, &depotService, &transactionService, &stockService, &userService))
 
 	port := getPort()
 	log.Printf("Start Server on port %s in %s mode", port, env)
@@ -63,7 +63,7 @@ func authRouter(userService *ports.UserService, sessionService *ports.SessionSer
 	return r
 }
 
-func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, stockService *ports.StockService) http.Handler {
+func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, stockService *ports.StockService, userService *ports.UserService) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -81,8 +81,12 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	depotHandler := httpadapter.NewDepotHandler(depotService)
 	transactionHandler := httpadapter.NewTransactionHandler(transactionService)
 	stockHandler := httpadapter.NewStockHandler(stockService)
+	userHandler := httpadapter.NewUserHandler(userService)
 
 	// Routes
+	r.Get("/users/me", userHandler.GetUser)
+	r.Put("/users/me/salary", userHandler.UpdateSalary)
+
 	r.Get("/budgets", budgetHandler.GetBudgets)
 	r.Get("/budgets/{id}", budgetHandler.GetBudget)
 	r.Post("/budgets", budgetHandler.CreateBudget)

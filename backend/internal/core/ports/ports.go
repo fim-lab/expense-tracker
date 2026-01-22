@@ -34,6 +34,8 @@ type WalletService interface {
 
 type UserService interface {
 	Authenticate(username, password string) (domain.User, error)
+	GetUserByID(userID int) (domain.User, error)
+	UpdateSalary(userID int, salary int) error
 }
 
 type SessionService interface {
@@ -57,7 +59,9 @@ type StockService interface {
 // --- Driven Ports  ---
 type ExpenseRepository interface {
 	GetUserByUsername(username string) (domain.User, error)
+	GetUserByID(userID int) (domain.User, error)
 	SaveUser(u domain.User) error
+	UpdateUserSalary(userID int, salary int) error
 
 	SaveSession(s domain.Session) error
 	GetSessionByToken(token string) (domain.Session, error)
