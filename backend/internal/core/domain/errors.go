@@ -9,6 +9,7 @@ var (
 	ErrBudgetNotFound      = errors.New("budget not found or unauthorized")
 	ErrMissingWallet       = errors.New("wallet name is required")
 	ErrWalletNotFound      = errors.New("wallet not found or unauthorized")
+	ErrSameWalletTransfer  = errors.New("cannot transfer to the same wallet")
 	ErrMissingDepot        = errors.New("depot name is required")
 	ErrDepotNotFound       = errors.New("depot not found or unauthorized")
 	ErrUnauthorized        = errors.New("user not authorized")

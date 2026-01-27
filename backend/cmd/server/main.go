@@ -98,6 +98,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Get("/transactions", transactionHandler.GetTransactions)
 	r.Get("/transactions/search", transactionHandler.SearchTransactions)
 	r.Post("/transactions", transactionHandler.CreateTransaction)
+	r.Post("/transactions/transfer", transactionHandler.Transfer)
 	r.Put("/transactions/{id}", transactionHandler.UpdateTransaction)
 	r.Delete("/transactions/{id}", transactionHandler.DeleteTransaction)
 

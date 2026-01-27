@@ -72,7 +72,7 @@ func NewRepository() *Repository {
 	repo.SaveTransaction(domain.Transaction{
 		UserID:        demoUser.ID,
 		Date:          time.Now(),
-		BudgetID:      demoBudget.ID,
+		BudgetID:      &demoBudget.ID,
 		WalletID:      demoWallet.ID,
 		Description:   "Test Transaction",
 		AmountInCents: 500,
@@ -119,14 +119,16 @@ func (r *Repository) SaveTransaction(t domain.Transaction) error {
 	}
 	r.transactions[t.ID] = t
 
-	budget, ok := r.budgets[t.BudgetID]
-	if ok {
-		adjustment := t.AmountInCents
-		if t.Type == domain.Expense {
-			adjustment = -t.AmountInCents
+	if t.BudgetID != nil {
+		budget, ok := r.budgets[*t.BudgetID]
+		if ok {
+			adjustment := t.AmountInCents
+			if t.Type == domain.Expense {
+				adjustment = -t.AmountInCents
+			}
+			budget.BalanceCents += adjustment
+			r.budgets[*t.BudgetID] = budget
 		}
-		budget.BalanceCents += adjustment
-		r.budgets[t.BudgetID] = budget
 	}
 
 	wallet, ok := r.wallets[t.WalletID]
@@ -195,7 +197,12 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 
 	dtos := make([]domain.TransactionDTO, 0, len(paginatedTxs))
 	for _, t := range paginatedTxs {
-		budget := r.budgets[t.BudgetID]
+		var budgetName string
+		if t.BudgetID != nil {
+			if budget, ok := r.budgets[*t.BudgetID]; ok {
+				budgetName = budget.Name
+			}
+		}
 		wallet := r.wallets[t.WalletID]
 		dtos = append(dtos, domain.TransactionDTO{
 			ID:            t.ID,
@@ -203,7 +210,7 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 			Description:   t.Description,
 			AmountInCents: t.AmountInCents,
 			Type:          t.Type,
-			BudgetName:    budget.Name,
+			BudgetName:    budgetName,
 			WalletName:    wallet.Name,
 			IsPending:     t.IsPending,
 		})
@@ -236,7 +243,7 @@ func (r *Repository) SearchTransactions(userID int, criteria domain.TransactionS
 			continue
 		}
 
-		if criteria.BudgetID != nil && t.BudgetID != *criteria.BudgetID {
+		if criteria.BudgetID != nil && *t.BudgetID != *criteria.BudgetID {
 			continue
 		}
 
@@ -272,7 +279,12 @@ func (r *Repository) SearchTransactions(userID int, criteria domain.TransactionS
 
 	dtos := make([]domain.TransactionDTO, 0, len(paginatedTxs))
 	for _, t := range paginatedTxs {
-		budget := r.budgets[t.BudgetID]
+		var budgetName string
+		if t.BudgetID != nil {
+			if budget, ok := r.budgets[*t.BudgetID]; ok {
+				budgetName = budget.Name
+			}
+		}
 		wallet := r.wallets[t.WalletID]
 		dtos = append(dtos, domain.TransactionDTO{
 			ID:            t.ID,
@@ -280,7 +292,7 @@ func (r *Repository) SearchTransactions(userID int, criteria domain.TransactionS
 			Description:   t.Description,
 			AmountInCents: t.AmountInCents,
 			Type:          t.Type,
-			BudgetName:    budget.Name,
+			BudgetName:    budgetName,
 			WalletName:    wallet.Name,
 			IsPending:     t.IsPending,
 		})
@@ -313,7 +325,7 @@ func (r *Repository) CountSearchedTransactions(userID int, criteria domain.Trans
 			continue
 		}
 
-		if criteria.BudgetID != nil && t.BudgetID != *criteria.BudgetID {
+		if criteria.BudgetID != nil && *t.BudgetID != *criteria.BudgetID {
 			continue
 		}
 
@@ -345,10 +357,12 @@ func (r *Repository) DeleteTransaction(id int) error {
 		adjustment = tx.AmountInCents
 	}
 
-	budget, ok := r.budgets[tx.BudgetID]
-	if ok {
-		budget.BalanceCents += adjustment
-		r.budgets[tx.BudgetID] = budget
+	if tx.BudgetID != nil {
+		budget, ok := r.budgets[*tx.BudgetID]
+		if ok {
+			budget.BalanceCents += adjustment
+			r.budgets[*tx.BudgetID] = budget
+		}
 	}
 
 	wallet, ok := r.wallets[tx.WalletID]
@@ -374,9 +388,11 @@ func (r *Repository) UpdateTransaction(t domain.Transaction) error {
 	if oldT.Type == domain.Income {
 		oldAdjustment = -oldT.AmountInCents
 	}
-	if budget, ok := r.budgets[oldT.BudgetID]; ok {
-		budget.BalanceCents += oldAdjustment
-		r.budgets[oldT.BudgetID] = budget
+	if oldT.BudgetID != nil {
+		if budget, ok := r.budgets[*oldT.BudgetID]; ok {
+			budget.BalanceCents += oldAdjustment
+			r.budgets[*oldT.BudgetID] = budget
+		}
 	}
 	if wallet, ok := r.wallets[oldT.WalletID]; ok {
 		wallet.BalanceCents += oldAdjustment
@@ -389,14 +405,45 @@ func (r *Repository) UpdateTransaction(t domain.Transaction) error {
 	if t.Type == domain.Expense {
 		newAdjustment = -t.AmountInCents
 	}
-	if budget, ok := r.budgets[t.BudgetID]; ok {
-		budget.BalanceCents += newAdjustment
-		r.budgets[t.BudgetID] = budget
+	if t.BudgetID != nil {
+		if budget, ok := r.budgets[*t.BudgetID]; ok {
+			budget.BalanceCents += newAdjustment
+			r.budgets[*t.BudgetID] = budget
+		}
 	}
 	if wallet, ok := r.wallets[t.WalletID]; ok {
 		wallet.BalanceCents += newAdjustment
 		r.wallets[t.WalletID] = wallet
 	}
+
+	return nil
+}
+
+func (r *Repository) CreateTransfer(from, to domain.Transaction) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if from.ID == 0 {
+		from.ID = r.nextID()
+	}
+	r.transactions[from.ID] = from
+	fromWallet, ok := r.wallets[from.WalletID]
+	if !ok {
+		return domain.ErrWalletNotFound
+	}
+	fromWallet.BalanceCents -= from.AmountInCents
+	r.wallets[from.WalletID] = fromWallet
+
+	if to.ID == 0 {
+		to.ID = r.nextID()
+	}
+	r.transactions[to.ID] = to
+	toWallet, ok := r.wallets[to.WalletID]
+	if !ok {
+		return domain.ErrWalletNotFound
+	}
+	toWallet.BalanceCents += to.AmountInCents
+	r.wallets[to.WalletID] = toWallet
 
 	return nil
 }

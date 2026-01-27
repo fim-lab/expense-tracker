@@ -146,6 +146,36 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 	json.NewEncoder(w).Encode(transaction)
 }
 
+func (h *TransactionHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+	var req struct {
+		FromWalletID int `json:"fromWalletId"`
+		ToWalletID   int `json:"toWalletId"`
+		Amount       int `json:"amount"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.service.CreateTransfer(userID, req.FromWalletID, req.ToWalletID, req.Amount)
+	if err != nil {
+		if err == domain.ErrSameWalletTransfer || err == domain.ErrInvalidAmount {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err == domain.ErrWalletNotFound {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Error creating transfer", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *TransactionHandler) UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(int)
 	transactionIDStr := chi.URLParam(r, "id")

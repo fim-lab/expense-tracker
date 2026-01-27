@@ -1,6 +1,9 @@
 package services
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
@@ -16,9 +19,11 @@ func NewTransactionService(repo ports.ExpenseRepository) ports.TransactionServic
 func (s *transactionService) CreateTransaction(userID int, t domain.Transaction) error {
 	t.UserID = userID
 
-	budget, err := s.repo.GetBudgetByID(t.BudgetID)
-	if err != nil || budget.UserID != userID {
-		return domain.ErrBudgetNotFound
+	if t.BudgetID != nil {
+		budget, err := s.repo.GetBudgetByID(*t.BudgetID)
+		if err != nil || budget.UserID != userID {
+			return domain.ErrBudgetNotFound
+		}
 	}
 
 	if t.AmountInCents <= 0 {
@@ -26,6 +31,46 @@ func (s *transactionService) CreateTransaction(userID int, t domain.Transaction)
 	}
 
 	return s.repo.SaveTransaction(t)
+}
+
+func (s *transactionService) CreateTransfer(userID, fromWalletID, toWalletID, amount int) error {
+	if fromWalletID == toWalletID {
+		return domain.ErrSameWalletTransfer
+	}
+
+	fromWallet, err := s.repo.GetWalletByID(fromWalletID)
+	if err != nil || fromWallet.UserID != userID {
+		return domain.ErrWalletNotFound
+	}
+
+	toWallet, err := s.repo.GetWalletByID(toWalletID)
+	if err != nil || toWallet.UserID != userID {
+		return domain.ErrWalletNotFound
+	}
+
+	if amount <= 0 {
+		return domain.ErrInvalidAmount
+	}
+
+	fromTransaction := domain.Transaction{
+		UserID:        userID,
+		Date:          time.Now(),
+		WalletID:      fromWalletID,
+		Description:   fmt.Sprintf("Transfer to %s", toWallet.Name),
+		AmountInCents: amount,
+		Type:          domain.Expense,
+	}
+
+	toTransaction := domain.Transaction{
+		UserID:        userID,
+		Date:          time.Now(),
+		WalletID:      toWalletID,
+		Description:   fmt.Sprintf("Transfer from %s", fromWallet.Name),
+		AmountInCents: amount,
+		Type:          domain.Income,
+	}
+
+	return s.repo.CreateTransfer(fromTransaction, toTransaction)
 }
 
 func (s *transactionService) GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {

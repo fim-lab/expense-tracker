@@ -484,6 +484,56 @@ func (r *Repository) DeleteTransaction(id int) error {
 	return tx.Commit()
 }
 
+func (r *Repository) CreateTransfer(from, to domain.Transaction) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	fromTags, _ := json.Marshal(from.Tags)
+	query := `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+	_, err = tx.Exec(query, from.UserID, from.Date, from.BudgetID, from.WalletID, from.Description, from.AmountInCents, from.Type, from.IsPending, from.IsDebt, fromTags)
+	if err != nil {
+		return fmt.Errorf("failed to insert from-transaction: %w", err)
+	}
+
+	queryWalletFrom := `
+		UPDATE wallets
+		SET balance_cents = balance_cents - $1
+		WHERE id = $2 AND user_id = $3
+	`
+	_, err = tx.Exec(queryWalletFrom, from.AmountInCents, from.WalletID, from.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update from-wallet balance: %w", err)
+	}
+
+	toTags, _ := json.Marshal(to.Tags)
+	query = `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+	_, err = tx.Exec(query, to.UserID, to.Date, to.BudgetID, to.WalletID, to.Description, to.AmountInCents, to.Type, to.IsPending, to.IsDebt, toTags)
+	if err != nil {
+		return fmt.Errorf("failed to insert to-transaction: %w", err)
+	}
+
+	queryWalletTo := `
+		UPDATE wallets
+		SET balance_cents = balance_cents + $1
+		WHERE id = $2 AND user_id = $3
+	`
+	_, err = tx.Exec(queryWalletTo, to.AmountInCents, to.WalletID, to.UserID)
+	if err != nil {
+		return fmt.Errorf("failed to update to-wallet balance: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
 // --- Session Methods ---
 
 func (r *Repository) SaveSession(session domain.Session) error {
