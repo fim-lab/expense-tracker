@@ -13,7 +13,11 @@
 				>({isExpense ? '-' : '+'}{formatCurrency(transaction.amountInCents)})</span
 			>
 		</p>
-		<p class="tx-meta">{transaction.budgetName} • {transaction.walletName}</p>
+		<p class="tx-meta">
+			{transaction.budgetName}
+			{transaction.budgetName ? ' • ' : ''}
+			{transaction.walletName}
+		</p>
 		<p class="tx-date">{new Date(transaction.date).toLocaleDateString('de-DE')}</p>
 	</div>
 

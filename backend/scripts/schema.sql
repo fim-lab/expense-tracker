@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     date DATE NOT NULL,
-    budget_id INT NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,
+    budget_id INT REFERENCES budgets(id) ON DELETE CASCADE,
     wallet_id INT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
     description TEXT NOT NULL,
     amount_in_cents BIGINT NOT NULL,
