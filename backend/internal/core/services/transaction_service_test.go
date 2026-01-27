@@ -70,10 +70,10 @@ func TestGetTransactions_PaginationAndMapping(t *testing.T) {
 
 	now := time.Now()
 	txs := []domain.Transaction{
-		{Date: now.Add(-3 * time.Hour), BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Older", UserID: testUser.ID},
-		{Date: now.Add(-1 * time.Hour), BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Middle", UserID: testUser.ID},
-		{Date: now, BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: testUser.ID},
-		{Date: now, BudgetID: testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: 99},
+		{Date: now.Add(-3 * time.Hour), BudgetID: &testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Older", UserID: testUser.ID},
+		{Date: now.Add(-1 * time.Hour), BudgetID: &testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Middle", UserID: testUser.ID},
+		{Date: now, BudgetID: &testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: testUser.ID},
+		{Date: now, BudgetID: &testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: 99},
 	}
 	for _, tx := range txs {
 		repo.SaveTransaction(tx)

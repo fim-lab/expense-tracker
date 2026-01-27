@@ -211,13 +211,18 @@ func (r *Repository) UpdateTransaction(t domain.Transaction) error {
 	defer tx.Rollback()
 
 	var oldT domain.Transaction
+	var oldNullBudgetID sql.NullInt32
 	queryFetch := `SELECT amount_in_cents, type, budget_id, wallet_id FROM transactions WHERE id = $1 AND user_id = $2`
-	err = tx.QueryRow(queryFetch, t.ID, t.UserID).Scan(&oldT.AmountInCents, &oldT.Type, &oldT.BudgetID, &oldT.WalletID)
+	err = tx.QueryRow(queryFetch, t.ID, t.UserID).Scan(&oldT.AmountInCents, &oldT.Type, &oldNullBudgetID, &oldT.WalletID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.ErrTransactionNotFound
 		}
 		return fmt.Errorf("could not find original transaction: %w", err)
+	}
+	if oldNullBudgetID.Valid {
+		oldBudgetID := int(oldNullBudgetID.Int32)
+		oldT.BudgetID = &oldBudgetID
 	}
 
 	oldAdjustment := oldT.AmountInCents
@@ -272,14 +277,19 @@ func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
 	var tags []byte
 	query := `SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 
 	          FROM transactions WHERE id = $1`
+	var nullBudgetID sql.NullInt32
 	err := r.db.QueryRow(query, id).Scan(
-		&t.ID, &t.UserID, &t.Date, &t.BudgetID, &t.WalletID, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.IsDebt, &tags,
+		&t.ID, &t.UserID, &t.Date, &nullBudgetID, &t.WalletID, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.IsDebt, &tags,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.Transaction{}, domain.ErrTransactionNotFound
 		}
 		return domain.Transaction{}, err
+	}
+	if nullBudgetID.Valid {
+		budgetID := int(nullBudgetID.Int32)
+		t.BudgetID = &budgetID
 	}
 	json.Unmarshal(tags, &t.Tags)
 	return t, nil
@@ -313,9 +323,15 @@ func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) (
 	var txs []domain.TransactionDTO
 	for rows.Next() {
 		var t domain.TransactionDTO
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.BudgetName, &t.WalletName)
+		var nullBudgetName sql.NullString
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &nullBudgetName, &t.WalletName)
 		if err != nil {
 			return nil, err
+		}
+		if nullBudgetName.Valid {
+			t.BudgetName = nullBudgetName.String
+		} else {
+			t.BudgetName = ""
 		}
 		txs = append(txs, t)
 	}
@@ -378,9 +394,15 @@ func (r *Repository) SearchTransactions(userID int, criteria domain.TransactionS
 	var txs []domain.TransactionDTO
 	for rows.Next() {
 		var t domain.TransactionDTO
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.BudgetName, &t.WalletName)
+		var nullBudgetName sql.NullString
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &nullBudgetName, &t.WalletName)
 		if err != nil {
 			return nil, err
+		}
+		if nullBudgetName.Valid {
+			t.BudgetName = nullBudgetName.String
+		} else {
+			t.BudgetName = ""
 		}
 		txs = append(txs, t)
 	}
@@ -442,11 +464,11 @@ func (r *Repository) DeleteTransaction(id int) error {
 
 	var amount int
 	var tType domain.TransactionType
-	var budgetID int
+	var nullBudgetID sql.NullInt32
 	var walletID int
 	var userID int
 	queryFetch := `SELECT amount_in_cents, type, budget_id, wallet_id, user_id FROM transactions WHERE id = $1`
-	err = tx.QueryRow(queryFetch, id).Scan(&amount, &tType, &budgetID, &walletID, &userID)
+	err = tx.QueryRow(queryFetch, id).Scan(&amount, &tType, &nullBudgetID, &walletID, &userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.ErrTransactionNotFound
@@ -459,10 +481,12 @@ func (r *Repository) DeleteTransaction(id int) error {
 		adjustment = amount
 	}
 
-	queryBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
-	_, err = tx.Exec(queryBudget, adjustment, budgetID, userID)
-	if err != nil {
-		return err
+	if nullBudgetID.Valid {
+		queryBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
+		_, err = tx.Exec(queryBudget, adjustment, nullBudgetID.Int32, userID)
+		if err != nil {
+			return err
+		}
 	}
 
 	queryWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
