@@ -691,7 +691,7 @@ func (r *Repository) CountTransactionsByBudgetID(budgetID int) (int, error) {
 	defer r.mu.RUnlock()
 	count := 0
 	for _, t := range r.transactions {
-		if t.BudgetID == budgetID {
+		if *t.BudgetID == budgetID {
 			count++
 		}
 	}

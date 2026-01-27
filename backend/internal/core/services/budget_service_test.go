@@ -108,7 +108,7 @@ func TestGetBudgetCanDelete(t *testing.T) {
 
 		_ = repo.SaveTransaction(domain.Transaction{
 			UserID:        userID,
-			BudgetID:      createdBudget.ID,
+			BudgetID:      &createdBudget.ID,
 			AmountInCents: 100,
 			Description:   "Test Transaction",
 			Date:          time.Now(),
@@ -156,7 +156,7 @@ func TestGetBudgetsCanDelete(t *testing.T) {
 
 	_ = repo.SaveTransaction(domain.Transaction{
 		UserID:        userID,
-		BudgetID:      createdBudget2.ID,
+		BudgetID:      &createdBudget2.ID,
 		AmountInCents: 100,
 		Description:   "Test Transaction",
 		Date:          time.Now(),
@@ -220,7 +220,7 @@ func TestDeleteBudget(t *testing.T) {
 
 		_ = repo.SaveTransaction(domain.Transaction{
 			UserID:        userID,
-			BudgetID:      testBudget.ID,
+			BudgetID:      &testBudget.ID,
 			AmountInCents: 100,
 			Description:   "Test Transaction",
 			Date:          time.Now(),
