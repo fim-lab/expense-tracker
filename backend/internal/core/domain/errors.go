@@ -17,4 +17,5 @@ var (
 	ErrStockNotFound       = errors.New("stock not found")
 	ErrUserNotFound        = errors.New("user not found")
 	ErrSessionNotFound     = errors.New("session not found")
+	ErrNotEmpty            = errors.New("cannot delete: still contains transactions")
 )

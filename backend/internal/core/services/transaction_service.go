@@ -125,3 +125,15 @@ func (s *transactionService) DeleteTransaction(userID int, id int) error {
 	}
 	return s.repo.DeleteTransaction(id)
 }
+
+func (s *transactionService) GetTransactionByID(userID int, id int) (domain.Transaction, error) {
+	transaction, err := s.repo.GetTransactionByID(id)
+	if err != nil {
+		return domain.Transaction{}, err
+	}
+	if transaction.UserID != userID {
+		return domain.Transaction{}, domain.ErrUnauthorized
+	}
+	return transaction, nil
+}
+

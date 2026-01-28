@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"strings"
@@ -23,7 +24,15 @@ type Repository struct {
 	lastID       int
 }
 
-func NewRepository() *Repository {
+func NewSeededRepository() *Repository {
+	return NewRepository(true)
+}
+
+func NewCleanRepository() *Repository {
+	return NewRepository(false)
+}
+
+func NewRepository(initWithSeedData bool) *Repository {
 	repo := &Repository{
 		transactions: make(map[int]domain.Transaction),
 		budgets:      make(map[int]domain.Budget),
@@ -35,50 +44,59 @@ func NewRepository() *Repository {
 		lastID:       0,
 	}
 
-	// SEED DATA
-	// Username: demo | Password: demo
-	demoUsername := "demo"
-	// "Demo Budget" | 5€ Limit
-	// "Demo Cash Wallet"
-	hash, _ := bcrypt.GenerateFromPassword([]byte(demoUsername), bcrypt.DefaultCost)
-	repo.SaveUser(domain.User{
-		Username:     demoUsername,
-		PasswordHash: string(hash),
-	})
-	demoUser, err := repo.GetUserByUsername(demoUsername)
-	if err != nil {
-		log.Fatal("Could not initiate demo User", err)
-	}
+	if initWithSeedData {
+		const AMOUNT_OF_SEEDED_TX = 21
+		// SEED DATA
+		// Username: demo | Password: demo
+		demoUsername := "demo"
+		// "Demo Budget" | 5€ Limit
+		// "Demo Cash Wallet"
+		hash, _ := bcrypt.GenerateFromPassword([]byte(demoUsername), bcrypt.DefaultCost)
+		repo.SaveUser(domain.User{
+			Username:     demoUsername,
+			PasswordHash: string(hash),
+		})
+		demoUser, err := repo.GetUserByUsername(demoUsername)
+		if err != nil {
+			log.Fatal("Could not initiate demo User", err)
+		}
 
-	repo.SaveBudget(domain.Budget{
-		UserID:     demoUser.ID,
-		Name:       "Demo Budget",
-		LimitCents: 500,
-	})
-	budgets, err := repo.FindBudgetsByUser(demoUser.ID)
-	if err != nil {
-		log.Fatal("Could not initiate demo Budget", err)
+		repo.SaveBudget(domain.Budget{
+			UserID:     demoUser.ID,
+			Name:       "Demo Budget",
+			LimitCents: 500,
+		})
+		budgets, err := repo.FindBudgetsByUser(demoUser.ID)
+		if err != nil {
+			log.Fatal("Could not initiate demo Budget", err)
+		}
+		demoBudget := budgets[0]
+		repo.SaveWallet(domain.Wallet{
+			UserID: demoUser.ID,
+			Name:   "Demo Cash Wallet",
+		})
+		wallets, err := repo.FindWalletsByUser(demoUser.ID)
+		if err != nil {
+			log.Fatal("Could not initiate demo Wallet", err)
+		}
+		demoWallet := wallets[0]
+		for i := 0; i < AMOUNT_OF_SEEDED_TX; i++ {
+			repo.SaveTransaction(domain.Transaction{
+				UserID:        demoUser.ID,
+				Date:          time.Now().AddDate(0, 0, -i),
+				BudgetID:      &demoBudget.ID,
+				WalletID:      demoWallet.ID,
+				Description:   fmt.Sprintf("Transaction%v%v", i%2, i%3),
+				AmountInCents: 104 * i,
+				Type: func() domain.TransactionType {
+					if i%4 == 0 {
+						return domain.Expense
+					}
+					return domain.Income
+				}(),
+			})
+		}
 	}
-	demoBudget := budgets[0]
-	repo.SaveWallet(domain.Wallet{
-		UserID: demoUser.ID,
-		Name:   "Demo Cash Wallet",
-	})
-	wallets, err := repo.FindWalletsByUser(demoUser.ID)
-	if err != nil {
-		log.Fatal("Could not initiate demo Wallet", err)
-	}
-	demoWallet := wallets[0]
-	repo.SaveTransaction(domain.Transaction{
-		UserID:        demoUser.ID,
-		Date:          time.Now(),
-		BudgetID:      &demoBudget.ID,
-		WalletID:      demoWallet.ID,
-		Description:   "Test Transaction",
-		AmountInCents: 500,
-		Type:          domain.Expense,
-	})
-
 	return repo
 }
 
@@ -492,6 +510,19 @@ func (r *Repository) DeleteBudget(id int) error {
 	return nil
 }
 
+func (r *Repository) UpdateBudget(b domain.Budget) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	existingBudget, ok := r.budgets[b.ID]
+	if !ok {
+		return domain.ErrBudgetNotFound
+	}
+	existingBudget.Name = b.Name
+	existingBudget.LimitCents = b.LimitCents
+	r.budgets[b.ID] = existingBudget
+	return nil
+}
+
 func (r *Repository) SaveSession(session domain.Session) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -558,6 +589,18 @@ func (r *Repository) DeleteWallet(id int) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.wallets, id)
+	return nil
+}
+
+func (r *Repository) UpdateWallet(w domain.Wallet) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	existingWallet, ok := r.wallets[w.ID]
+	if !ok {
+		return domain.ErrWalletNotFound
+	}
+	existingWallet.Name = w.Name
+	r.wallets[w.ID] = existingWallet
 	return nil
 }
 
@@ -641,4 +684,28 @@ func (r *Repository) DeleteStock(id int) error {
 	defer r.mu.Unlock()
 	delete(r.stocks, id)
 	return nil
+}
+
+func (r *Repository) CountTransactionsByBudgetID(budgetID int) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for _, t := range r.transactions {
+		if *t.BudgetID == budgetID {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *Repository) CountTransactionsByWalletID(walletID int) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for _, t := range r.transactions {
+		if t.WalletID == walletID {
+			count++
+		}
+	}
+	return count, nil
 }

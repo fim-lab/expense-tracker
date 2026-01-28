@@ -10,7 +10,7 @@ import (
 )
 
 func TestTransactionOwnership(t *testing.T) {
-	repo := memory.NewRepository()
+	repo := memory.NewSeededRepository()
 	svc := NewTransactionService(repo)
 
 	tx := domain.Transaction{
@@ -47,7 +47,7 @@ func TestTransactionOwnership(t *testing.T) {
 }
 
 func TestGetTransactions_PaginationAndMapping(t *testing.T) {
-	repo := memory.NewRepository()
+	repo := memory.NewSeededRepository()
 	svc := NewTransactionService(repo)
 
 	testUsername := "testuser"

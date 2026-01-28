@@ -1,20 +1,30 @@
-import { error } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
-  const API_URL = 'http://localhost:8080/api';
-  const cookieHeader = cookies.getAll().map(c => `${c.name}=${c.value}`).join('; ');
+	const cookieHeader = cookies
+		.getAll()
+		.map((c) => `${c.name}=${c.value}`)
+		.join('; ');
 
-  // Fetch wallets and budgets in parallel
-  const [walletsRes, budgetsRes] = await Promise.all([
-    fetch(`${API_URL}/wallets`, { headers: { Cookie: cookieHeader } }),
-    fetch(`${API_URL}/budgets`, { headers: { Cookie: cookieHeader } })
-  ]);
+	const authedApiFetch = async (path: string) => {
+		const res = await fetch(`/api${path}`, {
+			headers: { Cookie: cookieHeader }
+		});
 
-  if (walletsRes.status === 401) throw error(401, 'Unauthorized');
+		if (res.status === 401) {
+			throw redirect(302, '/login');
+		}
 
-  return {
-    wallets: walletsRes.ok ? await walletsRes.json() : [],
-    budgets: budgetsRes.ok ? await budgetsRes.json() : []
-  };
+		if (!res.ok) return null;
+		return res.json();
+	};
+
+	const wallets = (await authedApiFetch('/wallets')) || [];
+	const budgets = (await authedApiFetch('/budgets')) || [];
+
+	return {
+		wallets,
+		budgets
+	};
 };

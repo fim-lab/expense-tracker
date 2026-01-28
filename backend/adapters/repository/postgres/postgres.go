@@ -109,15 +109,14 @@ func (r *Repository) SaveWallet(w domain.Wallet) error {
 	return err
 }
 
-func (r *Repository) UpdateWallet(b domain.Wallet) error {
+func (r *Repository) UpdateWallet(w domain.Wallet) error {
 	query := `
 		UPDATE wallets
-		SET name = $2 
+		SET name = $2
 	    WHERE id = $1`
-	_, err := r.db.Exec(query, b.ID, b.Name)
+	_, err := r.db.Exec(query, w.ID, w.Name)
 	return err
 }
-
 func (r *Repository) GetWalletByID(id int) (domain.Wallet, error) {
 	var w domain.Wallet
 	query := `SELECT id, user_id, name FROM wallets WHERE id = $1`
@@ -670,4 +669,24 @@ func (r *Repository) DeleteStock(id int) error {
 	query := `DELETE FROM stocks WHERE id = $1`
 	_, err := r.db.Exec(query, id)
 	return err
+}
+
+func (r *Repository) CountTransactionsByBudgetID(budgetID int) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM transactions WHERE budget_id = $1`
+	err := r.db.QueryRow(query, budgetID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count transactions for budget ID %d: %w", budgetID, err)
+	}
+	return count, nil
+}
+
+func (r *Repository) CountTransactionsByWalletID(walletID int) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM transactions WHERE wallet_id = $1`
+	err := r.db.QueryRow(query, walletID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count transactions for wallet ID %d: %w", walletID, err)
+	}
+	return count, nil
 }
