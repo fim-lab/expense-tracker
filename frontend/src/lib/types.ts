@@ -48,6 +48,9 @@ export interface Wallet {
 	userId: number;
 	name: string;
 	balanceCents: number;
+	canDelete: boolean;
+	isEditing?: boolean;
+	newName?: string;
 }
 
 export interface Budget {
