@@ -5,4 +5,5 @@ type Wallet struct {
 	UserID       int    `json:"userId"`
 	Name         string `json:"name"`
 	BalanceCents int    `json:"balanceCents"`
+	CanDelete    bool   `json:"canDelete"`
 }

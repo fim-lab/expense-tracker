@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import type { TransactionType } from '$lib/types';
-	import { updateParams } from '$lib/utils';
+	import { updateParams, debounce } from '$lib/utils';
 
 	let { budgets, wallets } = $props();
 	const searchTerm = $derived(
@@ -25,6 +25,10 @@
 		const typeParam = page.url.searchParams.get('type');
 		return (typeParam === 'INCOME' || typeParam === 'EXPENSE') ? typeParam : 'all';
 	});
+
+	const debouncedUpdateParams = debounce((value: string) => {
+		updateParams({ q: value });
+	}, 500);
 </script>
 
 <form>
@@ -32,7 +36,7 @@
 		<label for="search">
 			Description
 			<input type="search" value={searchTerm} id="search" name="search" 
-				oninput={(e) => updateParams({ q: e.currentTarget.value})} />
+				oninput={(e) => debouncedUpdateParams(e.currentTarget.value)} />
 		</label>
 		<div></div>
 	</div>

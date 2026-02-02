@@ -6,4 +6,5 @@ type Budget struct {
 	Name         string `json:"name"`
 	LimitCents   int    `json:"limitCents"`
 	BalanceCents int    `json:"balanceCents"`
+	CanDelete    bool   `json:"canDelete"`
 }

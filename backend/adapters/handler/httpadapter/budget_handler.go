@@ -68,6 +68,41 @@ func (h *BudgetHandler) CreateBudget(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(budget)
 }
 
+func (h *BudgetHandler) GetBudget(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	budgetID := chi.URLParam(r, "id")
+	if budgetID == "" {
+		http.Error(w, "Missing budget ID", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(budgetID)
+	if err != nil {
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
+	}
+
+	budget, err := h.service.GetBudget(userID, id)
+	if err != nil {
+		log.Printf("Error fetching budget %d for user %d: %v", id, userID, err)
+		if err == domain.ErrUnauthorized {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		} else {
+			http.Error(w, "Could not fetch budget", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(budget)
+}
+
 func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -91,6 +126,54 @@ func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error deleting budget: %v", err)
 		http.Error(w, "Error deleting budget", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *BudgetHandler) UpdateBudget(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	budgetID := chi.URLParam(r, "id")
+	if budgetID == "" {
+		http.Error(w, "Missing budget ID", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(budgetID)
+	if err != nil {
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
+	}
+
+	var budget domain.Budget
+
+	err = json.NewDecoder(r.Body).Decode(&budget)
+	if err != nil {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	budget.ID = id
+	budget.UserID = userID
+
+	err = h.service.UpdateBudget(userID, budget)
+	if err != nil {
+		log.Printf("Error updating budget %d for user %d: %v", id, userID, err)
+		switch err {
+		case domain.ErrBudgetNotFound, domain.ErrMissingBudget, domain.ErrInvalidAmount:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case domain.ErrUnauthorized:
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		default:
+			http.Error(w, "Could not update budget", http.StatusInternalServerError)
+		}
 		return
 	}
 

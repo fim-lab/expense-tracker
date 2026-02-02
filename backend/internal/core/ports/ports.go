@@ -11,10 +11,13 @@ type TransactionService interface {
 	GetTransactionCount(userID int) (int, error)
 	UpdateTransaction(userID int, t domain.Transaction) error
 	DeleteTransaction(userID int, id int) error
+	GetTransactionByID(userID int, id int) (domain.Transaction, error)
 }
 
 type BudgetService interface {
 	CreateBudget(userID int, b domain.Budget) error
+	GetBudget(userID int, id int) (domain.Budget, error)
+	UpdateBudget(userID int, budget domain.Budget) error
 	GetBudgets(userID int) ([]domain.Budget, error)
 	GetTotalOfBudgets(userID int) (int, error)
 	DeleteBudget(userID int, id int) error
@@ -22,6 +25,8 @@ type BudgetService interface {
 
 type WalletService interface {
 	CreateWallet(userID int, w domain.Wallet) error
+	GetWallet(userID int, id int) (domain.Wallet, error)
+	UpdateWallet(userID int, wallet domain.Wallet) error
 	GetWallets(userID int) ([]domain.Wallet, error)
 	GetTotalOfWallets(userID int) (int, error)
 	DeleteWallet(userID int, id int) error
@@ -60,11 +65,13 @@ type ExpenseRepository interface {
 
 	SaveBudget(b domain.Budget) error
 	GetBudgetByID(id int) (domain.Budget, error)
+	UpdateBudget(budget domain.Budget) error
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
 	DeleteBudget(id int) error
 
 	SaveWallet(w domain.Wallet) error
 	GetWalletByID(id int) (domain.Wallet, error)
+	UpdateWallet(wallet domain.Wallet) error
 	FindWalletsByUser(userID int) ([]domain.Wallet, error)
 	DeleteWallet(id int) error
 
@@ -82,6 +89,9 @@ type ExpenseRepository interface {
 	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
 	CreateTransfer(from, to domain.Transaction) error
+
+	CountTransactionsByBudgetID(budgetID int) (int, error)
+	CountTransactionsByWalletID(walletID int) (int, error)
 
 	SaveStock(s domain.Stock) error
 	GetStockByID(id int) (domain.Stock, error)

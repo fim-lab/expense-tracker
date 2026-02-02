@@ -236,3 +236,31 @@ func (h *TransactionHandler) DeleteTransaction(w http.ResponseWriter, r *http.Re
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *TransactionHandler) GetTransaction(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+	transactionIDStr := chi.URLParam(r, "id")
+	if transactionIDStr == "" {
+		http.Error(w, "Missing transaction ID", http.StatusBadRequest)
+		return
+	}
+
+	transactionID, err := strconv.Atoi(transactionIDStr)
+	if err != nil {
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
+	}
+
+	transaction, err := h.service.GetTransactionByID(userID, transactionID)
+	if err != nil {
+		if err == domain.ErrTransactionNotFound {
+			http.Error(w, "Transaction not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Error fetching transaction", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(transaction)
+}
