@@ -56,4 +56,8 @@ export interface Budget {
 	name: string;
 	limitCents: number;
 	balanceCents: number;
+	canDelete: boolean;
+	isEditing?: boolean;
+	newName?: string;
+	newLimitEuros?: number;
 }
