@@ -28,6 +28,10 @@ export const formatCurrency = (cents: number) => {
 	});
 };
 
+export function getShortMonthYearString(date: Date): string {
+	return date.toLocaleDateString('de-DE', { year: '2-digit', month: 'long' });
+}
+
 export async function searchTransactions(
 	criteria: TransactionSearchCriteria
 ): Promise<PaginatedTransactions> {
