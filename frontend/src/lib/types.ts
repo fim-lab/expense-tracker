@@ -53,6 +53,13 @@ export interface Wallet {
 	newName?: string;
 }
 
+export interface User {
+	id: number;
+	salaryCents: number;
+	isEditing?: boolean;
+	newSalaryEuros?: number;
+}
+
 export interface Budget {
 	id: number;
 	userId: number;

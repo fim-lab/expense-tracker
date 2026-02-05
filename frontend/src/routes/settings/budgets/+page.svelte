@@ -1,8 +1,18 @@
 <script lang="ts">
 	import { formatCurrency } from '$lib/utils';
-	import type { Budget } from '$lib/types';
+	import type { Budget, User } from '$lib/types';
 
 	let { data } = $props();
+
+	let user = $state<User | null>(
+		data.user
+			? {
+					...data.user,
+					isEditing: false,
+					newSalaryEuros: data.user.salaryCents / 100
+				}
+			: null
+	);
 
 	let budgets = $state<Budget[]>(
 		data.budgets.map((b) => ({
@@ -57,15 +67,81 @@
 			}
 		}
 	}
+
+	function startEditingSalary() {
+		if (user) {
+			user.isEditing = true;
+			user.newSalaryEuros = user.salaryCents / 100;
+		}
+	}
+
+	function cancelEditingSalary() {
+		if (user) {
+			user.isEditing = false;
+		}
+	}
+
+	async function updateSalary() {
+		if (!user || user.newSalaryEuros === undefined || user.newSalaryEuros < 0) {
+			alert('Enter a valid salary.');
+			return;
+		}
+		const newSalaryCents = Math.round(user.newSalaryEuros * 100);
+		const res = await fetch(`/api/users/me/salary`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ salaryCents: newSalaryCents })
+		});
+
+		if (res.ok) {
+			user.salaryCents = newSalaryCents;
+			user.isEditing = false;
+		} else {
+			console.error('Failed to update salary');
+			alert('Failed to update salary. Please try again.');
+		}
+	}
 </script>
 
-<h1>Budgets</h1>
+<h1>Salary & Budgets</h1>
+
+{#if user}
+	<table>
+		<thead>
+			<tr>
+				<th>Current Salary</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>
+					{#if user.isEditing}
+						<input type="number" step="0.01" bind:value={user.newSalaryEuros} />
+					{:else}
+						{formatCurrency(user.salaryCents)}
+					{/if}
+				</td>
+				<td>
+					{#if user.isEditing}
+						<button onclick={updateSalary}>Save</button>
+						<button class="secondary" onclick={cancelEditingSalary}>Cancel</button>
+					{:else}
+						<button onclick={startEditingSalary}>Edit Salary</button>
+					{/if}
+				</td>
+			</tr>
+		</tbody>
+	</table>
+{:else}
+	<p>Loading user data or user not found.</p>
+{/if}
 
 {#if budgets.length > 0}
 	<table>
 		<thead>
 			<tr>
-				<th>Name</th>
+				<th>Budgets</th>
 				<th>Limit</th>
 				<th>Actions</th>
 			</tr>

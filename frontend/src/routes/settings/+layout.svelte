@@ -6,7 +6,7 @@
 	<aside class="container">
 		<nav>
 			<ul>
-				<li><a href="/settings/budgets">Budgets</a></li>
+				<li><a href="/settings/budgets">Salary/Budget</a></li>
 				<li><a href="/settings/wallets">Wallets</a></li>
 				<li><a href="/settings/appearance">Appearance</a></li>
 			</ul>
