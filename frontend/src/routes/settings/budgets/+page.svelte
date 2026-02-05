@@ -64,6 +64,20 @@
 		salaryMismatch = totalBudgetLimitCents - currentSalaryInput;
 	}
 
+	function fixSalary() {
+		if (user) {
+			user.newSalaryEuros = totalBudgetLimitCents / 100;
+			updateSalaryInput();
+		}
+	}
+
+	function fixBudget(budget: Budget) {
+		if (budget.newLimitEuros !== undefined) {
+			budget.newLimitEuros = (Math.round(budget.newLimitEuros * 100) - salaryMismatch) / 100;
+			calculateTotalBudgetLimit();
+		}
+	}
+
 	function startEditing(budget: Budget) {
 		budget.isEditing = true;
 		budget.newName = budget.name;
@@ -183,6 +197,9 @@
 				</td>
 				<td>
 					{#if user.isEditing}
+						{#if salaryMismatch !== 0}
+							<button class="secondary" onclick={fixSalary}>Fix</button>
+						{/if}
 						<button onclick={updateSalary}>Save</button>
 						<button class="secondary" onclick={cancelEditingSalary}>Cancel</button>
 					{:else}
@@ -231,6 +248,9 @@
 					</td>
 					<td>
 						{#if budget.isEditing}
+							{#if salaryMismatch !== 0}
+								<button class="secondary" onclick={() => fixBudget(budget)}>Fix</button>
+							{/if}
 							<button onclick={() => updateBudget(budget)}>OK</button>
 							<button class="secondary" onclick={() => cancelEditing(budget)}>Cancel</button>
 						{:else}
