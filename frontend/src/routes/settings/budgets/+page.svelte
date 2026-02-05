@@ -15,13 +15,54 @@
 	);
 
 	let budgets = $state<Budget[]>(
-		data.budgets.map((b) => ({
+		data.budgets.map((b: Budget) => ({
 			...b,
 			isEditing: false,
 			newName: '',
 			newLimitEuros: b.limitCents / 100
 		}))
 	);
+
+	$effect(() => {
+		if (budgets) {
+			calculateTotalBudgetLimit();
+		}
+		if (user) {
+			updateSalaryInput();
+		}
+	});
+
+	let totalBudgetLimitCents = $state(0);
+	let currentSalaryInput = $state(0);
+	let salaryMismatch = $state(0);
+
+	function calculateTotalBudgetLimit() {
+		let total = 0;
+		for (const budget of budgets) {
+			total +=
+				budget.isEditing && budget.newLimitEuros !== undefined
+					? Math.round(budget.newLimitEuros * 100)
+					: budget.limitCents;
+		}
+		totalBudgetLimitCents = total;
+		calculateSalaryMismatch();
+	}
+
+	function updateSalaryInput() {
+		if (user && user.salaryCents !== undefined) {
+			currentSalaryInput =
+				user.isEditing && user.newSalaryEuros !== undefined
+					? Math.round(user.newSalaryEuros * 100)
+					: user.salaryCents;
+		} else {
+			salaryMismatch = 0;
+		}
+		calculateSalaryMismatch();
+	}
+
+	function calculateSalaryMismatch() {
+		salaryMismatch = totalBudgetLimitCents - currentSalaryInput;
+	}
 
 	function startEditing(budget: Budget) {
 		budget.isEditing = true;
@@ -31,6 +72,7 @@
 
 	function cancelEditing(budget: Budget) {
 		budget.isEditing = false;
+		calculateTotalBudgetLimit();
 	}
 
 	async function updateBudget(budget: Budget) {
@@ -49,6 +91,7 @@
 			budget.name = budget.newName;
 			budget.limitCents = newLimitCents;
 			budget.isEditing = false;
+			calculateTotalBudgetLimit();
 		} else {
 			console.error('Failed to update budget');
 		}
@@ -62,6 +105,7 @@
 
 			if (res.ok) {
 				budgets = budgets.filter((b) => b.id !== budgetId);
+				calculateTotalBudgetLimit();
 			} else {
 				console.error('Failed to delete budget');
 			}
@@ -78,6 +122,7 @@
 	function cancelEditingSalary() {
 		if (user) {
 			user.isEditing = false;
+			calculateSalaryMismatch();
 		}
 	}
 
@@ -96,6 +141,7 @@
 		if (res.ok) {
 			user.salaryCents = newSalaryCents;
 			user.isEditing = false;
+			calculateSalaryMismatch();
 		} else {
 			console.error('Failed to update salary');
 			alert('Failed to update salary. Please try again.');
@@ -104,6 +150,14 @@
 </script>
 
 <h1>Salary & Budgets</h1>
+
+{#if salaryMismatch !== 0}
+	<article class="warning">
+		The sum of your budget limits ({formatCurrency(totalBudgetLimitCents)}) does not equal your
+		salary ({formatCurrency(currentSalaryInput)}).<br />
+		The Difference is {formatCurrency(salaryMismatch)}
+	</article>
+{/if}
 
 {#if user}
 	<table>
@@ -117,7 +171,12 @@
 			<tr>
 				<td>
 					{#if user.isEditing}
-						<input type="number" step="0.01" bind:value={user.newSalaryEuros} />
+						<input
+							type="number"
+							step="0.01"
+							bind:value={user.newSalaryEuros}
+							oninput={updateSalaryInput}
+						/>
 					{:else}
 						{formatCurrency(user.salaryCents)}
 					{/if}
@@ -137,11 +196,13 @@
 	<p>Loading user data or user not found.</p>
 {/if}
 
+<h2>Budgets</h2>
+
 {#if budgets.length > 0}
 	<table>
 		<thead>
 			<tr>
-				<th>Budgets</th>
+				<th>Budget</th>
 				<th>Limit</th>
 				<th>Actions</th>
 			</tr>
@@ -158,7 +219,12 @@
 					</td>
 					<td>
 						{#if budget.isEditing}
-							<input type="number" step="0.01" bind:value={budget.newLimitEuros} />
+							<input
+								type="number"
+								step="0.01"
+								bind:value={budget.newLimitEuros}
+								oninput={calculateTotalBudgetLimit}
+							/>
 						{:else}
 							{formatCurrency(budget.limitCents)}
 						{/if}
@@ -193,6 +259,7 @@
 <style>
 	table {
 		width: 100%;
+		margin-bottom: 1rem;
 	}
 	th,
 	td {
@@ -205,5 +272,13 @@
 	}
 	input {
 		margin-bottom: 0;
+	}
+	.warning {
+		background-color: var(--pico-form-element-background-color);
+		color: var(--pico-color-red-600);
+		border: 1px solid var(--pico-color-red-300);
+		padding: 1rem;
+		margin-bottom: 1rem;
+		border-radius: var(--pico-border-radius);
 	}
 </style>
