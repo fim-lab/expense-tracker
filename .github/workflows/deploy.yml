@@ -6,6 +6,8 @@ permissions:
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   test-and-deploy:
@@ -26,7 +28,7 @@ jobs:
           go test ./...
 
       - name: Trigger Render Deployment
-        if: success()
+        if: success() && github.event_name == 'push'
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
 
       # - name: Trigger Render Demo Deployment
