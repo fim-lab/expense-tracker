@@ -10,25 +10,27 @@ import (
 )
 
 type postgresRepositoryCollection struct {
-	userRepo        *UserRepository
-	sessionRepo     *SessionRepository
-	budgetRepo      *BudgetRepository
-	walletRepo      *WalletRepository
-	depotRepo       *DepotRepository
-	transactionRepo *TransactionRepository
-	stockRepo       *StockRepository
+	userRepo                *UserRepository
+	sessionRepo             *SessionRepository
+	budgetRepo              *BudgetRepository
+	walletRepo              *WalletRepository
+	depotRepo               *DepotRepository
+	transactionRepo         *TransactionRepository
+	stockRepo               *StockRepository
+	transactionTemplateRepo *TransactionTemplateRepository
 }
 
 func NewPostgresRepositoryCollection() (*sql.DB, ports.Repositories) {
 	db := setupPostgresDB()
 	return db, &postgresRepositoryCollection{
-		userRepo:        NewUserRepository(db),
-		sessionRepo:     NewSessionRepository(db),
-		budgetRepo:      NewBudgetRepository(db),
-		walletRepo:      NewWalletRepository(db),
-		depotRepo:       NewDepotRepository(db),
-		transactionRepo: NewTransactionRepository(db),
-		stockRepo:       NewStockRepository(db),
+		userRepo:                NewUserRepository(db),
+		sessionRepo:             NewSessionRepository(db),
+		budgetRepo:              NewBudgetRepository(db),
+		walletRepo:              NewWalletRepository(db),
+		depotRepo:               NewDepotRepository(db),
+		transactionRepo:         NewTransactionRepository(db),
+		stockRepo:               NewStockRepository(db),
+		transactionTemplateRepo: NewTransactionTemplateRepository(db),
 	}
 }
 
@@ -76,4 +78,8 @@ func (prc *postgresRepositoryCollection) TransactionRepository() ports.Transacti
 
 func (prc *postgresRepositoryCollection) StockRepository() ports.StockRepository {
 	return prc.stockRepo
+}
+
+func (prc *postgresRepositoryCollection) TransactionTemplateRepository() ports.TransactionTemplateRepository {
+	return prc.transactionTemplateRepo
 }

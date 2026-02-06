@@ -56,6 +56,14 @@ type StockService interface {
 	DeleteStock(userID int, id int) error
 }
 
+type TransactionTemplateService interface {
+	CreateTransactionTemplate(userID int, tt domain.TransactionTemplate) error
+	GetTransactionTemplate(userID int, id int) (domain.TransactionTemplate, error)
+	GetTransactionTemplates(userID int) ([]domain.TransactionTemplate, error)
+	UpdateTransactionTemplate(userID int, tt domain.TransactionTemplate) error
+	DeleteTransactionTemplate(userID int, id int) error
+}
+
 // --- Driven Ports  ---
 
 type UserRepository interface {
@@ -115,6 +123,14 @@ type StockRepository interface {
 	DeleteStock(id int) error
 }
 
+type TransactionTemplateRepository interface {
+	SaveTransactionTemplate(tt domain.TransactionTemplate) error
+	GetTransactionTemplateByID(id int) (domain.TransactionTemplate, error)
+	FindTransactionTemplatesByUser(userID int) ([]domain.TransactionTemplate, error)
+	UpdateTransactionTemplate(tt domain.TransactionTemplate) error
+	DeleteTransactionTemplate(id int) error
+}
+
 type Repositories interface {
 	UserRepository() UserRepository
 	SessionRepository() SessionRepository
@@ -123,4 +139,5 @@ type Repositories interface {
 	DepotRepository() DepotRepository
 	TransactionRepository() TransactionRepository
 	StockRepository() StockRepository
+	TransactionTemplateRepository() TransactionTemplateRepository
 }

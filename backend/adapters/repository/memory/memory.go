@@ -12,15 +12,16 @@ import (
 )
 
 type inMemoryRepositories struct {
-	mu           sync.RWMutex
-	transactions map[int]domain.Transaction
-	budgets      map[int]domain.Budget
-	wallets      map[int]domain.Wallet
-	users        map[string]domain.User
-	sessions     map[string]domain.Session
-	depots       map[int]domain.Depot
-	stocks       map[int]domain.Stock
-	lastID       int
+	mu                   sync.RWMutex
+	transactions         map[int]domain.Transaction
+	budgets              map[int]domain.Budget
+	wallets              map[int]domain.Wallet
+	users                map[string]domain.User
+	sessions             map[string]domain.Session
+	depots               map[int]domain.Depot
+	stocks               map[int]domain.Stock
+	transactionTemplates map[int]domain.TransactionTemplate
+	lastID               int
 }
 
 func NewSeededRepositories() ports.Repositories {
@@ -35,14 +36,15 @@ func NewCleanRepositories() ports.Repositories {
 
 func NewInMemoryRepositories() *inMemoryRepositories {
 	return &inMemoryRepositories{
-		transactions: make(map[int]domain.Transaction),
-		budgets:      make(map[int]domain.Budget),
-		wallets:      make(map[int]domain.Wallet),
-		users:        make(map[string]domain.User),
-		sessions:     make(map[string]domain.Session),
-		depots:       make(map[int]domain.Depot),
-		stocks:       make(map[int]domain.Stock),
-		lastID:       0,
+		transactions:         make(map[int]domain.Transaction),
+		budgets:              make(map[int]domain.Budget),
+		wallets:              make(map[int]domain.Wallet),
+		users:                make(map[string]domain.User),
+		sessions:             make(map[string]domain.Session),
+		depots:               make(map[int]domain.Depot),
+		stocks:               make(map[int]domain.Stock),
+		transactionTemplates: make(map[int]domain.TransactionTemplate),
+		lastID:               0,
 	}
 }
 
@@ -138,4 +140,8 @@ func (r *inMemoryRepositories) StockRepository() ports.StockRepository {
 
 func (r *inMemoryRepositories) TransactionRepository() ports.TransactionRepository {
 	return &TransactionRepository{repo: r}
+}
+
+func (r *inMemoryRepositories) TransactionTemplateRepository() ports.TransactionTemplateRepository {
+	return &TransactionTemplateRepository{repo: r}
 }
