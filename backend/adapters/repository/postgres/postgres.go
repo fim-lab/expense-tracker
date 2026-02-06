@@ -2,710 +2,78 @@ package postgres
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 
-	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
-type Repository struct {
-	db *sql.DB
+type postgresRepositoryCollection struct {
+	userRepo        *UserRepository
+	sessionRepo     *SessionRepository
+	budgetRepo      *BudgetRepository
+	walletRepo      *WalletRepository
+	depotRepo       *DepotRepository
+	transactionRepo *TransactionRepository
+	stockRepo       *StockRepository
 }
 
-func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db}
+func NewPostgresRepositoryCollection() (*sql.DB, ports.Repositories) {
+	db := setupPostgresDB()
+	return db, &postgresRepositoryCollection{
+		userRepo:        NewUserRepository(db),
+		sessionRepo:     NewSessionRepository(db),
+		budgetRepo:      NewBudgetRepository(db),
+		walletRepo:      NewWalletRepository(db),
+		depotRepo:       NewDepotRepository(db),
+		transactionRepo: NewTransactionRepository(db),
+		stockRepo:       NewStockRepository(db),
+	}
 }
 
-// --- User Methods ---
+func setupPostgresDB() *sql.DB {
+	dbUrl := os.Getenv("DATABASE_URL")
+	if dbUrl == "" {
+		log.Fatal("DATABASE_URL environment variable is not set for production mode")
+	}
 
-func (r *Repository) GetUserByUsername(username string) (domain.User, error) {
-	var u domain.User
-	query := `SELECT id, username, password_hash, salary_cents FROM users WHERE username = $1`
-	err := r.db.QueryRow(query, username).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.SalaryCents)
+	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.User{}, domain.ErrUserNotFound
-		}
-		return domain.User{}, err
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	return u, nil
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("Database unreachable: %v", err)
+	}
+	fmt.Println("Connected to Postgres DB")
+	return db
 }
 
-func (r *Repository) SaveUser(u domain.User) error {
-	query := `INSERT INTO users (username, password_hash, salary_cents) 
-	          VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(query, u.Username, u.PasswordHash, u.SalaryCents)
-	return err
+func (prc *postgresRepositoryCollection) UserRepository() ports.UserRepository {
+	return prc.userRepo
 }
 
-func (r *Repository) UpdateUser(u domain.User) error {
-	query := `
-        UPDATE users
-        SET username = $2, password_hash = $3
-        WHERE id = $1`
-	_, err := r.db.Exec(query, u.ID, u.Username, u.PasswordHash)
-	return err
+func (prc *postgresRepositoryCollection) SessionRepository() ports.SessionRepository {
+	return prc.sessionRepo
 }
 
-func (r *Repository) GetUserByID(userID int) (domain.User, error) {
-	var u domain.User
-	query := `SELECT id, username, password_hash, salary_cents FROM users WHERE id = $1`
-	err := r.db.QueryRow(query, userID).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.SalaryCents)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.User{}, domain.ErrUserNotFound
-		}
-		return domain.User{}, err
-	}
-	return u, nil
+func (prc *postgresRepositoryCollection) BudgetRepository() ports.BudgetRepository {
+	return prc.budgetRepo
 }
 
-func (r *Repository) UpdateUserSalary(userID int, salary int) error {
-	query := `UPDATE users SET salary_cents = $1 WHERE id = $2`
-	_, err := r.db.Exec(query, salary, userID)
-	return err
+func (prc *postgresRepositoryCollection) WalletRepository() ports.WalletRepository {
+	return prc.walletRepo
 }
 
-// --- Budget Methods ---
-
-func (r *Repository) SaveBudget(b domain.Budget) error {
-	query := `INSERT INTO budgets (user_id, name, limit_cents) 
-	          VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(query, b.UserID, b.Name, b.LimitCents)
-	return err
+func (prc *postgresRepositoryCollection) DepotRepository() ports.DepotRepository {
+	return prc.depotRepo
 }
 
-func (r *Repository) UpdateBudget(b domain.Budget) error {
-	query := `
-		UPDATE budgets
-		SET name = $2, limit_cents = $3 
-	    WHERE id = $1`
-	_, err := r.db.Exec(query, b.ID, b.Name, b.LimitCents)
-	return err
+func (prc *postgresRepositoryCollection) TransactionRepository() ports.TransactionRepository {
+	return prc.transactionRepo
 }
 
-func (r *Repository) GetBudgetByID(id int) (domain.Budget, error) {
-	var b domain.Budget
-	err := r.db.QueryRow("SELECT id, user_id, name, limit_cents FROM budgets WHERE id = $1", id).
-		Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.Budget{}, domain.ErrMissingBudget
-		}
-		return domain.Budget{}, err
-	}
-	return b, nil
-}
-
-func (r *Repository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
-	rows, err := r.db.Query("SELECT id, user_id, name, limit_cents, balance_cents FROM budgets WHERE user_id = $1 ORDER BY id ASC", userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var res []domain.Budget
-	for rows.Next() {
-		var b domain.Budget
-		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &b.BalanceCents); err != nil {
-			return nil, err
-		}
-		res = append(res, b)
-	}
-	return res, nil
-}
-
-func (r *Repository) DeleteBudget(id int) error {
-	_, err := r.db.Exec("DELETE FROM budgets WHERE id = $1", id)
-	return err
-}
-
-// --- Wallet Methods ---
-
-func (r *Repository) SaveWallet(w domain.Wallet) error {
-	query := `INSERT INTO wallets (user_id, name) VALUES ($1, $2)`
-	_, err := r.db.Exec(query, w.UserID, w.Name)
-	return err
-}
-
-func (r *Repository) UpdateWallet(w domain.Wallet) error {
-	query := `
-		UPDATE wallets
-		SET name = $2
-	    WHERE id = $1`
-	_, err := r.db.Exec(query, w.ID, w.Name)
-	return err
-}
-func (r *Repository) GetWalletByID(id int) (domain.Wallet, error) {
-	var w domain.Wallet
-	query := `SELECT id, user_id, name FROM wallets WHERE id = $1`
-	err := r.db.QueryRow(query, id).Scan(&w.ID, &w.UserID, &w.Name)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.Wallet{}, domain.ErrWalletNotFound
-		}
-		return domain.Wallet{}, err
-	}
-	return w, nil
-}
-
-func (r *Repository) FindWalletsByUser(userID int) ([]domain.Wallet, error) {
-	query := `SELECT id, user_id, name, balance_cents FROM wallets WHERE user_id = $1 ORDER BY id ASC`
-	rows, err := r.db.Query(query, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var res []domain.Wallet
-	for rows.Next() {
-		var w domain.Wallet
-		if err := rows.Scan(&w.ID, &w.UserID, &w.Name, &w.BalanceCents); err != nil {
-			return nil, err
-		}
-		res = append(res, w)
-	}
-	return res, nil
-}
-
-func (r *Repository) DeleteWallet(id int) error {
-	_, err := r.db.Exec("DELETE FROM wallets WHERE id = $1", id)
-	return err
-}
-
-// --- Transaction Methods ---
-
-func (r *Repository) SaveTransaction(t domain.Transaction) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("could not start transaction: %w", err)
-	}
-	defer tx.Rollback()
-	tags, _ := json.Marshal(t.Tags)
-
-	query := `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err = tx.Exec(query, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
-	if err != nil {
-		return fmt.Errorf("failed to insert transaction: %w", err)
-	}
-	adjustment := t.AmountInCents
-	if t.Type == domain.Expense {
-		adjustment = -t.AmountInCents
-	}
-
-	queryBudget := `
-		UPDATE budgets 
-		SET balance_cents = balance_cents + $1 
-		WHERE id = $2 AND user_id = $3
-	`
-	_, err = tx.Exec(queryBudget, adjustment, t.BudgetID, t.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to update budget balance: %w", err)
-	}
-
-	queryWallet := `
-		UPDATE wallets
-		SET balance_cents = balance_cents + $1
-		WHERE id = $2 AND user_id = $3
-	`
-	_, err = tx.Exec(queryWallet, adjustment, t.WalletID, t.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to update wallet balance: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
-}
-
-func (r *Repository) UpdateTransaction(t domain.Transaction) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("could not start transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	var oldT domain.Transaction
-	var oldNullBudgetID sql.NullInt32
-	queryFetch := `SELECT amount_in_cents, type, budget_id, wallet_id FROM transactions WHERE id = $1 AND user_id = $2`
-	err = tx.QueryRow(queryFetch, t.ID, t.UserID).Scan(&oldT.AmountInCents, &oldT.Type, &oldNullBudgetID, &oldT.WalletID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.ErrTransactionNotFound
-		}
-		return fmt.Errorf("could not find original transaction: %w", err)
-	}
-	if oldNullBudgetID.Valid {
-		oldBudgetID := int(oldNullBudgetID.Int32)
-		oldT.BudgetID = &oldBudgetID
-	}
-
-	oldAdjustment := oldT.AmountInCents
-	if oldT.Type == domain.Income {
-		oldAdjustment = -oldT.AmountInCents
-	}
-
-	queryRevertBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
-	_, err = tx.Exec(queryRevertBudget, oldAdjustment, oldT.BudgetID)
-	if err != nil {
-		return fmt.Errorf("failed to revert budget balance: %w", err)
-	}
-
-	queryRevertWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2`
-	_, err = tx.Exec(queryRevertWallet, oldAdjustment, oldT.WalletID)
-	if err != nil {
-		return fmt.Errorf("failed to revert wallet balance: %w", err)
-	}
-
-	tags, _ := json.Marshal(t.Tags)
-	query := `
-		UPDATE transactions
-		SET date = $2, budget_id = $3, wallet_id = $4, description = $5, amount_in_cents = $6, type = $7, is_pending = $8, is_debt = $9, tags = $10
-	    WHERE id = $1 AND user_id = $11`
-	_, err = tx.Exec(query, t.ID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags, t.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to update transaction record: %w", err)
-	}
-
-	newAdjustment := t.AmountInCents
-	if t.Type == domain.Expense {
-		newAdjustment = -t.AmountInCents
-	}
-
-	queryApplyBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
-	_, err = tx.Exec(queryApplyBudget, newAdjustment, t.BudgetID)
-	if err != nil {
-		return fmt.Errorf("failed to apply new budget balance: %w", err)
-	}
-
-	queryApplyWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2`
-	_, err = tx.Exec(queryApplyWallet, newAdjustment, t.WalletID)
-	if err != nil {
-		return fmt.Errorf("failed to apply new wallet balance: %w", err)
-	}
-
-	return tx.Commit()
-}
-
-func (r *Repository) GetTransactionByID(id int) (domain.Transaction, error) {
-	var t domain.Transaction
-	var tags []byte
-	query := `SELECT id, user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags 
-	          FROM transactions WHERE id = $1`
-	var nullBudgetID sql.NullInt32
-	err := r.db.QueryRow(query, id).Scan(
-		&t.ID, &t.UserID, &t.Date, &nullBudgetID, &t.WalletID, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &t.IsDebt, &tags,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.Transaction{}, domain.ErrTransactionNotFound
-		}
-		return domain.Transaction{}, err
-	}
-	if nullBudgetID.Valid {
-		budgetID := int(nullBudgetID.Int32)
-		t.BudgetID = &budgetID
-	}
-	json.Unmarshal(tags, &t.Tags)
-	return t, nil
-}
-
-func (r *Repository) GetTransactionCount(userID int) (int, error) {
-	query := `SELECT COUNT(*) FROM transactions WHERE user_id = $1`
-	var count int
-	err := r.db.QueryRow(query, userID).Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
-func (r *Repository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
-	query := `
-		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, b.name as budget_name, w.name as wallet_name
-		FROM transactions t
-		LEFT JOIN budgets b ON t.budget_id = b.id
-		LEFT JOIN wallets w ON t.wallet_id = w.id
-		WHERE t.user_id = $1
-		ORDER BY t.date DESC, t.id DESC
-		LIMIT $2 OFFSET $3`
-	rows, err := r.db.Query(query, userID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var txs []domain.TransactionDTO
-	for rows.Next() {
-		var t domain.TransactionDTO
-		var nullBudgetName sql.NullString
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &nullBudgetName, &t.WalletName)
-		if err != nil {
-			return nil, err
-		}
-		if nullBudgetName.Valid {
-			t.BudgetName = nullBudgetName.String
-		} else {
-			t.BudgetName = ""
-		}
-		txs = append(txs, t)
-	}
-	return txs, nil
-}
-
-func (r *Repository) SearchTransactions(userID int, criteria domain.TransactionSearchCriteria) ([]domain.TransactionDTO, error) {
-	query := `
-		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, b.name as budget_name, w.name as wallet_name
-		FROM transactions t
-		LEFT JOIN budgets b ON t.budget_id = b.id
-		LEFT JOIN wallets w ON t.wallet_id = w.id
-	`
-	whereClause := " WHERE t.user_id = $1"
-	args := []interface{}{userID}
-	argID := 2
-
-	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
-		args = append(args, "%"+*criteria.SearchTerm+"%")
-		argID++
-	}
-	if criteria.FromDate != nil {
-		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)
-		args = append(args, *criteria.FromDate)
-		argID++
-	}
-	if criteria.UntilDate != nil {
-		whereClause += fmt.Sprintf(" AND t.date <= $%d", argID)
-		args = append(args, *criteria.UntilDate)
-		argID++
-	}
-	if criteria.BudgetID != nil {
-		whereClause += fmt.Sprintf(" AND t.budget_id = $%d", argID)
-		args = append(args, *criteria.BudgetID)
-		argID++
-	}
-	if criteria.WalletID != nil {
-		whereClause += fmt.Sprintf(" AND t.wallet_id = $%d", argID)
-		args = append(args, *criteria.WalletID)
-		argID++
-	}
-	if criteria.Type != nil {
-		whereClause += fmt.Sprintf(" AND t.type = $%d", argID)
-		args = append(args, *criteria.Type)
-		argID++
-	}
-
-	query += whereClause
-	query += " ORDER BY t.date DESC, t.id DESC"
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argID, argID+1)
-	args = append(args, criteria.PageSize, (criteria.Page-1)*criteria.PageSize)
-
-	rows, err := r.db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var txs []domain.TransactionDTO
-	for rows.Next() {
-		var t domain.TransactionDTO
-		var nullBudgetName sql.NullString
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &nullBudgetName, &t.WalletName)
-		if err != nil {
-			return nil, err
-		}
-		if nullBudgetName.Valid {
-			t.BudgetName = nullBudgetName.String
-		} else {
-			t.BudgetName = ""
-		}
-		txs = append(txs, t)
-	}
-	return txs, nil
-}
-
-func (r *Repository) CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error) {
-	query := `SELECT COUNT(t.id) FROM transactions t`
-	whereClause := " WHERE t.user_id = $1"
-	args := []interface{}{userID}
-	argID := 2
-
-	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
-		args = append(args, "%"+*criteria.SearchTerm+"%")
-		argID++
-	}
-	if criteria.FromDate != nil {
-		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)
-		args = append(args, *criteria.FromDate)
-		argID++
-	}
-	if criteria.UntilDate != nil {
-		whereClause += fmt.Sprintf(" AND t.date <= $%d", argID)
-		args = append(args, *criteria.UntilDate)
-		argID++
-	}
-	if criteria.BudgetID != nil {
-		whereClause += fmt.Sprintf(" AND t.budget_id = $%d", argID)
-		args = append(args, *criteria.BudgetID)
-		argID++
-	}
-	if criteria.WalletID != nil {
-		whereClause += fmt.Sprintf(" AND t.wallet_id = $%d", argID)
-		args = append(args, *criteria.WalletID)
-		argID++
-	}
-	if criteria.Type != nil {
-		whereClause += fmt.Sprintf(" AND t.type = $%d", argID)
-		args = append(args, *criteria.Type)
-		argID++
-	}
-
-	query += whereClause
-	var count int
-	err := r.db.QueryRow(query, args...).Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
-func (r *Repository) DeleteTransaction(id int) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	var amount int
-	var tType domain.TransactionType
-	var nullBudgetID sql.NullInt32
-	var walletID int
-	var userID int
-	queryFetch := `SELECT amount_in_cents, type, budget_id, wallet_id, user_id FROM transactions WHERE id = $1`
-	err = tx.QueryRow(queryFetch, id).Scan(&amount, &tType, &nullBudgetID, &walletID, &userID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.ErrTransactionNotFound
-		}
-		return err
-	}
-
-	adjustment := -amount
-	if tType == domain.Expense {
-		adjustment = amount
-	}
-
-	if nullBudgetID.Valid {
-		queryBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
-		_, err = tx.Exec(queryBudget, adjustment, nullBudgetID.Int32, userID)
-		if err != nil {
-			return err
-		}
-	}
-
-	queryWallet := `UPDATE wallets SET balance_cents = balance_cents + $1 WHERE id = $2 AND user_id = $3`
-	_, err = tx.Exec(queryWallet, adjustment, walletID, userID)
-	if err != nil {
-		return err
-	}
-
-	result, err := tx.Exec("DELETE FROM transactions WHERE id = $1", id)
-	if err != nil {
-		return err
-	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return domain.ErrTransactionNotFound
-	}
-
-	return tx.Commit()
-}
-
-func (r *Repository) CreateTransfer(from, to domain.Transaction) error {
-	tx, err := r.db.Begin()
-	if err != nil {
-		return fmt.Errorf("could not start transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	fromTags, _ := json.Marshal(from.Tags)
-	query := `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err = tx.Exec(query, from.UserID, from.Date, from.BudgetID, from.WalletID, from.Description, from.AmountInCents, from.Type, from.IsPending, from.IsDebt, fromTags)
-	if err != nil {
-		return fmt.Errorf("failed to insert from-transaction: %w", err)
-	}
-
-	queryWalletFrom := `
-		UPDATE wallets
-		SET balance_cents = balance_cents - $1
-		WHERE id = $2 AND user_id = $3
-	`
-	_, err = tx.Exec(queryWalletFrom, from.AmountInCents, from.WalletID, from.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to update from-wallet balance: %w", err)
-	}
-
-	toTags, _ := json.Marshal(to.Tags)
-	query = `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err = tx.Exec(query, to.UserID, to.Date, to.BudgetID, to.WalletID, to.Description, to.AmountInCents, to.Type, to.IsPending, to.IsDebt, toTags)
-	if err != nil {
-		return fmt.Errorf("failed to insert to-transaction: %w", err)
-	}
-
-	queryWalletTo := `
-		UPDATE wallets
-		SET balance_cents = balance_cents + $1
-		WHERE id = $2 AND user_id = $3
-	`
-	_, err = tx.Exec(queryWalletTo, to.AmountInCents, to.WalletID, to.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to update to-wallet balance: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
-}
-
-// --- Session Methods ---
-
-func (r *Repository) SaveSession(session domain.Session) error {
-	query := `
-        INSERT INTO sessions (token, user_id, expiry)
-        VALUES ($1, $2, $3)
-    `
-	_, err := r.db.Exec(query, session.SessionToken, session.UserID, session.Expiry)
-	return err
-}
-
-func (r *Repository) GetSessionByToken(token string) (domain.Session, error) {
-	query := `SELECT token, user_id, expiry FROM sessions WHERE token = $1`
-	row := r.db.QueryRow(query, token)
-
-	var session domain.Session
-	err := row.Scan(&session.SessionToken, &session.UserID, &session.Expiry)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return domain.Session{}, domain.ErrSessionNotFound
-		}
-		return domain.Session{}, err
-	}
-	return session, nil
-}
-
-func (r *Repository) DeleteSession(token string) error {
-	query := `DELETE FROM sessions WHERE token = $1`
-	_, err := r.db.Exec(query, token)
-	return err
-}
-
-// --- Depot Methods ---
-
-func (r *Repository) SaveDepot(d domain.Depot) error {
-	query := `INSERT INTO depots (user_id, wallet_id, name) VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(query, d.UserID, d.WalletID, d.Name)
-	return err
-}
-
-func (r *Repository) GetDepotByID(id int) (domain.Depot, error) {
-	var d domain.Depot
-	query := `SELECT id, user_id, wallet_id, name FROM depots WHERE id = $1`
-	err := r.db.QueryRow(query, id).Scan(&d.ID, &d.UserID, &d.WalletID, &d.Name)
-	return d, err
-}
-
-func (r *Repository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
-	query := `SELECT id, user_id, wallet_id, name FROM depots WHERE user_id = $1`
-	rows, err := r.db.Query(query, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var depots []domain.Depot
-	for rows.Next() {
-		var d domain.Depot
-		if err := rows.Scan(&d.ID, &d.UserID, &d.WalletID, &d.Name); err != nil {
-			return nil, err
-		}
-		depots = append(depots, d)
-	}
-	return depots, nil
-}
-
-func (r *Repository) DeleteDepot(id int) error {
-	_, err := r.db.Exec("DELETE FROM depots WHERE id = $1", id)
-	return err
-}
-
-// --- Stock Methods ---
-
-func (r *Repository) SaveStock(s domain.Stock) error {
-	query := `INSERT INTO stocks (user_id, depot_id, date_of_purchase, wkn, amount, price_in_cents) 
-	          VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := r.db.Exec(query, s.UserID, s.DepotID, s.DateOfPurchase, s.WKN, s.Amount, s.PriceInCents)
-	return err
-}
-
-func (r *Repository) GetStockByID(id int) (domain.Stock, error) {
-	var s domain.Stock
-	query := `SELECT id, user_id, depot_id, date_of_purchase, wkn, amount, price_in_cents 
-	          FROM stocks WHERE id = $1`
-	err := r.db.QueryRow(query, id).Scan(&s.ID, &s.UserID, &s.DepotID, &s.DateOfPurchase, &s.WKN, &s.Amount, &s.PriceInCents)
-	return s, err
-}
-
-func (r *Repository) FindStocksByUser(userID int) ([]domain.Stock, error) {
-	query := `SELECT id, user_id, depot_id, date_of_purchase, wkn, amount, price_in_cents 
-	          FROM stocks WHERE user_id = $1`
-	rows, err := r.db.Query(query, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var stocks []domain.Stock
-	for rows.Next() {
-		var s domain.Stock
-		if err := rows.Scan(&s.ID, &s.UserID, &s.DepotID, &s.DateOfPurchase, &s.WKN, &s.Amount, &s.PriceInCents); err != nil {
-			return nil, err
-		}
-		stocks = append(stocks, s)
-	}
-	return stocks, nil
-}
-
-func (r *Repository) DeleteStock(id int) error {
-	query := `DELETE FROM stocks WHERE id = $1`
-	_, err := r.db.Exec(query, id)
-	return err
-}
-
-func (r *Repository) CountTransactionsByBudgetID(budgetID int) (int, error) {
-	var count int
-	query := `SELECT COUNT(*) FROM transactions WHERE budget_id = $1`
-	err := r.db.QueryRow(query, budgetID).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count transactions for budget ID %d: %w", budgetID, err)
-	}
-	return count, nil
-}
-
-func (r *Repository) CountTransactionsByWalletID(walletID int) (int, error) {
-	var count int
-	query := `SELECT COUNT(*) FROM transactions WHERE wallet_id = $1`
-	err := r.db.QueryRow(query, walletID).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count transactions for wallet ID %d: %w", walletID, err)
-	}
-	return count, nil
+func (prc *postgresRepositoryCollection) StockRepository() ports.StockRepository {
+	return prc.stockRepo
 }

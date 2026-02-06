@@ -8,11 +8,12 @@ import (
 )
 
 type walletService struct {
-	repo ports.ExpenseRepository
+	walletRepo      ports.WalletRepository
+	transactionRepo ports.TransactionRepository
 }
 
-func NewWalletService(repo ports.ExpenseRepository) ports.WalletService {
-	return &walletService{repo: repo}
+func NewWalletService(walletRepo ports.WalletRepository, transactionRepo ports.TransactionRepository) ports.WalletService {
+	return &walletService{walletRepo: walletRepo, transactionRepo: transactionRepo}
 }
 
 func (s *walletService) CreateWallet(userID int, b domain.Wallet) error {
@@ -22,11 +23,11 @@ func (s *walletService) CreateWallet(userID int, b domain.Wallet) error {
 		return domain.ErrMissingWallet
 	}
 
-	return s.repo.SaveWallet(b)
+	return s.walletRepo.SaveWallet(b)
 }
 
 func (s *walletService) GetWallet(userID int, id int) (domain.Wallet, error) {
-	wallet, err := s.repo.GetWalletByID(id)
+	wallet, err := s.walletRepo.GetWalletByID(id)
 	if err != nil {
 		return domain.Wallet{}, err
 	}
@@ -39,7 +40,7 @@ func (s *walletService) GetWallet(userID int, id int) (domain.Wallet, error) {
 	if wallet.BalanceCents != 0 {
 		wallet.CanDelete = false
 	} else {
-		count, err := s.repo.CountTransactionsByWalletID(wallet.ID)
+		count, err := s.transactionRepo.CountTransactionsByWalletID(wallet.ID)
 		if err != nil {
 			return domain.Wallet{}, err
 		}
@@ -52,7 +53,7 @@ func (s *walletService) GetWallet(userID int, id int) (domain.Wallet, error) {
 }
 
 func (s *walletService) GetWallets(userID int) ([]domain.Wallet, error) {
-	wallets, err := s.repo.FindWalletsByUser(userID)
+	wallets, err := s.walletRepo.FindWalletsByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +63,7 @@ func (s *walletService) GetWallets(userID int) ([]domain.Wallet, error) {
 		if wallets[i].BalanceCents != 0 {
 			wallets[i].CanDelete = false
 		} else {
-			count, err := s.repo.CountTransactionsByWalletID(wallets[i].ID)
+			count, err := s.transactionRepo.CountTransactionsByWalletID(wallets[i].ID)
 			if err != nil {
 				return nil, err
 			}
@@ -76,7 +77,7 @@ func (s *walletService) GetWallets(userID int) ([]domain.Wallet, error) {
 }
 
 func (s *walletService) GetTotalOfWallets(userID int) (int, error) {
-	wallets, err := s.repo.FindWalletsByUser(userID)
+	wallets, err := s.walletRepo.FindWalletsByUser(userID)
 	if err != nil {
 		return 0, err
 	}
@@ -90,7 +91,7 @@ func (s *walletService) GetTotalOfWallets(userID int) (int, error) {
 }
 
 func (s *walletService) UpdateWallet(userID int, wallet domain.Wallet) error {
-	existingWallet, err := s.repo.GetWalletByID(wallet.ID)
+	existingWallet, err := s.walletRepo.GetWalletByID(wallet.ID)
 	if err != nil {
 		return err
 	}
@@ -103,18 +104,18 @@ func (s *walletService) UpdateWallet(userID int, wallet domain.Wallet) error {
 		return domain.ErrMissingDescription
 	}
 
-	return s.repo.UpdateWallet(wallet)
+	return s.walletRepo.UpdateWallet(wallet)
 }
 
 func (s *walletService) DeleteWallet(userID int, id int) error {
-	existing, err := s.repo.GetWalletByID(id)
+	existing, err := s.walletRepo.GetWalletByID(id)
 	if err != nil {
 		return err
 	}
 	if existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
-	transactionCount, err := s.repo.CountTransactionsByWalletID(id)
+	transactionCount, err := s.transactionRepo.CountTransactionsByWalletID(id)
 	if err != nil {
 		return err
 	}
@@ -122,5 +123,5 @@ func (s *walletService) DeleteWallet(userID int, id int) error {
 		return domain.ErrNotEmpty
 	}
 
-	return s.repo.DeleteWallet(id)
+	return s.walletRepo.DeleteWallet(id)
 }

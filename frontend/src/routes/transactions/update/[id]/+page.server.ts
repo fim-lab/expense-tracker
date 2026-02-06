@@ -24,10 +24,6 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 	const budgets = (await authedApiFetch('/budgets')) || [];
 	const transaction = (await authedApiFetch(`/transactions/${params.id}`)) || {};
 
-	if (!transaction.ok) {
-		throw error(transaction.status, 'Failed to load transaction');
-	}
-
 	return {
 		wallets,
 		budgets,
