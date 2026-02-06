@@ -6,11 +6,12 @@ import (
 
 	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	_ "github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
 func TestCreateBudget(t *testing.T) {
-	repo := memory.NewSeededRepository()
-	svc := NewBudgetService(repo)
+	repos := memory.NewSeededRepositories()
+	svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 
 	t.Run("Valid budget creation", func(t *testing.T) {
 		budget := domain.Budget{
@@ -23,7 +24,7 @@ func TestCreateBudget(t *testing.T) {
 			t.Errorf("expected no error, got %v", err)
 		}
 
-		saved, _ := repo.FindBudgetsByUser(23)
+		saved, _ := repos.BudgetRepository().FindBudgetsByUser(23)
 		found := false
 		for _, b := range saved {
 			if b.Name == "Groceries" {
@@ -82,11 +83,11 @@ func TestGetBudgetCanDelete(t *testing.T) {
 	userID := 1
 
 	t.Run("CanDelete is false when BalanceCents is not zero", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewBudgetService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 		budget := domain.Budget{UserID: userID, Name: "Non-Zero Balance", LimitCents: 10000, BalanceCents: 500}
 		svc.CreateBudget(userID, budget)
-		budgets, _ := repo.FindBudgetsByUser(userID)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		createdBudget := budgets[0]
 
 		fetchedBudget, err := svc.GetBudget(userID, createdBudget.ID)
@@ -99,14 +100,14 @@ func TestGetBudgetCanDelete(t *testing.T) {
 	})
 
 	t.Run("CanDelete is false when BalanceCents is zero but transactions exist", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewBudgetService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 		budget := domain.Budget{UserID: userID, Name: "Zero Balance, Has Transactions", LimitCents: 10000, BalanceCents: -100}
 		svc.CreateBudget(userID, budget)
-		budgets, _ := repo.FindBudgetsByUser(userID)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		createdBudget := budgets[0]
 
-		_ = repo.SaveTransaction(domain.Transaction{
+		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			BudgetID:      &createdBudget.ID,
 			AmountInCents: 100,
@@ -124,11 +125,11 @@ func TestGetBudgetCanDelete(t *testing.T) {
 	})
 
 	t.Run("CanDelete is true when BalanceCents is zero and no transactions exist", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewBudgetService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 		budget := domain.Budget{UserID: userID, Name: "Zero Balance, No Transactions", LimitCents: 10000, BalanceCents: 0}
 		svc.CreateBudget(userID, budget)
-		budgets, _ := repo.FindBudgetsByUser(userID)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		createdBudget := budgets[0]
 
 		fetchedBudget, err := svc.GetBudget(userID, createdBudget.ID)
@@ -143,18 +144,18 @@ func TestGetBudgetCanDelete(t *testing.T) {
 
 func TestGetBudgetsCanDelete(t *testing.T) {
 	userID := 1
-	repo := memory.NewCleanRepository()
-	svc := NewBudgetService(repo)
+	repos := memory.NewCleanRepositories()
+	svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 
 	budget1 := domain.Budget{UserID: userID, Name: "Budget 1", LimitCents: 10000, BalanceCents: 500}
 	svc.CreateBudget(userID, budget1)
 
 	budget2 := domain.Budget{UserID: userID, Name: "Budget 2", LimitCents: 10000, BalanceCents: -100}
 	svc.CreateBudget(userID, budget2)
-	budgets, _ := repo.FindBudgetsByUser(userID)
+	budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 	createdBudget2 := budgets[1]
 
-	_ = repo.SaveTransaction(domain.Transaction{
+	_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
 		UserID:        userID,
 		BudgetID:      &createdBudget2.ID,
 		AmountInCents: 100,
@@ -192,11 +193,11 @@ func TestDeleteBudget(t *testing.T) {
 	userID := 1
 
 	t.Run("Successfully delete empty budget", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewBudgetService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 		budget := domain.Budget{UserID: userID, Name: "Test Budget", LimitCents: 10000}
 		svc.CreateBudget(userID, budget)
-		budgets, _ := repo.FindBudgetsByUser(userID)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		testBudget := budgets[0]
 
 		err := svc.DeleteBudget(userID, testBudget.ID)
@@ -211,14 +212,14 @@ func TestDeleteBudget(t *testing.T) {
 	})
 
 	t.Run("Fail to delete budget with transactions", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewBudgetService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 		budget := domain.Budget{UserID: userID, Name: "Test Budget", LimitCents: 10000}
 		svc.CreateBudget(userID, budget)
-		budgets, _ := repo.FindBudgetsByUser(userID)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		testBudget := budgets[0]
 
-		_ = repo.SaveTransaction(domain.Transaction{
+		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			BudgetID:      &testBudget.ID,
 			AmountInCents: 100,
@@ -238,11 +239,11 @@ func TestDeleteBudget(t *testing.T) {
 	})
 
 	t.Run("Unauthorized deletion", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewBudgetService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 		budget := domain.Budget{UserID: userID, Name: "Test Budget", LimitCents: 10000}
 		svc.CreateBudget(userID, budget)
-		budgets, _ := repo.FindBudgetsByUser(userID)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		testBudget := budgets[0]
 
 		err := svc.DeleteBudget(999, testBudget.ID)
