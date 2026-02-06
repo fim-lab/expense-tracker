@@ -113,45 +113,42 @@
 		}
 
 		const today = new Date().toISOString();
-		const requests = [];
+		try {
+			let allOk = true;
+			for (const budget of budgets) {
+				if (budget.newLimitEuros !== undefined && budget.newLimitEuros > 0) {
+					const payload = {
+						date: today,
+						description: transactionDescription,
+						amountInCents: Math.round(budget.newLimitEuros * 100),
+						walletId: selectedWalletId,
+						budgetId: budget.id,
+						type: 'INCOME',
+						isPending: false,
+						tags: []
+					};
 
-		for (const budget of budgets) {
-			if (budget.newLimitEuros !== undefined && budget.newLimitEuros > 0) {
-				const payload = {
-					date: today,
-					description: transactionDescription,
-					amountInCents: Math.round(budget.newLimitEuros * 100),
-					walletId: selectedWalletId,
-					budgetId: budget.id,
-					type: 'INCOME',
-					isPending: false,
-					tags: []
-				};
-				requests.push(
-					fetch(`/api/transactions`, {
+					const response = await fetch(`/api/transactions`, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify(payload)
-					})
-				);
+					});
+
+					if (!response.ok) {
+						allOk = false;
+						console.error(`Failed to generate transaction for budget ${budget.name}:`, response);
+						alert(
+							`Failed to generate transaction for budget ${budget.name}. Please check the console for details.`
+						);
+					}
+				}
 			}
-		}
-
-		if (requests.length === 0) {
-			alert('No transactions to generate. Please ensure budgets have a positive limit.');
-			return;
-		}
-
-		try {
-			const responses = await Promise.all(requests);
-			const allOk = responses.every((res) => res.ok);
 
 			if (allOk) {
 				alert('Salary transactions generated successfully!');
 				goto('/');
 			} else {
 				alert('Some transactions failed to generate. Please check the console for details.');
-				console.error('Failed responses:', responses);
 			}
 		} catch (error) {
 			console.error('Error sending transactions:', error);
