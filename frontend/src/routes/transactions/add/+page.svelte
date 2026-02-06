@@ -14,7 +14,6 @@
 		e.preventDefault();
 		errorMessage = '';
 
-		// 1. Convert YYYY-MM-DD to RFC3339 for Go's time.Time
 		const rfc3339Date = new Date(date).toISOString();
 
 		const payload = {

@@ -5,6 +5,22 @@
 	let limitInEuro = $state(0);
 	let isSubmitting = $state(false);
 
+	function handleFocus(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '0') {
+			input.value = '';
+		}
+	}
+
+	function handleBlur(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '') {
+			input.value = '0';
+			// Also update the bound state immediately
+			limitInEuro = 0;
+		}
+	}
+
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		isSubmitting = true;
@@ -41,7 +57,14 @@
 
 		<label>
 			Monthly Limit (EUR)
-			<input type="number" step="0.01" bind:value={limitInEuro} required />
+			<input
+				type="number"
+				step="0.01"
+				bind:value={limitInEuro}
+				required
+				onfocus={handleFocus}
+				onblur={handleBlur}
+			/>
 		</label>
 
 		<button type="submit" aria-busy={isSubmitting}>Create Budget</button>

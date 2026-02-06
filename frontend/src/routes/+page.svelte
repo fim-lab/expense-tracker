@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import TransactionSearchForm from '$lib/components/TransactionSearchForm.svelte';
 	import WalletCard from '$lib/components/WalletCard.svelte';
-	import { updateParams } from '$lib/utils';
 
-	const pageNr = page.data.page
-	const pageSize = page.data.pageSize
+	const pageNr = page.data.page;
+	const pageSize = page.data.pageSize;
 	const totalPages = $derived(Math.ceil(page.data.total / pageSize));
 
 	async function deleteTransaction(id: number) {
@@ -20,7 +19,7 @@
 		});
 
 		if (res && res.ok) {
-			await updateParams({});
+			await invalidateAll();
 		} else {
 			alert('Failed to delete transaction');
 		}

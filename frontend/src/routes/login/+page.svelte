@@ -6,17 +6,14 @@
 	let error = '';
 
 	async function handleSubmit() {
-		// 1. Reset error
 		error = '';
 
-		// 2. Construct the JSON body strictly matching the Go struct
 		const payload = {
 			username: username,
 			password: password
 		};
 
 		try {
-			// 3. Send to Go Backend (via Proxy)
 			const response = await fetch('/auth/login', {
 				method: 'POST',
 				headers: {
@@ -26,11 +23,8 @@
 			});
 
 			if (response.ok) {
-				// Success: The Go backend set the HttpOnly cookie.
-				// We just need to move the user to the dashboard.
 				goto('/');
 			} else {
-				// Handle non-200 responses (e.g. 401 Unauthorized)
 				error = 'Invalid credentials';
 			}
 		} catch (e) {

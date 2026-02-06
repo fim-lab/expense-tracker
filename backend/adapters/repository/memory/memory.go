@@ -47,7 +47,7 @@ func NewRepository(initWithSeedData bool) *Repository {
 	if initWithSeedData {
 		const AMOUNT_OF_SEEDED_TX = 21
 		// SEED DATA
-		// Username: demo | Password: demo
+		// Username: demo | Password: demo | Salary: 100€
 		demoUsername := "demo"
 		// "Demo Budget" | 5€ Limit
 		// "Demo Cash Wallet"
@@ -55,6 +55,7 @@ func NewRepository(initWithSeedData bool) *Repository {
 		repo.SaveUser(domain.User{
 			Username:     demoUsername,
 			PasswordHash: string(hash),
+			SalaryCents:  10000,
 		})
 		demoUser, err := repo.GetUserByUsername(demoUsername)
 		if err != nil {
@@ -123,8 +124,47 @@ func (r *Repository) SaveUser(u domain.User) error {
 	if u.ID == 0 {
 		u.ID = r.nextID()
 	}
+
+	foundExistingUserByID := false
+	var existingUsername string
+	for uname, user := range r.users {
+		if user.ID == u.ID {
+			foundExistingUserByID = true
+			existingUsername = uname
+			break
+		}
+	}
+
+	if foundExistingUserByID && existingUsername != u.Username {
+		delete(r.users, existingUsername)
+	}
+
 	r.users[u.Username] = u
 	return nil
+}
+
+func (r *Repository) GetUserByID(userID int) (domain.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, user := range r.users {
+		if user.ID == userID {
+			return user, nil
+		}
+	}
+	return domain.User{}, domain.ErrUserNotFound
+}
+
+func (r *Repository) UpdateUserSalary(userID int, salary int) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for username, user := range r.users {
+		if user.ID == userID {
+			user.SalaryCents = salary
+			r.users[username] = user
+			return nil
+		}
+	}
+	return domain.ErrUserNotFound
 }
 
 // --- Transaction Methods ---
