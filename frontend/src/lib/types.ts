@@ -71,3 +71,17 @@ export interface Budget {
 	newName?: string;
 	newLimitEuros?: number;
 }
+
+export interface TransactionTemplate {
+    id: number;
+    userId: number;
+    day: number; // Day of the month (1-31)
+    budgetId: number | null;
+    walletId: number;
+    description: string;
+    amountInCents: number;
+    type: TransactionType;
+    tags?: string[];
+    budgetName?: string;
+    walletName?: string;
+}

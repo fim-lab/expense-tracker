@@ -1,14 +1,46 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import TransactionTemplateCard from '$lib/components/TransactionTemplateCard.svelte';
+	import type { TransactionTemplate } from '$lib/types';
 	let { data } = $props();
 
-	let description = $state('');
-	let amount = $state(0);
+	const urlParams = page.url.searchParams;
+
+	let description = $state(urlParams.get('description') || '');
+	let amount = $state(Number(urlParams.get('amount')) || 0);
 	let date = $state(new Date().toISOString().split('T')[0]);
-	let walletId = $state(0);
-	let budgetId = $state(0);
-	let type = $state('EXPENSE');
+	let walletId = $state(Number(urlParams.get('walletId')) || 0);
+	let budgetId = $state(Number(urlParams.get('budgetId')) || 0);
+	let type = $state(urlParams.get('type') || 'EXPENSE');
 	let errorMessage = $state('');
+
+	let templates: TransactionTemplate[] = $state(data.templates);
+
+	async function handleDelete(templateId: number) {
+		const res = await fetch(`/api/transaction-templates/${templateId}`, {
+			method: 'DELETE'
+		});
+
+		if (res.ok) {
+			templates = templates.filter((t) => t.id !== templateId);
+		} else {
+			alert('Failed to delete template');
+		}
+	}
+
+	function handleUse(template: TransactionTemplate) {
+		const newDate = new Date();
+		newDate.setDate(template.day + 1);
+		date = newDate.toISOString().split('T')[0];
+		description = template.description;
+		amount = template.amountInCents / 100;
+		walletId = template.walletId;
+		if (template.budgetId) {
+			budgetId = template.budgetId;
+		}
+		type = template.type;
+	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -82,7 +114,10 @@
 			body: JSON.stringify(payload)
 		});
 
-		if (!res.ok) {
+		if (res.ok) {
+			const newTemplate: TransactionTemplate = await res.json();
+			templates = [...templates, newTemplate];
+		} else {
 			const errorText = await res.text();
 			console.error('Backend Error:', errorText);
 			errorMessage = `Failed to save transaction template: ${errorText}`;
@@ -148,6 +183,17 @@
 		</div>
 	</form>
 </article>
+
+{#if templates.length > 0}
+	<article>
+		<h3>Templates</h3>
+		<div>
+			{#each templates as template (template.id)}
+				<TransactionTemplateCard {template} ondelete={handleDelete} onuse={handleUse} />
+			{/each}
+		</div>
+	</article>
+{/if}
 
 <style>
 	.error-message {

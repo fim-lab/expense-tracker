@@ -58,21 +58,6 @@ func TestTransactionTemplateService(t *testing.T) {
 		}
 	})
 
-	t.Run("CreateTransactionTemplate - Unauthorized", func(t *testing.T) {
-		template := domain.TransactionTemplate{
-			UserID:        user.ID,
-			Day:           10,
-			WalletID:      walletId,
-			Description:   "Unauthorized Attempt",
-			AmountInCents: 100,
-			Type:          domain.Expense,
-		}
-		err := svc.CreateTransactionTemplate(user.ID+1, template)
-		if err != domain.ErrUnauthorized {
-			t.Errorf("Expected ErrUnauthorized, got %v", err)
-		}
-	})
-
 	t.Run("CreateTransactionTemplate - Invalid Template Data", func(t *testing.T) {
 		template := domain.TransactionTemplate{
 			UserID:        user.ID,

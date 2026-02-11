@@ -22,9 +22,11 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 
 	const wallets = (await authedApiFetch('/wallets')) || [];
 	const budgets = (await authedApiFetch('/budgets')) || [];
+	const templates = (await authedApiFetch('/transaction-templates')) || [];
 
 	return {
 		wallets,
-		budgets
+		budgets,
+		templates
 	};
 };
