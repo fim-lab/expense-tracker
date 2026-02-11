@@ -26,9 +26,8 @@ func NewTransactionTemplateService(
 }
 
 func (s *transactionTemplateService) CreateTransactionTemplate(userID int, tt domain.TransactionTemplate) error {
-	if tt.UserID != userID {
-		return domain.ErrUnauthorized
-	}
+	tt.UserID = userID
+
 	if err := tt.Validate(); err != nil {
 		return err
 	}

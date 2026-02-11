@@ -50,6 +50,44 @@
 			errorMessage = `Failed to save transaction: ${errorText}`;
 		}
 	}
+
+	async function saveAsTemplate(e: Event) {
+		e.preventDefault();
+		errorMessage = '';
+
+		const day = new Date(date).getDate();
+
+		const payload = {
+			day: day,
+			description: description,
+			amountInCents: Math.round(amount * 100),
+			walletId: Number(walletId),
+			budgetId: Number(budgetId),
+			type: type,
+			tags: []
+		};
+
+		if (payload.amountInCents <= 0) {
+			errorMessage = 'Amount must be greater than zero.';
+			return;
+		}
+		if (payload.walletId === 0 || payload.budgetId === 0) {
+			errorMessage = 'Please select a wallet and a budget.';
+			return;
+		}
+
+		const res = await fetch('/api/transaction-templates', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		});
+
+		if (!res.ok) {
+			const errorText = await res.text();
+			console.error('Backend Error:', errorText);
+			errorMessage = `Failed to save transaction template: ${errorText}`;
+		}
+	}
 </script>
 
 <article>
@@ -104,7 +142,10 @@
 			<p class="error-message">{errorMessage}</p>
 		{/if}
 
-		<button type="submit">Save Transaction</button>
+		<div class="grid">
+			<button type="submit">Save Transaction</button>
+			<button type="button" onclick={saveAsTemplate}>Save as template</button>
+		</div>
 	</form>
 </article>
 
