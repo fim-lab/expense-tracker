@@ -45,7 +45,7 @@
 
 	function handleUse(template: TransactionTemplate) {
 		const newDate = new Date();
-		newDate.setDate(template.day + 1);
+		newDate.setDate(template.day);
 		date = newDate.toISOString().split('T')[0];
 		description = template.description;
 		amount = template.amountInCents / 100;
