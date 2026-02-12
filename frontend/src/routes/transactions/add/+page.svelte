@@ -158,9 +158,13 @@
 
 		<label>
 			Description
+			<span
+				class="tooltip-info"
+				title="Use '$date' in templates for current month(or last at the beginning of the month) in the form 'Februar 26'"
+				>ⓘ</span
+			>
 			<input type="text" bind:value={description} placeholder="Grocery shopping..." required />
 		</label>
-
 		<div class="grid">
 			<label>
 				Amount (EUR)
@@ -221,5 +225,12 @@
 		color: var(--pico-del-color);
 		margin-top: 1rem;
 		margin-bottom: 0;
+	}
+
+	.tooltip-info {
+		cursor: help;
+		font-weight: bold;
+		color: var(--pico-secondary); /* Using a secondary color for visibility */
+		margin-left: 0.5rem;
 	}
 </style>
