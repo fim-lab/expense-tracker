@@ -9,18 +9,20 @@ import (
 )
 
 type transactionService struct {
-	repo ports.ExpenseRepository
+	transactionRepo ports.TransactionRepository
+	budgetRepo      ports.BudgetRepository
+	walletRepo      ports.WalletRepository
 }
 
-func NewTransactionService(repo ports.ExpenseRepository) ports.TransactionService {
-	return &transactionService{repo: repo}
+func NewTransactionService(transactionRepo ports.TransactionRepository, budgetRepo ports.BudgetRepository, walletRepo ports.WalletRepository) ports.TransactionService {
+	return &transactionService{transactionRepo: transactionRepo, budgetRepo: budgetRepo, walletRepo: walletRepo}
 }
 
 func (s *transactionService) CreateTransaction(userID int, t domain.Transaction) error {
 	t.UserID = userID
 
 	if t.BudgetID != nil {
-		budget, err := s.repo.GetBudgetByID(*t.BudgetID)
+		budget, err := s.budgetRepo.GetBudgetByID(*t.BudgetID)
 		if err != nil || budget.UserID != userID {
 			return domain.ErrBudgetNotFound
 		}
@@ -30,7 +32,7 @@ func (s *transactionService) CreateTransaction(userID int, t domain.Transaction)
 		return domain.ErrInvalidAmount
 	}
 
-	return s.repo.SaveTransaction(t)
+	return s.transactionRepo.SaveTransaction(t)
 }
 
 func (s *transactionService) CreateTransfer(userID, fromWalletID, toWalletID, amount int) error {
@@ -38,12 +40,12 @@ func (s *transactionService) CreateTransfer(userID, fromWalletID, toWalletID, am
 		return domain.ErrSameWalletTransfer
 	}
 
-	fromWallet, err := s.repo.GetWalletByID(fromWalletID)
+	fromWallet, err := s.walletRepo.GetWalletByID(fromWalletID)
 	if err != nil || fromWallet.UserID != userID {
 		return domain.ErrWalletNotFound
 	}
 
-	toWallet, err := s.repo.GetWalletByID(toWalletID)
+	toWallet, err := s.walletRepo.GetWalletByID(toWalletID)
 	if err != nil || toWallet.UserID != userID {
 		return domain.ErrWalletNotFound
 	}
@@ -70,11 +72,11 @@ func (s *transactionService) CreateTransfer(userID, fromWalletID, toWalletID, am
 		Type:          domain.Income,
 	}
 
-	return s.repo.CreateTransfer(fromTransaction, toTransaction)
+	return s.transactionRepo.CreateTransfer(fromTransaction, toTransaction)
 }
 
 func (s *transactionService) GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
-	return s.repo.FindTransactionsByUser(userID, limit, offset)
+	return s.transactionRepo.FindTransactionsByUser(userID, limit, offset)
 }
 
 func (s *transactionService) Search(userID int, criteria domain.TransactionSearchCriteria) (*domain.PaginatedTransactions, error) {
@@ -87,12 +89,12 @@ func (s *transactionService) Search(userID int, criteria domain.TransactionSearc
 		criteria.PageSize = 100
 	}
 
-	transactions, err := s.repo.SearchTransactions(userID, criteria)
+	transactions, err := s.transactionRepo.SearchTransactions(userID, criteria)
 	if err != nil {
 		return nil, err
 	}
 
-	total, err := s.repo.CountSearchedTransactions(userID, criteria)
+	total, err := s.transactionRepo.CountSearchedTransactions(userID, criteria)
 	if err != nil {
 		return nil, err
 	}
@@ -106,28 +108,28 @@ func (s *transactionService) Search(userID int, criteria domain.TransactionSearc
 }
 
 func (s *transactionService) GetTransactionCount(userID int) (int, error) {
-	return s.repo.GetTransactionCount(userID)
+	return s.transactionRepo.GetTransactionCount(userID)
 }
 
 func (s *transactionService) UpdateTransaction(userID int, t domain.Transaction) error {
-	existing, err := s.repo.GetTransactionByID(t.ID)
+	existing, err := s.transactionRepo.GetTransactionByID(t.ID)
 	if err != nil || existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
 	t.UserID = userID
-	return s.repo.UpdateTransaction(t)
+	return s.transactionRepo.UpdateTransaction(t)
 }
 
 func (s *transactionService) DeleteTransaction(userID int, id int) error {
-	existing, err := s.repo.GetTransactionByID(id)
+	existing, err := s.transactionRepo.GetTransactionByID(id)
 	if err != nil || existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
-	return s.repo.DeleteTransaction(id)
+	return s.transactionRepo.DeleteTransaction(id)
 }
 
 func (s *transactionService) GetTransactionByID(userID int, id int) (domain.Transaction, error) {
-	transaction, err := s.repo.GetTransactionByID(id)
+	transaction, err := s.transactionRepo.GetTransactionByID(id)
 	if err != nil {
 		return domain.Transaction{}, err
 	}

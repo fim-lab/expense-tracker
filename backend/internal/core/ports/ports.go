@@ -56,34 +56,53 @@ type StockService interface {
 	DeleteStock(userID int, id int) error
 }
 
+type TransactionTemplateService interface {
+	CreateTransactionTemplate(userID int, tt domain.TransactionTemplate) error
+	GetTransactionTemplate(userID int, id int) (domain.TransactionTemplate, error)
+	GetTransactionTemplates(userID int) ([]domain.TransactionTemplate, error)
+	UpdateTransactionTemplate(userID int, tt domain.TransactionTemplate) error
+	DeleteTransactionTemplate(userID int, id int) error
+}
+
 // --- Driven Ports  ---
-type ExpenseRepository interface {
+
+type UserRepository interface {
 	GetUserByUsername(username string) (domain.User, error)
 	GetUserByID(userID int) (domain.User, error)
 	SaveUser(u domain.User) error
 	UpdateUserSalary(userID int, salary int) error
+}
 
+type SessionRepository interface {
 	SaveSession(s domain.Session) error
 	GetSessionByToken(token string) (domain.Session, error)
 	DeleteSession(sessionId string) error
+}
 
+type BudgetRepository interface {
 	SaveBudget(b domain.Budget) error
 	GetBudgetByID(id int) (domain.Budget, error)
 	UpdateBudget(budget domain.Budget) error
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
 	DeleteBudget(id int) error
+}
 
+type WalletRepository interface {
 	SaveWallet(w domain.Wallet) error
 	GetWalletByID(id int) (domain.Wallet, error)
 	UpdateWallet(wallet domain.Wallet) error
 	FindWalletsByUser(userID int) ([]domain.Wallet, error)
 	DeleteWallet(id int) error
+}
 
+type DepotRepository interface {
 	SaveDepot(d domain.Depot) error
 	GetDepotByID(id int) (domain.Depot, error)
 	FindDepotsByUser(userID int) ([]domain.Depot, error)
 	DeleteDepot(id int) error
+}
 
+type TransactionRepository interface {
 	SaveTransaction(t domain.Transaction) error
 	GetTransactionByID(id int) (domain.Transaction, error)
 	GetTransactionCount(userId int) (int, error)
@@ -93,12 +112,32 @@ type ExpenseRepository interface {
 	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
 	CreateTransfer(from, to domain.Transaction) error
-
 	CountTransactionsByBudgetID(budgetID int) (int, error)
 	CountTransactionsByWalletID(walletID int) (int, error)
+}
 
+type StockRepository interface {
 	SaveStock(s domain.Stock) error
 	GetStockByID(id int) (domain.Stock, error)
 	FindStocksByUser(userID int) ([]domain.Stock, error)
 	DeleteStock(id int) error
+}
+
+type TransactionTemplateRepository interface {
+	SaveTransactionTemplate(tt domain.TransactionTemplate) error
+	GetTransactionTemplateByID(id int) (domain.TransactionTemplate, error)
+	FindTransactionTemplatesByUser(userID int) ([]domain.TransactionTemplate, error)
+	UpdateTransactionTemplate(tt domain.TransactionTemplate) error
+	DeleteTransactionTemplate(id int) error
+}
+
+type Repositories interface {
+	UserRepository() UserRepository
+	SessionRepository() SessionRepository
+	BudgetRepository() BudgetRepository
+	WalletRepository() WalletRepository
+	DepotRepository() DepotRepository
+	TransactionRepository() TransactionRepository
+	StockRepository() StockRepository
+	TransactionTemplateRepository() TransactionTemplateRepository
 }

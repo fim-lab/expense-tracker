@@ -14,15 +14,16 @@ import (
 )
 
 func TestUserHandler_GetSalary(t *testing.T) {
-	repo := memory.NewCleanRepository()
+	repos := memory.NewCleanRepositories()
 	testUser := domain.User{
 		ID:           1,
 		Username:     "testuser",
 		PasswordHash: "hash",
 		SalaryCents:  50000,
 	}
-	repo.SaveUser(testUser)
-	userService := services.NewUserService(repo)
+	repos.UserRepository().SaveUser(testUser)
+
+	userService := services.NewUserService(repos.UserRepository())
 	handler := NewUserHandler(&userService)
 
 	req := httptest.NewRequest("GET", "/api/user/salary", nil)
@@ -38,16 +39,16 @@ func TestUserHandler_GetSalary(t *testing.T) {
 }
 
 func TestUserHandler_UpdateSalary(t *testing.T) {
-	repo := memory.NewCleanRepository()
+	repos := memory.NewCleanRepositories()
 	testUser := domain.User{
 		ID:           1,
 		Username:     "testuser",
 		PasswordHash: "hash",
 		SalaryCents:  0,
 	}
-	repo.SaveUser(testUser)
+	repos.UserRepository().SaveUser(testUser)
 
-	userService := services.NewUserService(repo)
+	userService := services.NewUserService(repos.UserRepository())
 	handler := NewUserHandler(&userService)
 
 	payload := map[string]int{"salaryCents": 50000}
@@ -63,7 +64,7 @@ func TestUserHandler_UpdateSalary(t *testing.T) {
 		t.Errorf("expected status OK; got %d", rr.Code)
 	}
 
-	user, _ := repo.GetUserByID(1)
+	user, _ := repos.UserRepository().GetUserByID(1)
 	if user.SalaryCents != 50000 {
 		t.Errorf("expected salary to be 50000, but got %d", user.SalaryCents)
 	}

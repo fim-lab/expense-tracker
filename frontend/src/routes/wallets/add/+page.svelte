@@ -16,7 +16,6 @@
 		const input = event.target as HTMLInputElement;
 		if (input.value === '') {
 			input.value = '0';
-			// Also update the bound state immediately
 			initialBalanceEuro = 0;
 		}
 	}

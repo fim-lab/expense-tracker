@@ -8,11 +8,12 @@ import (
 )
 
 type budgetService struct {
-	repo ports.ExpenseRepository
+	budgetRepo      ports.BudgetRepository
+	transactionRepo ports.TransactionRepository
 }
 
-func NewBudgetService(repo ports.ExpenseRepository) ports.BudgetService {
-	return &budgetService{repo: repo}
+func NewBudgetService(budgetRepo ports.BudgetRepository, transactionRepo ports.TransactionRepository) ports.BudgetService {
+	return &budgetService{budgetRepo: budgetRepo, transactionRepo: transactionRepo}
 }
 
 func (s *budgetService) CreateBudget(userID int, b domain.Budget) error {
@@ -26,11 +27,11 @@ func (s *budgetService) CreateBudget(userID int, b domain.Budget) error {
 		return domain.ErrInvalidAmount
 	}
 
-	return s.repo.SaveBudget(b)
+	return s.budgetRepo.SaveBudget(b)
 }
 
 func (s *budgetService) GetBudget(userID int, id int) (domain.Budget, error) {
-	budget, err := s.repo.GetBudgetByID(id)
+	budget, err := s.budgetRepo.GetBudgetByID(id)
 	if err != nil {
 		return domain.Budget{}, err
 	}
@@ -43,7 +44,7 @@ func (s *budgetService) GetBudget(userID int, id int) (domain.Budget, error) {
 	if budget.BalanceCents != 0 {
 		budget.CanDelete = false
 	} else {
-		count, err := s.repo.CountTransactionsByBudgetID(budget.ID)
+		count, err := s.transactionRepo.CountTransactionsByBudgetID(budget.ID)
 		if err != nil {
 			return domain.Budget{}, err
 		}
@@ -56,7 +57,7 @@ func (s *budgetService) GetBudget(userID int, id int) (domain.Budget, error) {
 }
 
 func (s *budgetService) GetBudgets(userID int) ([]domain.Budget, error) {
-	budgets, err := s.repo.FindBudgetsByUser(userID)
+	budgets, err := s.budgetRepo.FindBudgetsByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +67,7 @@ func (s *budgetService) GetBudgets(userID int) ([]domain.Budget, error) {
 		if budgets[i].BalanceCents != 0 {
 			budgets[i].CanDelete = false
 		} else {
-			count, err := s.repo.CountTransactionsByBudgetID(budgets[i].ID)
+			count, err := s.transactionRepo.CountTransactionsByBudgetID(budgets[i].ID)
 			if err != nil {
 				return nil, err
 			}
@@ -80,7 +81,7 @@ func (s *budgetService) GetBudgets(userID int) ([]domain.Budget, error) {
 }
 
 func (s *budgetService) GetTotalOfBudgets(userID int) (int, error) {
-	budgets, err := s.repo.FindBudgetsByUser(userID)
+	budgets, err := s.budgetRepo.FindBudgetsByUser(userID)
 	if err != nil {
 		return 0, err
 	}
@@ -94,7 +95,7 @@ func (s *budgetService) GetTotalOfBudgets(userID int) (int, error) {
 }
 
 func (s *budgetService) UpdateBudget(userID int, budget domain.Budget) error {
-	existingBudget, err := s.repo.GetBudgetByID(budget.ID)
+	existingBudget, err := s.budgetRepo.GetBudgetByID(budget.ID)
 	if err != nil {
 		return err
 	}
@@ -110,18 +111,18 @@ func (s *budgetService) UpdateBudget(userID int, budget domain.Budget) error {
 		return domain.ErrInvalidAmount
 	}
 
-	return s.repo.UpdateBudget(budget)
+	return s.budgetRepo.UpdateBudget(budget)
 }
 
 func (s *budgetService) DeleteBudget(userID int, id int) error {
-	existing, err := s.repo.GetBudgetByID(id)
+	existing, err := s.budgetRepo.GetBudgetByID(id)
 	if err != nil {
 		return err
 	}
 	if existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
-	transactionCount, err := s.repo.CountTransactionsByBudgetID(id)
+	transactionCount, err := s.transactionRepo.CountTransactionsByBudgetID(id)
 	if err != nil {
 		return err
 	}
@@ -129,5 +130,5 @@ func (s *budgetService) DeleteBudget(userID int, id int) error {
 		return domain.ErrNotEmpty
 	}
 
-	return s.repo.DeleteBudget(id)
+	return s.budgetRepo.DeleteBudget(id)
 }

@@ -5,12 +5,13 @@ import (
 
 	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	_ "github.com/fim-lab/expense-tracker/internal/core/ports"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func TestAuthentication(t *testing.T) {
-	repo := memory.NewSeededRepository()
-	svc := NewUserService(repo)
+	repos := memory.NewSeededRepositories()
+	svc := NewUserService(repos.UserRepository())
 
 	pass := "secret"
 	hash, _ := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
@@ -19,7 +20,7 @@ func TestAuthentication(t *testing.T) {
 		Username:     "alice",
 		PasswordHash: string(hash),
 	}
-	repo.SaveUser(testUser)
+	repos.UserRepository().SaveUser(testUser)
 
 	t.Run("User gets authenticated if right credentials are provided", func(t *testing.T) {
 		authed, err := svc.Authenticate("alice", "secret")
