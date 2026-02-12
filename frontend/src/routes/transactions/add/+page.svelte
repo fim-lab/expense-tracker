@@ -17,6 +17,20 @@
 
 	let templates: TransactionTemplate[] = $state(data.templates);
 
+	function handleFocus(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '0') {
+			input.value = '';
+		}
+	}
+
+	function handleBlur(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '') {
+			input.value = '0';
+		}
+	}
+
 	async function handleDelete(templateId: number) {
 		const res = await fetch(`/api/transaction-templates/${templateId}`, {
 			method: 'DELETE'
@@ -150,7 +164,14 @@
 		<div class="grid">
 			<label>
 				Amount (EUR)
-				<input type="number" step="0.01" bind:value={amount} required />
+				<input
+					type="number"
+					onfocus={handleFocus}
+					onblur={handleBlur}
+					step="0.01"
+					bind:value={amount}
+					required
+				/>
 			</label>
 			<label>
 				Wallet
