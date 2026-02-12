@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	"github.com/lib/pq"
 )
 
 type TransactionTemplateRepository struct {
@@ -103,7 +104,7 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 	for rows.Next() {
 		var tt domain.TransactionTemplate
 		var budgetID sql.NullInt64
-		var tags []sql.NullString
+		var tags pq.StringArray
 
 		if err := rows.Scan(
 			&tt.ID,
@@ -123,12 +124,7 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 			bID := int(budgetID.Int64)
 			tt.BudgetID = &bID
 		}
-		tt.Tags = make([]string, len(tags))
-		for i, t := range tags {
-			if t.Valid {
-				tt.Tags[i] = t.String
-			}
-		}
+		tt.Tags = []string(tags)
 
 		templates = append(templates, tt)
 	}
