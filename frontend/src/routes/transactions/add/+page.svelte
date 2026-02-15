@@ -32,6 +32,7 @@
 	}
 
 	async function handleDelete(templateId: number) {
+		if (!confirm('Are you sure you want to delete this template?')) return;
 		const res = await fetch(`/api/transaction-templates/${templateId}`, {
 			method: 'DELETE'
 		});
