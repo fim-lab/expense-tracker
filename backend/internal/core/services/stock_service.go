@@ -8,11 +8,12 @@ import (
 )
 
 type stockService struct {
-	repo ports.ExpenseRepository
+	stockRepo ports.StockRepository
+	depotRepo ports.DepotRepository
 }
 
-func NewStockService(repo ports.ExpenseRepository) ports.StockService {
-	return &stockService{repo: repo}
+func NewStockService(stockRepo ports.StockRepository, depotRepo ports.DepotRepository) ports.StockService {
+	return &stockService{stockRepo: stockRepo, depotRepo: depotRepo}
 }
 
 func (s *stockService) CreateStock(userID int, st domain.Stock) error {
@@ -25,24 +26,24 @@ func (s *stockService) CreateStock(userID int, st domain.Stock) error {
 		return errors.New("WKN is required")
 	}
 
-	depot, err := s.repo.GetDepotByID(st.DepotID)
+	depot, err := s.depotRepo.GetDepotByID(st.DepotID)
 	if err != nil || depot.UserID != userID {
 		return errors.New("invalid depot for stock")
 	}
 
-	return s.repo.SaveStock(st)
+	return s.stockRepo.SaveStock(st)
 }
 
 func (s *stockService) GetStocks(userID int) ([]domain.Stock, error) {
-	return s.repo.FindStocksByUser(userID)
+	return s.stockRepo.FindStocksByUser(userID)
 }
 
 // TODO: func (s *stockService) UpdateStocks(...
 
 func (s *stockService) DeleteStock(userID int, id int) error {
-	existing, err := s.repo.GetStockByID(id)
+	existing, err := s.stockRepo.GetStockByID(id)
 	if err != nil || existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
-	return s.repo.DeleteStock(id)
+	return s.stockRepo.DeleteStock(id)
 }

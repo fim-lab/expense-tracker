@@ -7,11 +7,12 @@ import (
 
 	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	_ "github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
 func TestTransactionOwnership(t *testing.T) {
-	repo := memory.NewSeededRepository()
-	svc := NewTransactionService(repo)
+	repos := memory.NewSeededRepositories()
+	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 
 	tx := domain.Transaction{
 		UserID:        2,
@@ -19,7 +20,7 @@ func TestTransactionOwnership(t *testing.T) {
 		AmountInCents: 500,
 		Date:          time.Now(),
 	}
-	repo.SaveTransaction(tx)
+	repos.TransactionRepository().SaveTransaction(tx)
 
 	t.Run("User 3 cannot delete User 2's transaction", func(t *testing.T) {
 		tx, err := svc.GetTransactions(2, 2, 0)
@@ -47,23 +48,23 @@ func TestTransactionOwnership(t *testing.T) {
 }
 
 func TestGetTransactions_PaginationAndMapping(t *testing.T) {
-	repo := memory.NewSeededRepository()
-	svc := NewTransactionService(repo)
+	repos := memory.NewSeededRepositories()
+	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 
 	testUsername := "testuser"
-	repo.SaveUser(domain.User{Username: testUsername, PasswordHash: "#"})
-	testUser, err := repo.GetUserByUsername(testUsername)
+	repos.UserRepository().SaveUser(domain.User{Username: testUsername, PasswordHash: "#"})
+	testUser, err := repos.UserRepository().GetUserByUsername(testUsername)
 	if err != nil {
 		log.Fatal("Could not save test User.")
 	}
 
-	repo.SaveBudget(domain.Budget{Name: "Food", UserID: testUser.ID})
-	repo.SaveWallet(domain.Wallet{Name: "Cash", UserID: testUser.ID})
-	testBudget, err := repo.FindBudgetsByUser(testUser.ID)
+	repos.BudgetRepository().SaveBudget(domain.Budget{Name: "Food", UserID: testUser.ID})
+	repos.WalletRepository().SaveWallet(domain.Wallet{Name: "Cash", UserID: testUser.ID})
+	testBudget, err := repos.BudgetRepository().FindBudgetsByUser(testUser.ID)
 	if err != nil {
 		return
 	}
-	testWallet, err := repo.FindWalletsByUser(testUser.ID)
+	testWallet, err := repos.WalletRepository().FindWalletsByUser(testUser.ID)
 	if err != nil {
 		return
 	}
@@ -76,7 +77,7 @@ func TestGetTransactions_PaginationAndMapping(t *testing.T) {
 		{Date: now, BudgetID: &testBudget[0].ID, WalletID: testWallet[0].ID, Description: "Newest", UserID: 99},
 	}
 	for _, tx := range txs {
-		repo.SaveTransaction(tx)
+		repos.TransactionRepository().SaveTransaction(tx)
 	}
 
 	t.Run("Verify Sorting and DTO Mapping", func(t *testing.T) {

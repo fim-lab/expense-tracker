@@ -15,6 +15,20 @@
 		return data.wallets.filter((wallet) => wallet.id !== fromWalletId);
 	});
 
+	function handleFocus(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '0') {
+			input.value = '';
+		}
+	}
+
+	function handleBlur(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '') {
+			input.value = '0';
+		}
+	}
+
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		errorMessage = '';
@@ -77,7 +91,14 @@
 
 		<label>
 			Amount (EUR)
-			<input type="number" step="0.01" bind:value={amount} required />
+			<input
+				type="number"
+				onfocus={handleFocus}
+				onblur={handleBlur}
+				step="0.01"
+				bind:value={amount}
+				required
+			/>
 		</label>
 
 		{#if errorMessage}

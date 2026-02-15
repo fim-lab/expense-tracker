@@ -5,11 +5,12 @@ import (
 
 	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	_ "github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
 func TestCreateWallet(t *testing.T) {
-	repo := memory.NewSeededRepository()
-	svc := NewWalletService(repo)
+	repos := memory.NewSeededRepositories()
+	svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 
 	t.Run("Valid wallet creation", func(t *testing.T) {
 		wallet := domain.Wallet{
@@ -21,7 +22,7 @@ func TestCreateWallet(t *testing.T) {
 			t.Errorf("expected no error, got %v", err)
 		}
 
-		saved, _ := repo.FindWalletsByUser(23)
+		saved, _ := repos.WalletRepository().FindWalletsByUser(23)
 		found := false
 		for _, w := range saved {
 			if w.Name == "Cash" {
@@ -70,11 +71,11 @@ func TestGetWalletCanDelete(t *testing.T) {
 	userID := 1
 
 	t.Run("CanDelete is false when BalanceCents is not zero", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewWalletService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 		wallet := domain.Wallet{UserID: userID, Name: "Non-Zero Balance", BalanceCents: 500}
 		svc.CreateWallet(userID, wallet)
-		wallets, _ := repo.FindWalletsByUser(userID)
+		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		createdWallet := wallets[0]
 
 		fetchedWallet, err := svc.GetWallet(userID, createdWallet.ID)
@@ -87,14 +88,14 @@ func TestGetWalletCanDelete(t *testing.T) {
 	})
 
 	t.Run("CanDelete is false when BalanceCents is zero but transactions exist", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewWalletService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 		wallet := domain.Wallet{UserID: userID, Name: "Zero Balance, Has Transactions", BalanceCents: -100}
 		svc.CreateWallet(userID, wallet)
-		wallets, _ := repo.FindWalletsByUser(userID)
+		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		createdWallet := wallets[0]
 
-		_ = repo.SaveTransaction(domain.Transaction{
+		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			WalletID:      createdWallet.ID,
 			AmountInCents: 100,
@@ -111,11 +112,11 @@ func TestGetWalletCanDelete(t *testing.T) {
 	})
 
 	t.Run("CanDelete is true when BalanceCents is zero and no transactions exist", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewWalletService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 		wallet := domain.Wallet{UserID: userID, Name: "Zero Balance, No Transactions", BalanceCents: 0}
 		svc.CreateWallet(userID, wallet)
-		wallets, _ := repo.FindWalletsByUser(userID)
+		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		createdWallet := wallets[0]
 
 		fetchedWallet, err := svc.GetWallet(userID, createdWallet.ID)
@@ -130,18 +131,18 @@ func TestGetWalletCanDelete(t *testing.T) {
 
 func TestGetWalletsCanDelete(t *testing.T) {
 	userID := 1
-	repo := memory.NewCleanRepository()
-	svc := NewWalletService(repo)
+	repos := memory.NewCleanRepositories()
+	svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 
 	wallet1 := domain.Wallet{UserID: userID, Name: "Wallet 1", BalanceCents: 500}
 	svc.CreateWallet(userID, wallet1)
 
 	wallet2 := domain.Wallet{UserID: userID, Name: "Wallet 2", BalanceCents: -100}
 	svc.CreateWallet(userID, wallet2)
-	wallets, _ := repo.FindWalletsByUser(userID)
+	wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 	createdWallet2 := wallets[1]
 
-	_ = repo.SaveTransaction(domain.Transaction{
+	_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
 		UserID:        userID,
 		WalletID:      createdWallet2.ID,
 		AmountInCents: 100,
@@ -178,11 +179,11 @@ func TestDeleteWallet(t *testing.T) {
 	userID := 1
 
 	t.Run("Successfully delete empty wallet", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewWalletService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 		wallet := domain.Wallet{UserID: userID, Name: "Test Wallet"}
 		svc.CreateWallet(userID, wallet)
-		wallets, _ := repo.FindWalletsByUser(userID)
+		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		testWallet := wallets[0]
 
 		err := svc.DeleteWallet(userID, testWallet.ID)
@@ -197,14 +198,14 @@ func TestDeleteWallet(t *testing.T) {
 	})
 
 	t.Run("Fail to delete wallet with transactions", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewWalletService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 		wallet := domain.Wallet{UserID: userID, Name: "Test Wallet"}
 		svc.CreateWallet(userID, wallet)
-		wallets, _ := repo.FindWalletsByUser(userID)
+		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		testWallet := wallets[0]
 
-		_ = repo.SaveTransaction(domain.Transaction{
+		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			WalletID:      testWallet.ID,
 			AmountInCents: 100,
@@ -223,11 +224,11 @@ func TestDeleteWallet(t *testing.T) {
 	})
 
 	t.Run("Unauthorized deletion", func(t *testing.T) {
-		repo := memory.NewCleanRepository()
-		svc := NewWalletService(repo)
+		repos := memory.NewCleanRepositories()
+		svc := NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
 		wallet := domain.Wallet{UserID: userID, Name: "Test Wallet"}
 		svc.CreateWallet(userID, wallet)
-		wallets, _ := repo.FindWalletsByUser(userID)
+		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		testWallet := wallets[0]
 
 		err := svc.DeleteWallet(999, testWallet.ID)

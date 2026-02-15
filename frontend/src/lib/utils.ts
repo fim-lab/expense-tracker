@@ -32,6 +32,16 @@ export function getShortMonthYearString(date: Date): string {
 	return date.toLocaleDateString('de-DE', { year: '2-digit', month: 'long' });
 }
 
+export function getLastMonthShortMonthYearString(date: Date): string {
+	if (date.getMonth() == 0) {
+		date.setMonth(11);
+		date.setFullYear(date.getFullYear() - 1);
+		return getShortMonthYearString(date);
+	}
+	date.setMonth(date.getMonth() - 1);
+	return getShortMonthYearString(date);
+}
+
 export async function searchTransactions(
 	criteria: TransactionSearchCriteria
 ): Promise<PaginatedTransactions> {

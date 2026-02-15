@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -19,26 +18,36 @@ import (
 )
 
 const (
+	EnvTest       = "test"
 	EnvDemo       = "demo"
 	EnvProduction = "production"
 	DefaultPort   = "8080"
 )
 
 func main() {
-	env := determineEnvironment()
-	repo, db := getRepo(env)
-	if db != nil {
+	env := os.Getenv("APP_ENV")
+	var repos ports.Repositories
+
+	switch env {
+	case EnvProduction:
+		var db *sql.DB
+		db, repos = postgres.NewPostgresRepositoryCollection()
 		defer db.Close()
+	case EnvDemo:
+		repos = memory.NewCleanRepositories()
+	default:
+		repos = memory.NewSeededRepositories()
 	}
 
 	// Setup services
-	userService := services.NewUserService(repo)
-	sessionService := services.NewSessionService(repo)
-	budgetService := services.NewBudgetService(repo)
-	walletService := services.NewWalletService(repo)
-	depotService := services.NewDepotService(repo)
-	transactionService := services.NewTransactionService(repo)
-	stockService := services.NewStockService(repo)
+	userService := services.NewUserService(repos.UserRepository())
+	sessionService := services.NewSessionService(repos.SessionRepository())
+	budgetService := services.NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+	walletService := services.NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
+	depotService := services.NewDepotService(repos.DepotRepository(), repos.WalletRepository())
+	transactionService := services.NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
+	stockService := services.NewStockService(repos.StockRepository(), repos.DepotRepository())
+	transactionTemplateService := services.NewTransactionTemplateService(repos.TransactionTemplateRepository(), repos.WalletRepository(), repos.BudgetRepository())
 
 	// Setup router
 	router := chi.NewRouter()
@@ -46,11 +55,10 @@ func main() {
 
 	// Mount routers
 	router.Mount("/auth", authRouter(&userService, &sessionService))
-	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &walletService, &depotService, &transactionService, &stockService, &userService))
+	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &walletService, &depotService, &transactionService, &stockService, &userService, &transactionTemplateService))
 
-	port := getPort()
-	log.Printf("Start Server on port %s in %s mode", port, env)
-	if err := http.ListenAndServe(":"+port, router); err != nil {
+	log.Printf("Start Server on port %s in %s mode", DefaultPort, env)
+	if err := http.ListenAndServe(":"+DefaultPort, router); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
@@ -63,7 +71,7 @@ func authRouter(userService *ports.UserService, sessionService *ports.SessionSer
 	return r
 }
 
-func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, stockService *ports.StockService, userService *ports.UserService) http.Handler {
+func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, stockService *ports.StockService, userService *ports.UserService, transactionTemplateService *ports.TransactionTemplateService) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -82,6 +90,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	transactionHandler := httpadapter.NewTransactionHandler(transactionService)
 	stockHandler := httpadapter.NewStockHandler(stockService)
 	userHandler := httpadapter.NewUserHandler(userService)
+	transactionTemplateHandler := httpadapter.NewTransactionTemplateHandler(transactionTemplateService)
 
 	// Routes
 	r.Get("/users/me", userHandler.GetUser)
@@ -115,42 +124,11 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Post("/stocks", stockHandler.CreateStock)
 	r.Delete("/stocks/{id}", stockHandler.DeleteStock)
 
+	r.Get("/transaction-templates", transactionTemplateHandler.GetTransactionTemplates)
+	r.Get("/transaction-templates/{id}", transactionTemplateHandler.GetTransactionTemplateByID)
+	r.Post("/transaction-templates", transactionTemplateHandler.CreateTransactionTemplate)
+	r.Put("/transaction-templates/{id}", transactionTemplateHandler.UpdateTransactionTemplate)
+	r.Delete("/transaction-templates/{id}", transactionTemplateHandler.DeleteTransactionTemplate)
+
 	return r
-}
-
-func determineEnvironment() string {
-	env := os.Getenv("APP_ENV")
-	if env == EnvProduction {
-		return EnvProduction
-	}
-	return EnvDemo
-}
-
-func getRepo(env string) (ports.ExpenseRepository, *sql.DB) {
-	if env == EnvProduction {
-		return setupPostgresDB()
-	}
-	return memory.NewSeededRepository(), nil
-}
-
-func setupPostgresDB() (ports.ExpenseRepository, *sql.DB) {
-	dbUrl := os.Getenv("DATABASE_URL")
-	if dbUrl == "" {
-		log.Fatal("DATABASE_URL environment variable is not set for production mode")
-	}
-
-	db, err := sql.Open("postgres", dbUrl)
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Database unreachable: %v", err)
-	}
-	fmt.Println("Connected to Postgres DB")
-	return postgres.NewRepository(db), db
-}
-
-func getPort() string {
-	return DefaultPort
 }

@@ -1,14 +1,61 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import TransactionTemplateCard from '$lib/components/TransactionTemplateCard.svelte';
+	import type { TransactionTemplate } from '$lib/types';
 	let { data } = $props();
 
-	let description = $state('');
-	let amount = $state(0);
+	const urlParams = page.url.searchParams;
+
+	let description = $state(urlParams.get('description') || '');
+	let amount = $state(Number(urlParams.get('amount')) || 0);
 	let date = $state(new Date().toISOString().split('T')[0]);
-	let walletId = $state(0);
-	let budgetId = $state(0);
-	let type = $state('EXPENSE');
+	let walletId = $state(Number(urlParams.get('walletId')) || 0);
+	let budgetId = $state(Number(urlParams.get('budgetId')) || 0);
+	let type = $state(urlParams.get('type') || 'EXPENSE');
 	let errorMessage = $state('');
+
+	let templates: TransactionTemplate[] = $state(data.templates);
+
+	function handleFocus(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '0') {
+			input.value = '';
+		}
+	}
+
+	function handleBlur(event: FocusEvent) {
+		const input = event.target as HTMLInputElement;
+		if (input.value === '') {
+			input.value = '0';
+		}
+	}
+
+	async function handleDelete(templateId: number) {
+		if (!confirm('Are you sure you want to delete this template?')) return;
+		const res = await fetch(`/api/transaction-templates/${templateId}`, {
+			method: 'DELETE'
+		});
+
+		if (res.ok) {
+			templates = templates.filter((t) => t.id !== templateId);
+		} else {
+			alert('Failed to delete template');
+		}
+	}
+
+	function handleUse(template: TransactionTemplate) {
+		const newDate = new Date();
+		newDate.setDate(template.day);
+		date = newDate.toISOString().split('T')[0];
+		description = template.description;
+		amount = template.amountInCents / 100;
+		walletId = template.walletId;
+		if (template.budgetId) {
+			budgetId = template.budgetId;
+		}
+		type = template.type;
+	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -50,6 +97,47 @@
 			errorMessage = `Failed to save transaction: ${errorText}`;
 		}
 	}
+
+	async function saveAsTemplate(e: Event) {
+		e.preventDefault();
+		errorMessage = '';
+
+		const day = new Date(date).getDate();
+
+		const payload = {
+			day: day,
+			description: description,
+			amountInCents: Math.round(amount * 100),
+			walletId: Number(walletId),
+			budgetId: Number(budgetId),
+			type: type,
+			tags: []
+		};
+
+		if (payload.amountInCents <= 0) {
+			errorMessage = 'Amount must be greater than zero.';
+			return;
+		}
+		if (payload.walletId === 0 || payload.budgetId === 0) {
+			errorMessage = 'Please select a wallet and a budget.';
+			return;
+		}
+
+		const res = await fetch('/api/transaction-templates', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		});
+
+		if (res.ok) {
+			const newTemplate: TransactionTemplate = await res.json();
+			templates = [...templates, newTemplate];
+		} else {
+			const errorText = await res.text();
+			console.error('Backend Error:', errorText);
+			errorMessage = `Failed to save transaction template: ${errorText}`;
+		}
+	}
 </script>
 
 <article>
@@ -71,13 +159,24 @@
 
 		<label>
 			Description
+			<span
+				class="tooltip-info"
+				title="Use '$date' in templates for current month(or last at the beginning of the month) in the form 'Februar 26'"
+				>ⓘ</span
+			>
 			<input type="text" bind:value={description} placeholder="Grocery shopping..." required />
 		</label>
-
 		<div class="grid">
 			<label>
 				Amount (EUR)
-				<input type="number" step="0.01" bind:value={amount} required />
+				<input
+					type="number"
+					onfocus={handleFocus}
+					onblur={handleBlur}
+					step="0.01"
+					bind:value={amount}
+					required
+				/>
 			</label>
 			<label>
 				Wallet
@@ -104,14 +203,35 @@
 			<p class="error-message">{errorMessage}</p>
 		{/if}
 
-		<button type="submit">Save Transaction</button>
+		<div class="grid">
+			<button type="submit">Save Transaction</button>
+			<button type="button" onclick={saveAsTemplate}>Save as template</button>
+		</div>
 	</form>
 </article>
+
+{#if templates.length > 0}
+	<article>
+		<h3>Templates</h3>
+		<div>
+			{#each templates as template (template.id)}
+				<TransactionTemplateCard {template} ondelete={handleDelete} onuse={handleUse} />
+			{/each}
+		</div>
+	</article>
+{/if}
 
 <style>
 	.error-message {
 		color: var(--pico-del-color);
 		margin-top: 1rem;
 		margin-bottom: 0;
+	}
+
+	.tooltip-info {
+		cursor: help;
+		font-weight: bold;
+		color: var(--pico-secondary); /* Using a secondary color for visibility */
+		margin-left: 0.5rem;
 	}
 </style>
