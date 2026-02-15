@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
@@ -24,7 +23,6 @@ func (r *TransactionTemplateRepository) SaveTransactionTemplate(tt domain.Transa
 		RETURNING id
 	`
 	var id int
-	_, tags := json.Marshal(tt.Tags)
 	err := r.db.QueryRow(
 		query,
 		tt.UserID,
@@ -34,7 +32,7 @@ func (r *TransactionTemplateRepository) SaveTransactionTemplate(tt domain.Transa
 		tt.Description,
 		tt.AmountInCents,
 		tt.Type,
-		tags,
+		pq.Array(tt.Tags),
 	).Scan(&id)
 
 	if err != nil {
@@ -52,7 +50,7 @@ func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (doma
 	`
 	var tt domain.TransactionTemplate
 	var budgetID sql.NullInt64
-	var tags []sql.NullString
+	var tags pq.StringArray
 
 	err := r.db.QueryRow(query, id).Scan(
 		&tt.ID,
@@ -77,12 +75,7 @@ func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (doma
 		bID := int(budgetID.Int64)
 		tt.BudgetID = &bID
 	}
-	tt.Tags = make([]string, len(tags))
-	for i, t := range tags {
-		if t.Valid {
-			tt.Tags[i] = t.String
-		}
-	}
+	tt.Tags = tags
 
 	return tt, nil
 }
@@ -143,7 +136,6 @@ func (r *TransactionTemplateRepository) UpdateTransactionTemplate(tt domain.Tran
 		WHERE id = $8 AND user_id = $9
 	`
 
-	_, tags := json.Marshal(tt.Tags)
 	res, err := r.db.Exec(
 		query,
 		tt.Day,
@@ -152,7 +144,7 @@ func (r *TransactionTemplateRepository) UpdateTransactionTemplate(tt domain.Tran
 		tt.Description,
 		tt.AmountInCents,
 		tt.Type,
-		tags,
+		pq.Array(tt.Tags),
 		tt.ID,
 		tt.UserID,
 	)
