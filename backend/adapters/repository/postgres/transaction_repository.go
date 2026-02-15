@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
 
@@ -394,7 +395,7 @@ func (r *TransactionRepository) CreateTransfer(from, to domain.Transaction) erro
 	toTags, _ := json.Marshal(to.Tags)
 	query = `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err = tx.Exec(query, to.UserID, to.Date, to.ID, to.WalletID, to.Description, to.AmountInCents, to.Type, to.IsPending, to.IsDebt, toTags)
+	_, err = tx.Exec(query, to.UserID, to.Date, to.BudgetID, to.WalletID, to.Description, to.AmountInCents, to.Type, to.IsPending, to.IsDebt, toTags)
 	if err != nil {
 		return fmt.Errorf("failed to insert to-transaction: %w", err)
 	}
