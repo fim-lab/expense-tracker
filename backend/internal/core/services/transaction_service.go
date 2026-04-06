@@ -138,4 +138,3 @@ func (s *transactionService) GetTransactionByID(userID int, id int) (domain.Tran
 	}
 	return transaction, nil
 }
-
