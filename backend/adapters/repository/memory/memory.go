@@ -1,10 +1,8 @@
 package memory
 
 import (
-	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
@@ -54,63 +52,20 @@ func (r *inMemoryRepositories) nextID() int {
 }
 
 func (r *inMemoryRepositories) seed() {
-	const AMOUNT_OF_SEEDED_TX = 21
-	// SEED DATA
 	// Username: demo | Password: demo | Salary: 100€
 	demoUsername := "demo"
-	// "Demo Budget" | 5€ Limit
-	// "Demo Cash Wallet"
 	hash, _ := bcrypt.GenerateFromPassword([]byte(demoUsername), bcrypt.DefaultCost)
 
 	userRepo := r.UserRepository()
-	budgetRepo := r.BudgetRepository()
-	walletRepo := r.WalletRepository()
-	transactionRepo := r.TransactionRepository()
 
 	userRepo.SaveUser(domain.User{
 		Username:     demoUsername,
 		PasswordHash: string(hash),
 		SalaryCents:  10000,
 	})
-	demoUser, err := userRepo.GetUserByUsername(demoUsername)
+	_, err := userRepo.GetUserByUsername(demoUsername)
 	if err != nil {
 		log.Fatal("Could not initiate demo User", err)
-	}
-
-	budgetRepo.SaveBudget(domain.Budget{
-		UserID:     demoUser.ID,
-		Name:       "Demo Budget",
-		LimitCents: 500,
-	})
-	budgets, err := budgetRepo.FindBudgetsByUser(demoUser.ID)
-	if err != nil {
-		log.Fatal("Could not initiate demo Budget", err)
-	}
-	demoBudget := budgets[0]
-	walletRepo.SaveWallet(domain.Wallet{
-		UserID: demoUser.ID,
-		Name:   "Demo Cash Wallet",
-	})
-	wallets, err := walletRepo.FindWalletsByUser(demoUser.ID)
-	if err != nil {
-		log.Fatal("Could not initiate demo Wallet", err)
-	}
-	demoWallet := wallets[0]
-	for i := 0; i < AMOUNT_OF_SEEDED_TX; i++ {
-		transactionRepo.SaveTransaction(domain.Transaction{
-			UserID:        demoUser.ID,
-			Date:          time.Now().AddDate(0, 0, -i),
-			BudgetID:      &demoBudget.ID,
-			WalletID:      demoWallet.ID,
-			Description:   fmt.Sprintf("Transaction%v%v", i%2, i%3),
-			AmountInCents: 104 * i,
-			Type: func() domain.TransactionType {
-				if i%4 == 0 {
-					return domain.Expense
-				}
-				return domain.Income
-			}(),
-		})
 	}
 }
 
