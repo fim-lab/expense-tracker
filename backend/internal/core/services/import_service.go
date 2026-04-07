@@ -1,7 +1,9 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
@@ -137,4 +139,19 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 	}
 
 	return nil
+}
+
+func (s *importService) ImportTestData(userID int) error {
+	file, err := os.Open("data/testdata.json")
+	if err != nil {
+		return fmt.Errorf("could not open testdata file: %w", err)
+	}
+	defer file.Close()
+
+	var data domain.FullImportData
+	if err := json.NewDecoder(file).Decode(&data); err != nil {
+		return fmt.Errorf("could not decode testdata: %w", err)
+	}
+
+	return s.ImportData(userID, data)
 }

@@ -66,6 +66,7 @@ type TransactionTemplateService interface {
 
 type ImportService interface {
 	ImportData(userID int, data domain.FullImportData) error
+	ImportTestData(userID int) error
 }
 
 // --- Driven Ports  ---

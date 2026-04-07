@@ -299,3 +299,15 @@ func (h *TransactionHandler) ImportTransactions(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]int{"count": len(data.Transactions)})
 }
+
+func (h *TransactionHandler) ImportTestData(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+
+	err := h.importService.ImportTestData(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
