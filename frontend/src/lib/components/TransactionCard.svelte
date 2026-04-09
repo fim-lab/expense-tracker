@@ -43,7 +43,11 @@
 				<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
 			</svg>
 		</a>
-		<button class="action-icon delete-icon" onclick={() => ondelete(transaction.id)} aria-label="Delete">
+		<button
+			class="action-icon delete-icon"
+			onclick={() => ondelete(transaction.id)}
+			aria-label="Delete"
+		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="20"
@@ -71,13 +75,13 @@
 		padding: 1rem;
 		margin-bottom: 0.75rem;
 		background: var(--pico-card-background-color);
-		border-radius: var(--pico-border-radius);
+		border-radius: 8px;
 		box-shadow: var(--pico-card-box-shadow);
-		border-left: 4px solid var(--pico-ins-color);
+		border-left: 6px solid rgb(22, 163, 22);
 	}
 
 	.tx-card.expense {
-		border-left-color: var(--pico-del-color);
+		border-left-color: rgb(167, 21, 21);
 	}
 
 	.tx-title {
