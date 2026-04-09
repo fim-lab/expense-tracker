@@ -12,11 +12,15 @@ import (
 )
 
 type TransactionHandler struct {
-	service ports.TransactionService
+	service       ports.TransactionService
+	importService ports.ImportService
 }
 
-func NewTransactionHandler(service *ports.TransactionService) *TransactionHandler {
-	return &TransactionHandler{service: *service}
+func NewTransactionHandler(service ports.TransactionService, importService ports.ImportService) *TransactionHandler {
+	return &TransactionHandler{
+		service:       service,
+		importService: importService,
+	}
 }
 
 func (h *TransactionHandler) GetTransactions(w http.ResponseWriter, r *http.Request) {
@@ -263,4 +267,47 @@ func (h *TransactionHandler) GetTransaction(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(transaction)
+}
+
+func (h *TransactionHandler) ImportTransactions(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
+		http.Error(w, "Unable to parse form", http.StatusBadRequest)
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "Unable to get file from form", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	var data domain.FullImportData
+	if err := json.NewDecoder(file).Decode(&data); err != nil {
+		http.Error(w, "Invalid JSON format: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.importService.ImportData(userID, data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int{"count": len(data.Transactions)})
+}
+
+func (h *TransactionHandler) ImportTestData(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+
+	err := h.importService.ImportTestData(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

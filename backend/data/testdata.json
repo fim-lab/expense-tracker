@@ -1,0 +1,297 @@
+{
+  "settings": {
+    "id": "default",
+    "gehalt": 172500,
+    "budgets": [
+      { "name": "Wohnen", "valueInCents": 85000, "account": "Private" },
+      { "name": "Essen", "valueInCents": 20000, "account": "Private" },
+      { "name": "Abos", "valueInCents": 2500, "account": "Private" },
+      { "name": "Mobilität", "valueInCents": 15000, "account": "Private" },
+      { "name": "Freizeit", "valueInCents": 50000, "account": "Private" }
+    ],
+    "wallets": [
+      { "name": "Girokonto", "isDepot": false },
+      { "name": "Cash", "isDepot": false }
+    ]
+  },
+  "transactions": [
+    {
+      "id": "alloc-feb-wohnen",
+      "date": "2026-02-01T09:00:00.000Z",
+      "budget": "Wohnen",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Wohnen",
+      "amountInCents": 85000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-feb-verpflegung",
+      "date": "2026-02-01T09:00:00.000Z",
+      "budget": "Essen",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Essen",
+      "amountInCents": 20000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-feb-abos",
+      "date": "2026-02-01T09:00:00.000Z",
+      "budget": "Abos",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Abos",
+      "amountInCents": 2500,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-feb-mobi",
+      "date": "2026-02-01T09:00:00.000Z",
+      "budget": "Mobilität",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Mobilität",
+      "amountInCents": 15000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-feb-fz",
+      "date": "2026-02-01T09:00:00.000Z",
+      "budget": "Freizeit",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Freizeit",
+      "amountInCents": 50000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "exp-feb-miete",
+      "date": "2026-02-02T10:00:00.000Z",
+      "budget": "Wohnen",
+      "wallet": "Girokonto",
+      "description": "Miete",
+      "amountInCents": -75000,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-feb-nk",
+      "date": "2026-02-02T10:00:00.000Z",
+      "budget": "Wohnen",
+      "wallet": "Girokonto",
+      "description": "Nebenkosten",
+      "amountInCents": -10000,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-feb-stream",
+      "date": "2026-02-03T12:00:00.000Z",
+      "budget": "Abos",
+      "wallet": "Girokonto",
+      "description": "Streamingdienst",
+      "amountInCents": -1799,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-feb-eat",
+      "date": "2026-02-05T17:30:00.000Z",
+      "budget": "Essen",
+      "wallet": "Girokonto",
+      "description": "Wocheneinkauf",
+      "amountInCents": -16450,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-feb-eat",
+      "date": "2026-02-15T17:30:00.000Z",
+      "budget": "Essen",
+      "wallet": "Girokonto",
+      "description": "Wocheneinkauf",
+      "amountInCents": -13987,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-feb-kinopolish",
+      "date": "2026-02-14T20:00:00.000Z",
+      "budget": "Freizeit",
+      "wallet": "Cash",
+      "description": "Kino & Popcorn",
+      "amountInCents": -2500,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-feb-tanken",
+      "date": "2026-02-20T08:00:00.000Z",
+      "budget": "Mobilität",
+      "wallet": "Girokonto",
+      "description": "Benzin",
+      "amountInCents": -7500,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-tanken",
+      "date": "2026-03-10T08:00:00.000Z",
+      "budget": "Mobilität",
+      "wallet": "Girokonto",
+      "description": "Benzin",
+      "amountInCents": -8810,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-zug",
+      "date": "2026-03-02T08:00:00.000Z",
+      "budget": "Mobilität",
+      "wallet": "Girokonto",
+      "description": "Monatsticket ÖPNV",
+      "amountInCents": -6300,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-cash",
+      "date": "2026-03-04T08:00:00.000Z",
+      "wallet": "Girokonto",
+      "description": "Cash out",
+      "amountInCents": -10000,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "inc-mar-cash",
+      "date": "2026-03-04T08:00:00.000Z",
+      "wallet": "Cash",
+      "description": "Cash out",
+      "amountInCents": 10000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-mar-wohnen",
+      "date": "2026-03-01T09:00:00.000Z",
+      "budget": "Wohnen",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Wohnen",
+      "amountInCents": 85000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-mar-verpflegung",
+      "date": "2026-03-01T09:00:00.000Z",
+      "budget": "Essen",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Essen",
+      "amountInCents": 40000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-mar-abos",
+      "date": "2026-03-01T09:00:00.000Z",
+      "budget": "Abos",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Abos",
+      "amountInCents": 2500,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-mar-mobi",
+      "date": "2026-03-01T09:00:00.000Z",
+      "budget": "Mobilität",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Mobilität",
+      "amountInCents": 15000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "alloc-mar-fz",
+      "date": "2026-03-01T09:00:00.000Z",
+      "budget": "Freizeit",
+      "wallet": "Girokonto",
+      "description": "Budget Zuweisung Freizeit",
+      "amountInCents": 50000,
+      "type": "income",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-miete",
+      "date": "2026-03-02T10:00:00.000Z",
+      "budget": "Wohnen",
+      "wallet": "Girokonto",
+      "description": "Miete & NK",
+      "amountInCents": -85000,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-music",
+      "date": "2026-03-03T12:00:00.000Z",
+      "budget": "Abos",
+      "wallet": "Girokonto",
+      "description": "Music Streaming",
+      "amountInCents": -1499,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-lidl",
+      "date": "2026-03-07T11:00:00.000Z",
+      "budget": "Essen",
+      "wallet": "Girokonto",
+      "description": "Einkauf",
+      "amountInCents": -4230,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-restaurant",
+      "date": "2026-03-15T19:30:00.000Z",
+      "budget": "Essen",
+      "wallet": "Girokonto",
+      "description": "Italiener Abendessen",
+      "amountInCents": -5600,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-h&m",
+      "date": "2026-03-20T15:00:00.000Z",
+      "budget": "Freizeit",
+      "wallet": "Girokonto",
+      "description": "Kleidung",
+      "amountInCents": -8990,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-tv",
+      "date": "2026-03-22T10:00:00.000Z",
+      "budget": "Freizeit",
+      "wallet": "Girokonto",
+      "description": "Fernseher",
+      "amountInCents": -60000,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "exp-mar-kiosk",
+      "date": "2026-03-22T10:00:00.000Z",
+      "budget": "Freizeit",
+      "wallet": "Cash",
+      "description": "Kiosk",
+      "amountInCents": -1250,
+      "type": "expense",
+      "isPending": false
+    }
+  ]
+}

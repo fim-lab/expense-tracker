@@ -24,6 +24,20 @@
 			alert('Failed to delete transaction');
 		}
 	}
+
+	async function importTestData() {
+		const res = await fetch('/api/transactions/import/testdata', {
+			method: 'POST'
+		});
+
+		if (res && res.ok) {
+			await invalidateAll();
+		} else {
+			alert('Failed to import test data');
+		}
+	}
+
+	const isSearchActive = $derived(page.url.searchParams.size > 0);
 </script>
 
 <div class="grid">
@@ -54,6 +68,9 @@
 				{/each}
 			{:else}
 				<p>No transactions found.</p>
+				{#if page.data.total === 0 && !isSearchActive}
+					<button on:click={importTestData}>Import Test Data</button>
+				{/if}
 			{/if}
 		</div>
 		{#if totalPages > 1}

@@ -30,3 +30,36 @@ type PaginatedTransactions struct {
 	Page         int              `json:"page"`
 	PageSize     int              `json:"pageSize"`
 }
+
+type ImportTransaction struct {
+	ID            string    `json:"id"`
+	Date          time.Time `json:"date"`
+	Budget        string    `json:"budget"`
+	Wallet        string    `json:"wallet"`
+	Description   string    `json:"description"`
+	AmountInCents int       `json:"amountInCents"`
+	Type          string    `json:"type"`
+	IsPending     bool      `json:"isPending"`
+}
+
+type ImportBudget struct {
+	Name         string `json:"name"`
+	ValueInCents int    `json:"valueInCents"`
+	Account      string `json:"account"`
+}
+
+type ImportWallet struct {
+	Name    string `json:"name"`
+	IsDepot bool   `json:"isDepot"`
+}
+
+type ImportSettings struct {
+	Gehalt  int            `json:"gehalt"`
+	Budgets []ImportBudget `json:"budgets"`
+	Wallets []ImportWallet `json:"wallets"`
+}
+
+type FullImportData struct {
+	Settings     ImportSettings      `json:"settings"`
+	Transactions []ImportTransaction `json:"transactions"`
+}

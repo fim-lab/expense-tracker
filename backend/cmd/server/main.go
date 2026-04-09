@@ -48,6 +48,7 @@ func main() {
 	transactionService := services.NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	stockService := services.NewStockService(repos.StockRepository(), repos.DepotRepository())
 	transactionTemplateService := services.NewTransactionTemplateService(repos.TransactionTemplateRepository(), repos.WalletRepository(), repos.BudgetRepository())
+	importService := services.NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.TransactionRepository())
 
 	// Setup router
 	router := chi.NewRouter()
@@ -55,7 +56,7 @@ func main() {
 
 	// Mount routers
 	router.Mount("/auth", authRouter(&userService, &sessionService))
-	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &walletService, &depotService, &transactionService, &stockService, &userService, &transactionTemplateService))
+	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &walletService, &depotService, &transactionService, &stockService, &userService, &transactionTemplateService, &importService))
 
 	log.Printf("Start Server on port %s in %s mode", DefaultPort, env)
 	if err := http.ListenAndServe(":"+DefaultPort, router); err != nil {
@@ -71,7 +72,7 @@ func authRouter(userService *ports.UserService, sessionService *ports.SessionSer
 	return r
 }
 
-func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, stockService *ports.StockService, userService *ports.UserService, transactionTemplateService *ports.TransactionTemplateService) http.Handler {
+func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, stockService *ports.StockService, userService *ports.UserService, transactionTemplateService *ports.TransactionTemplateService, importService *ports.ImportService) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -87,7 +88,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	budgetHandler := httpadapter.NewBudgetHandler(budgetService)
 	walletHandler := httpadapter.NewWalletHandler(walletService)
 	depotHandler := httpadapter.NewDepotHandler(depotService)
-	transactionHandler := httpadapter.NewTransactionHandler(transactionService)
+	transactionHandler := httpadapter.NewTransactionHandler(*transactionService, *importService)
 	stockHandler := httpadapter.NewStockHandler(stockService)
 	userHandler := httpadapter.NewUserHandler(userService)
 	transactionTemplateHandler := httpadapter.NewTransactionTemplateHandler(transactionTemplateService)
@@ -119,6 +120,8 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Post("/transactions/transfer", transactionHandler.Transfer)
 	r.Put("/transactions/{id}", transactionHandler.UpdateTransaction)
 	r.Delete("/transactions/{id}", transactionHandler.DeleteTransaction)
+	r.Post("/transactions/import", transactionHandler.ImportTransactions)
+	r.Post("/transactions/import/testdata", transactionHandler.ImportTestData)
 
 	r.Get("/stocks", stockHandler.GetStocks)
 	r.Post("/stocks", stockHandler.CreateStock)

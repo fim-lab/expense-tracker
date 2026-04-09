@@ -16,6 +16,7 @@ FROM node:25-alpine
 RUN apk add --no-cache caddy
 WORKDIR /app
 COPY --from=backend-builder /app/main ./backend-server
+COPY --from=backend-builder /app/data ./data
 COPY --from=frontend-builder /app/build ./build
 COPY --from=frontend-builder /app/package.json ./
 COPY --from=frontend-builder /app/package-lock.json ./

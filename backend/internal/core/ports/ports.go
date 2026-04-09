@@ -64,6 +64,11 @@ type TransactionTemplateService interface {
 	DeleteTransactionTemplate(userID int, id int) error
 }
 
+type ImportService interface {
+	ImportData(userID int, data domain.FullImportData) error
+	ImportTestData(userID int) error
+}
+
 // --- Driven Ports  ---
 
 type UserRepository interface {
