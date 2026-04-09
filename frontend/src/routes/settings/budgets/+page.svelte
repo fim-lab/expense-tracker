@@ -276,6 +276,8 @@
 	<p>No budgets found.</p>
 {/if}
 
+<a href="/budgets/add">Add new Budget</a>
+
 <style>
 	table {
 		width: 100%;

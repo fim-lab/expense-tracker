@@ -98,6 +98,8 @@
 	<p>No wallets found.</p>
 {/if}
 
+<a href="/wallets/add">Add Wallet</a>
+
 <style>
 	table {
 		width: 100%;
