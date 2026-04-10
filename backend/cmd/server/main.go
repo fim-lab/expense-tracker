@@ -48,7 +48,7 @@ func main() {
 	transactionService := services.NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	stockService := services.NewStockService(repos.StockRepository(), repos.DepotRepository())
 	transactionTemplateService := services.NewTransactionTemplateService(repos.TransactionTemplateRepository(), repos.WalletRepository(), repos.BudgetRepository())
-	importService := services.NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.TransactionRepository())
+	importService := services.NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository())
 
 	// Setup router
 	router := chi.NewRouter()

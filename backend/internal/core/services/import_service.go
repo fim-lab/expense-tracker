@@ -14,6 +14,7 @@ type importService struct {
 	userRepo        ports.UserRepository
 	budgetRepo      ports.BudgetRepository
 	walletRepo      ports.WalletRepository
+	depotRepo       ports.DepotRepository
 	transactionRepo ports.TransactionRepository
 }
 
@@ -21,12 +22,14 @@ func NewImportService(
 	userRepo ports.UserRepository,
 	budgetRepo ports.BudgetRepository,
 	walletRepo ports.WalletRepository,
+	depotRepo ports.DepotRepository,
 	transactionRepo ports.TransactionRepository,
 ) ports.ImportService {
 	return &importService{
 		userRepo:        userRepo,
 		budgetRepo:      budgetRepo,
 		walletRepo:      walletRepo,
+		depotRepo:       depotRepo,
 		transactionRepo: transactionRepo,
 	}
 }
@@ -69,6 +72,38 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 	}
 	for _, w := range existingWallets {
 		walletMap[w.Name] = w.ID
+	}
+
+	var firstWalletID int
+	if len(existingWallets) > 0 {
+		firstWalletID = existingWallets[0].ID
+	}
+
+	if firstWalletID != 0 {
+		existingDepots, err := s.depotRepo.FindDepotsByUser(userID)
+		if err != nil {
+			return fmt.Errorf("failed to fetch existing depots: %w", err)
+		}
+		depotMap := make(map[string]bool)
+		for _, d := range existingDepots {
+			depotMap[d.Name] = true
+		}
+
+		for _, importWallet := range data.Settings.Wallets {
+			if !importWallet.IsDepot {
+				continue
+			}
+			if !depotMap[importWallet.Name] {
+				d := domain.Depot{
+					UserID:   userID,
+					Name:     importWallet.Name,
+					WalletID: firstWalletID,
+				}
+				if err := s.depotRepo.SaveDepot(d); err != nil {
+					return fmt.Errorf("failed to save depot %s: %w", importWallet.Name, err)
+				}
+			}
+		}
 	}
 
 	existingBudgets, err := s.budgetRepo.FindBudgetsByUser(userID)
