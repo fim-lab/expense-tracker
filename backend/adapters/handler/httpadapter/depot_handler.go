@@ -68,6 +68,48 @@ func (h *DepotHandler) CreateDepot(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(depot)
 }
 
+func (h *DepotHandler) UpdateDepot(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	depotID := chi.URLParam(r, "id")
+	if depotID == "" {
+		http.Error(w, "Missing depot ID", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(depotID)
+	if err != nil {
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
+	}
+
+	var depot domain.Depot
+	err = json.NewDecoder(r.Body).Decode(&depot)
+	if err != nil {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	depot.ID = id
+	depot.UserID = userID
+
+	err = h.service.UpdateDepot(userID, depot)
+	if err != nil {
+		log.Printf("Error updating depot: %v", err)
+		http.Error(w, "Error updating depot", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(depot)
+}
+
 func (h *DepotHandler) DeleteDepot(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {

@@ -47,6 +47,7 @@ type SessionService interface {
 type DepotService interface {
 	CreateDepot(userID int, d domain.Depot) error
 	GetDepots(userID int) ([]domain.Depot, error)
+	UpdateDepot(userID int, d domain.Depot) error
 	DeleteDepot(userID int, id int) error
 }
 
@@ -103,6 +104,7 @@ type WalletRepository interface {
 type DepotRepository interface {
 	SaveDepot(d domain.Depot) error
 	GetDepotByID(id int) (domain.Depot, error)
+	UpdateDepot(d domain.Depot) error
 	FindDepotsByUser(userID int) ([]domain.Depot, error)
 	DeleteDepot(id int) error
 }

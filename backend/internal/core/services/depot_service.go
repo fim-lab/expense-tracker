@@ -36,7 +36,27 @@ func (s *depotService) GetDepots(userID int) ([]domain.Depot, error) {
 	return s.depotRepo.FindDepotsByUser(userID)
 }
 
-// TODO: func (s *depotService) UpdateDepots(...
+func (s *depotService) UpdateDepot(userID int, d domain.Depot) error {
+	existing, err := s.depotRepo.GetDepotByID(d.ID)
+	if err != nil {
+		return err
+	}
+	if existing.UserID != userID {
+		return domain.ErrUnauthorized
+	}
+
+	if strings.TrimSpace(d.Name) == "" {
+		return errors.New("depot name is required")
+	}
+
+	wallet, err := s.walletRepo.GetWalletByID(d.WalletID)
+	if err != nil || wallet.UserID != userID {
+		return errors.New("invalid wallet for depot")
+	}
+
+	d.UserID = userID
+	return s.depotRepo.UpdateDepot(d)
+}
 
 func (s *depotService) DeleteDepot(userID int, id int) error {
 	existing, err := s.depotRepo.GetDepotByID(id)
