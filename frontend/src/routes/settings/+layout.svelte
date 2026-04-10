@@ -8,6 +8,7 @@
 			<ul>
 				<li><a href="/settings/budgets">Salary/Budget</a></li>
 				<li><a href="/settings/wallets">Wallets</a></li>
+				<li><a href="/settings/depots">Depots</a></li>
 				<li><a href="/settings/import">Import</a></li>
 				<li><a href="/settings/appearance">Appearance</a></li>
 			</ul>

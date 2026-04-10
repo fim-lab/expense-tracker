@@ -72,6 +72,16 @@ export interface Budget {
 	newLimitEuros?: number;
 }
 
+export interface Depot {
+	id: number;
+	userId: number;
+	walletId: number;
+	name: string;
+	isEditing?: boolean;
+	newName?: string;
+	newWalletId?: number;
+}
+
 export interface TransactionTemplate {
     id: number;
     userId: number;
