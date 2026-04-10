@@ -11,7 +11,7 @@ import (
 func TestImportTransactions(t *testing.T) {
 	repos := memory.NewCleanRepositories()
 	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
-	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository())
+	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.StockRepository(), repos.TransactionTemplateRepository())
 
 	userID := 1
 	repos.UserRepository().SaveUser(domain.User{ID: userID, Username: "test"})
