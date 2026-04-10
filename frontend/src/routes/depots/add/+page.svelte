@@ -29,7 +29,7 @@
 		});
 
 		if (res.ok) {
-			goto('/settings/depots');
+			goto('/settings/wallets');
 		} else {
 			alert('Failed to save depot');
 			isSubmitting = false;

@@ -174,6 +174,7 @@
 {/if}
 
 {#if user}
+	<h2>Salary</h2>
 	<table>
 		<thead>
 			<tr>
@@ -288,6 +289,7 @@
 		text-align: left;
 		padding: 0.5rem;
 	}
+	th:last-child,
 	td:last-child {
 		text-align: right;
 		white-space: nowrap;
