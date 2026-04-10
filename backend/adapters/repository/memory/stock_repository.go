@@ -46,3 +46,14 @@ func (r *StockRepository) DeleteStock(id int) error {
 	delete(r.repo.stocks, id)
 	return nil
 }
+
+func (r *StockRepository) DeleteAllByUser(userID int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	for id, s := range r.repo.stocks {
+		if s.UserID == userID {
+			delete(r.repo.stocks, id)
+		}
+	}
+	return nil
+}

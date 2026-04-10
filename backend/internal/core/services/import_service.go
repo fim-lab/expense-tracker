@@ -11,11 +11,13 @@ import (
 )
 
 type importService struct {
-	userRepo        ports.UserRepository
-	budgetRepo      ports.BudgetRepository
-	walletRepo      ports.WalletRepository
-	depotRepo       ports.DepotRepository
-	transactionRepo ports.TransactionRepository
+	userRepo                ports.UserRepository
+	budgetRepo              ports.BudgetRepository
+	walletRepo              ports.WalletRepository
+	depotRepo               ports.DepotRepository
+	transactionRepo         ports.TransactionRepository
+	stockRepo               ports.StockRepository
+	transactionTemplateRepo ports.TransactionTemplateRepository
 }
 
 func NewImportService(
@@ -24,14 +26,50 @@ func NewImportService(
 	walletRepo ports.WalletRepository,
 	depotRepo ports.DepotRepository,
 	transactionRepo ports.TransactionRepository,
+	stockRepo ports.StockRepository,
+	transactionTemplateRepo ports.TransactionTemplateRepository,
 ) ports.ImportService {
 	return &importService{
-		userRepo:        userRepo,
-		budgetRepo:      budgetRepo,
-		walletRepo:      walletRepo,
-		depotRepo:       depotRepo,
-		transactionRepo: transactionRepo,
+		userRepo:                userRepo,
+		budgetRepo:              budgetRepo,
+		walletRepo:              walletRepo,
+		depotRepo:               depotRepo,
+		transactionRepo:         transactionRepo,
+		stockRepo:               stockRepo,
+		transactionTemplateRepo: transactionTemplateRepo,
 	}
+}
+
+func (s *importService) DeleteAllUserData(userID int) error {
+	if err := s.transactionRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete transactions: %w", err)
+	}
+
+	if err := s.transactionTemplateRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete templates: %w", err)
+	}
+
+	if err := s.stockRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete stocks: %w", err)
+	}
+
+	if err := s.depotRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete depots: %w", err)
+	}
+
+	if err := s.budgetRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete budgets: %w", err)
+	}
+
+	if err := s.walletRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete wallets: %w", err)
+	}
+
+	if err := s.userRepo.UpdateUserSalary(userID, 0); err != nil {
+		return fmt.Errorf("failed to reset salary: %w", err)
+	}
+
+	return nil
 }
 
 func (s *importService) ImportData(userID int, data domain.FullImportData) error {

@@ -64,3 +64,8 @@ func (r *BudgetRepository) DeleteBudget(id int) error {
 	_, err := r.db.Exec("DELETE FROM budgets WHERE id = $1", id)
 	return err
 }
+
+func (r *BudgetRepository) DeleteAllByUser(userID int) error {
+	_, err := r.db.Exec("DELETE FROM budgets WHERE user_id = $1", userID)
+	return err
+}

@@ -181,3 +181,8 @@ func (r *TransactionTemplateRepository) DeleteTransactionTemplate(id int) error 
 	}
 	return nil
 }
+
+func (r *TransactionTemplateRepository) DeleteAllByUser(userID int) error {
+	_, err := r.db.Exec("DELETE FROM transaction_templates WHERE user_id = $1", userID)
+	return err
+}

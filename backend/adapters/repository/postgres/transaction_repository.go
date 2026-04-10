@@ -367,6 +367,11 @@ func (r *TransactionRepository) DeleteTransaction(id int) error {
 	return tx.Commit()
 }
 
+func (r *TransactionRepository) DeleteAllByUser(userID int) error {
+	_, err := r.db.Exec("DELETE FROM transactions WHERE user_id = $1", userID)
+	return err
+}
+
 func (r *TransactionRepository) CreateTransfer(from, to domain.Transaction) error {
 	tx, err := r.db.Begin()
 	if err != nil {

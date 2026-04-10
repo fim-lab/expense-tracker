@@ -285,6 +285,17 @@ func (r *TransactionRepository) DeleteTransaction(id int) error {
 	return nil
 }
 
+func (r *TransactionRepository) DeleteAllByUser(userID int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	for id, t := range r.repo.transactions {
+		if t.UserID == userID {
+			delete(r.repo.transactions, id)
+		}
+	}
+	return nil
+}
+
 func (r *TransactionRepository) UpdateTransaction(t domain.Transaction) error {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()

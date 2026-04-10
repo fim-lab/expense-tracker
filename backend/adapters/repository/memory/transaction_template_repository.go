@@ -72,3 +72,14 @@ func (r *TransactionTemplateRepository) DeleteTransactionTemplate(id int) error 
 	delete(r.repo.transactionTemplates, id)
 	return nil
 }
+
+func (r *TransactionTemplateRepository) DeleteAllByUser(userID int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	for id, tt := range r.repo.transactionTemplates {
+		if tt.UserID == userID {
+			delete(r.repo.transactionTemplates, id)
+		}
+	}
+	return nil
+}

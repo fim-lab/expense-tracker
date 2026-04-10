@@ -10,6 +10,7 @@
 				<li><a href="/settings/wallets">Wallets & Depots</a></li>
 				<li><a href="/settings/import">Import</a></li>
 				<li><a href="/settings/appearance">Appearance</a></li>
+				<li><a href="/settings/delete-data" style="color: var(--pico-color-red-600);">Delete Data</a></li>
 			</ul>
 		</nav>
 	</aside>

@@ -53,6 +53,17 @@ func (r *WalletRepository) DeleteWallet(id int) error {
 	return nil
 }
 
+func (r *WalletRepository) DeleteAllByUser(userID int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	for id, w := range r.repo.wallets {
+		if w.UserID == userID {
+			delete(r.repo.wallets, id)
+		}
+	}
+	return nil
+}
+
 func (r *WalletRepository) UpdateWallet(w domain.Wallet) error {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()

@@ -55,3 +55,8 @@ func (r *DepotRepository) DeleteDepot(id int) error {
 	_, err := r.db.Exec("DELETE FROM depots WHERE id = $1", id)
 	return err
 }
+
+func (r *DepotRepository) DeleteAllByUser(userID int) error {
+	_, err := r.db.Exec("DELETE FROM depots WHERE user_id = $1", userID)
+	return err
+}

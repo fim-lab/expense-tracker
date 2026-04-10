@@ -48,7 +48,15 @@ func main() {
 	transactionService := services.NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	stockService := services.NewStockService(repos.StockRepository(), repos.DepotRepository())
 	transactionTemplateService := services.NewTransactionTemplateService(repos.TransactionTemplateRepository(), repos.WalletRepository(), repos.BudgetRepository())
-	importService := services.NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository())
+	importService := services.NewImportService(
+		repos.UserRepository(),
+		repos.BudgetRepository(),
+		repos.WalletRepository(),
+		repos.DepotRepository(),
+		repos.TransactionRepository(),
+		repos.StockRepository(),
+		repos.TransactionTemplateRepository(),
+	)
 
 	// Setup router
 	router := chi.NewRouter()
@@ -123,6 +131,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Delete("/transactions/{id}", transactionHandler.DeleteTransaction)
 	r.Post("/transactions/import", transactionHandler.ImportTransactions)
 	r.Post("/transactions/import/testdata", transactionHandler.ImportTestData)
+	r.Delete("/users/me/data", transactionHandler.DeleteAllUserData)
 
 	r.Get("/stocks", stockHandler.GetStocks)
 	r.Post("/stocks", stockHandler.CreateStock)

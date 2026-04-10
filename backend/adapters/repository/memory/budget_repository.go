@@ -52,6 +52,17 @@ func (r *BudgetRepository) DeleteBudget(id int) error {
 	return nil
 }
 
+func (r *BudgetRepository) DeleteAllByUser(userID int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	for id, b := range r.repo.budgets {
+		if b.UserID == userID {
+			delete(r.repo.budgets, id)
+		}
+	}
+	return nil
+}
+
 func (r *BudgetRepository) UpdateBudget(b domain.Budget) error {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()

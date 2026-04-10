@@ -68,6 +68,7 @@ type TransactionTemplateService interface {
 type ImportService interface {
 	ImportData(userID int, data domain.FullImportData) error
 	ImportTestData(userID int) error
+	DeleteAllUserData(userID int) error
 }
 
 // --- Driven Ports  ---
@@ -91,6 +92,7 @@ type BudgetRepository interface {
 	UpdateBudget(budget domain.Budget) error
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
 	DeleteBudget(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type WalletRepository interface {
@@ -99,6 +101,7 @@ type WalletRepository interface {
 	UpdateWallet(wallet domain.Wallet) error
 	FindWalletsByUser(userID int) ([]domain.Wallet, error)
 	DeleteWallet(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type DepotRepository interface {
@@ -107,6 +110,7 @@ type DepotRepository interface {
 	UpdateDepot(d domain.Depot) error
 	FindDepotsByUser(userID int) ([]domain.Depot, error)
 	DeleteDepot(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type TransactionRepository interface {
@@ -118,6 +122,7 @@ type TransactionRepository interface {
 	CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error)
 	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
+	DeleteAllByUser(userID int) error
 	CreateTransfer(from, to domain.Transaction) error
 	CountTransactionsByBudgetID(budgetID int) (int, error)
 	CountTransactionsByWalletID(walletID int) (int, error)
@@ -128,6 +133,7 @@ type StockRepository interface {
 	GetStockByID(id int) (domain.Stock, error)
 	FindStocksByUser(userID int) ([]domain.Stock, error)
 	DeleteStock(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type TransactionTemplateRepository interface {
@@ -136,6 +142,7 @@ type TransactionTemplateRepository interface {
 	FindTransactionTemplatesByUser(userID int) ([]domain.TransactionTemplate, error)
 	UpdateTransactionTemplate(tt domain.TransactionTemplate) error
 	DeleteTransactionTemplate(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type Repositories interface {

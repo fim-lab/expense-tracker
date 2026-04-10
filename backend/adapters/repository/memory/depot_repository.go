@@ -53,3 +53,14 @@ func (r *DepotRepository) DeleteDepot(id int) error {
 	delete(r.repo.depots, id)
 	return nil
 }
+
+func (r *DepotRepository) DeleteAllByUser(userID int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	for id, d := range r.repo.depots {
+		if d.UserID == userID {
+			delete(r.repo.depots, id)
+		}
+	}
+	return nil
+}
