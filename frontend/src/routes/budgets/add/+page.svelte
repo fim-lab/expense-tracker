@@ -39,7 +39,7 @@
 		});
 
 		if (res.ok) {
-			goto('/');
+			goto('/settings/budgets');
 		} else {
 			alert('Failed to save budget');
 			isSubmitting = false;

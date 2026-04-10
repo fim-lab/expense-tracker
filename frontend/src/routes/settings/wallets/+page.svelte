@@ -5,7 +5,7 @@
 
 	let wallets = $state<Wallet[]>(
 		// svelte-ignore state_referenced_locally
-		data.wallets.map((w: Wallet) => ({ ...w, isEditing: false, newName: '' }))
+		(data.wallets || []).map((w: Wallet) => ({ ...w, isEditing: false, newName: '' }))
 	);
 
 	let depots = $state<Depot[]>(

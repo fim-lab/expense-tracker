@@ -10,6 +10,8 @@
 	const pageNr = page.data.page;
 	const pageSize = page.data.pageSize;
 	const totalPages = $derived(Math.ceil(page.data.total / pageSize));
+	const hasWallets = $derived(page.data?.wallets?.length > 0);
+	const hasBudgets = $derived(page.data?.budgets?.length > 0);
 
 	async function deleteTransaction(id: number) {
 		if (!confirm('Are you sure you want to delete this transaction?')) return;
@@ -46,16 +48,22 @@
 			<header><strong>Search</strong></header>
 			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
 		</article>
-		<article>
-			<header><strong>Wallets</strong></header>
-			{#each page.data.wallets as wallet}
-				<WalletCard {wallet} />
-			{/each}
-			<header><strong>Budgets</strong></header>
-			{#each page.data.budgets as budget}
-				<BudgetCard {budget} />
-			{/each}
-		</article>
+		{#if hasBudgets || hasWallets}
+			<article>
+				{#if hasWallets}
+					<header><strong>Wallets</strong></header>
+					{#each page.data.wallets as wallet}
+						<WalletCard {wallet} />
+					{/each}
+				{/if}
+				{#if hasBudgets}
+					<header><strong>Budgets</strong></header>
+					{#each page.data.budgets as budget}
+						<BudgetCard {budget} />
+					{/each}
+				{/if}
+			</article>
+		{/if}
 	</aside>
 
 	<article>

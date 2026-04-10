@@ -15,7 +15,7 @@
 	let type = $state(urlParams.get('type') || 'EXPENSE');
 	let errorMessage = $state('');
 
-	let templates: TransactionTemplate[] = $state(data.templates);
+	let templates: TransactionTemplate[] = $state(data.templates || []);
 
 	function handleFocus(event: FocusEvent) {
 		const input = event.target as HTMLInputElement;
@@ -182,7 +182,7 @@
 				Wallet
 				<select bind:value={walletId} required>
 					<option value={0} disabled>Select Wallet</option>
-					{#each data.wallets as wallet}
+					{#each data.wallets || [] as wallet}
 						<option value={wallet.id}>{wallet.name}</option>
 					{/each}
 				</select>
@@ -193,7 +193,7 @@
 			Budget
 			<select bind:value={budgetId} required>
 				<option value={0} disabled>Select Budget Category</option>
-				{#each data.budgets as budget}
+				{#each data.budgets || [] as budget}
 					<option value={budget.id}>{budget.name}</option>
 				{/each}
 			</select>

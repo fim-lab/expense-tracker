@@ -4,7 +4,7 @@
 	let { data } = $props();
 
 	let name = $state('');
-	let walletId = $state<number>(data.wallets[0]?.id || 0);
+	let walletId = $state<number>(data.wallets?.[0]?.id || 0);
 	let isSubmitting = $state(false);
 
 	async function handleSubmit(e: Event) {
@@ -49,7 +49,7 @@
 			Associated Wallet
 			<select bind:value={walletId} required>
 				<option value={0} disabled>Select a wallet</option>
-				{#each data.wallets as wallet}
+				{#each data.wallets || [] as wallet}
 					<option value={wallet.id}>{wallet.name}</option>
 				{/each}
 			</select>

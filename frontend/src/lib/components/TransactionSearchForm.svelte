@@ -3,7 +3,7 @@
 	import type { TransactionType } from '$lib/types';
 	import { updateParams, debounce } from '$lib/utils';
 
-	let { budgets, wallets } = $props();
+	let { budgets = [], wallets = [] } = $props();
 	const searchTerm = $derived(
 		page.url.searchParams.get('q') ?? ''
 	);
