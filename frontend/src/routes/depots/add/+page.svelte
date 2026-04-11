@@ -42,7 +42,7 @@
 	<form onsubmit={handleSubmit}>
 		<label>
 			Depot Name
-			<input type="text" bind:value={name} placeholder="e.g. My Stock Depot" required />
+			<input type="text" bind:value={name} placeholder="e.g. My Depot" required />
 		</label>
 
 		<label>

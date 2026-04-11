@@ -11,7 +11,7 @@ import (
 func TestImportTransactions(t *testing.T) {
 	repos := memory.NewCleanRepositories()
 	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
-	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.StockRepository(), repos.TransactionTemplateRepository())
+	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.LotRepository(), repos.TransactionTemplateRepository())
 
 	userID := 1
 	repos.UserRepository().SaveUser(domain.User{ID: userID, Username: "test"})
@@ -28,9 +28,9 @@ func TestImportTransactions(t *testing.T) {
 				{Name: "Shared", ValueInCents: 100000, Account: "Shared"}, // Should be skipped
 			},
 			Wallets: []domain.ImportWallet{
-				{Name: "Cash", IsDepot: false},  // Existing
-				{Name: "Bank", IsDepot: false},  // New
-				{Name: "Stocks", IsDepot: true}, // New Depot
+				{Name: "Cash", IsDepot: false}, // Existing
+				{Name: "Bank", IsDepot: false}, // New
+				{Name: "Lots", IsDepot: true}, // New Depot
 			},
 		},
 		Transactions: []domain.ImportTransaction{
@@ -82,8 +82,8 @@ func TestImportTransactions(t *testing.T) {
 	depots, _ := repos.DepotRepository().FindDepotsByUser(userID)
 	if len(depots) != 1 {
 		t.Errorf("Expected 1 depot, got %d", len(depots))
-	} else if depots[0].Name != "Stocks" {
-		t.Errorf("Expected depot name 'Stocks', got '%s'", depots[0].Name)
+	} else if depots[0].Name != "Lots" {
+		t.Errorf("Expected depot name 'Lots', got '%s'", depots[0].Name)
 	}
 
 	user, _ := repos.UserRepository().GetUserByID(userID)

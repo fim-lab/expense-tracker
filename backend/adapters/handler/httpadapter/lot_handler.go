@@ -11,79 +11,77 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type StockHandler struct {
-	service ports.StockService
+type LotHandler struct {
+	service ports.LotService
 }
 
-func NewStockHandler(service *ports.StockService) *StockHandler {
-	return &StockHandler{service: *service}
+func NewLotHandler(service *ports.LotService) *LotHandler {
+	return &LotHandler{service: *service}
 }
 
-func (h *StockHandler) GetStocks(w http.ResponseWriter, r *http.Request) {
+func (h *LotHandler) GetLots(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	stocks, err := h.service.GetStocks(userID)
+	lots, err := h.service.GetLots(userID)
 	if err != nil {
-		log.Printf("Error fetching stocks: %v", err)
-		http.Error(w, "Could not fetch stocks", http.StatusInternalServerError)
+		log.Printf("Error fetching lots: %v", err)
+		http.Error(w, "Could not fetch lots", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(stocks)
+	json.NewEncoder(w).Encode(lots)
 }
 
-func (h *StockHandler) CreateStock(w http.ResponseWriter, r *http.Request) {
+func (h *LotHandler) CreateLot(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var stock domain.Stock
-	if err := json.NewDecoder(r.Body).Decode(&stock); err != nil {
+	var lot domain.Lot
+	if err := json.NewDecoder(r.Body).Decode(&lot); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
-	stock.UserID = userID
-
-	if err := h.service.CreateStock(userID, stock); err != nil {
+	if err := h.service.CreateLot(userID, lot); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(stock)
+	json.NewEncoder(w).Encode(lot)
 }
 
-func (h *StockHandler) DeleteStock(w http.ResponseWriter, r *http.Request) {
+func (h *LotHandler) DeleteLot(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	stockID := chi.URLParam(r, "id")
-	if stockID == "" {
-		http.Error(w, "Missing stock ID", http.StatusBadRequest)
+	lotID := chi.URLParam(r, "id")
+	if lotID == "" {
+		http.Error(w, "Missing lot ID", http.StatusBadRequest)
 		return
 	}
 
-	id, err := strconv.Atoi(stockID)
+	id, err := strconv.Atoi(lotID)
 	if err != nil {
 		http.Error(w, "Id is not valid", http.StatusBadRequest)
 		return
 	}
 
-	err = h.service.DeleteStock(userID, id)
+	err = h.service.DeleteLot(userID, id)
 	if err != nil {
-		log.Printf("Error deleting stock: %v", err)
-		http.Error(w, "Error deleting stock", http.StatusInternalServerError)
+		log.Printf("Error deleting lot: %v", err)
+		http.Error(w, "Error deleting lot", http.StatusInternalServerError)
 		return
 	}
 

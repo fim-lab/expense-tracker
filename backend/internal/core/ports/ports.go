@@ -51,10 +51,10 @@ type DepotService interface {
 	DeleteDepot(userID int, id int) error
 }
 
-type StockService interface {
-	CreateStock(userID int, s domain.Stock) error
-	GetStocks(userID int) ([]domain.Stock, error)
-	DeleteStock(userID int, id int) error
+type LotService interface {
+	CreateLot(userID int, l domain.Lot) error
+	GetLots(userID int) ([]domain.Lot, error)
+	DeleteLot(userID int, id int) error
 }
 
 type TransactionTemplateService interface {
@@ -128,11 +128,12 @@ type TransactionRepository interface {
 	CountTransactionsByWalletID(walletID int) (int, error)
 }
 
-type StockRepository interface {
-	SaveStock(s domain.Stock) error
-	GetStockByID(id int) (domain.Stock, error)
-	FindStocksByUser(userID int) ([]domain.Stock, error)
-	DeleteStock(id int) error
+type LotRepository interface {
+	SaveLot(l domain.Lot) error
+	GetLotByID(id int) (domain.Lot, error)
+	FindLotsByDepot(depotID int) ([]domain.Lot, error)
+	DeleteLot(id int) error
+	DeleteAllLotsOfDepot(depotID int) error
 	DeleteAllByUser(userID int) error
 }
 
@@ -152,6 +153,6 @@ type Repositories interface {
 	WalletRepository() WalletRepository
 	DepotRepository() DepotRepository
 	TransactionRepository() TransactionRepository
-	StockRepository() StockRepository
+	LotRepository() LotRepository
 	TransactionTemplateRepository() TransactionTemplateRepository
 }
