@@ -15,6 +15,7 @@ var (
 	ErrUnauthorized                = errors.New("user not authorized")
 	ErrTransactionNotFound         = errors.New("transaction not found")
 	ErrLotNotFound                 = errors.New("lot not found")
+	ErrTradeNotFound               = errors.New("trade not found")
 	ErrUserNotFound                = errors.New("user not found")
 	ErrSessionNotFound             = errors.New("session not found")
 	ErrNotEmpty                    = errors.New("cannot delete: still contains transactions")

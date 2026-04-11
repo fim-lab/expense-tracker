@@ -57,6 +57,13 @@ type LotService interface {
 	DeleteLot(userID int, id int) error
 }
 
+type TradeService interface {
+	CreateTrade(userID int, t domain.Trade) error
+	GetTradesByDepot(userID int, depotID int) ([]domain.Trade, error)
+	UpdateTrade(userID int, t domain.Trade) error
+	DeleteTrade(userID int, id int) error
+}
+
 type TransactionTemplateService interface {
 	CreateTransactionTemplate(userID int, tt domain.TransactionTemplate) error
 	GetTransactionTemplate(userID int, id int) (domain.TransactionTemplate, error)
@@ -137,6 +144,15 @@ type LotRepository interface {
 	DeleteAllByUser(userID int) error
 }
 
+type TradeRepository interface {
+	SaveTrade(t domain.Trade) error
+	GetTradeByID(id int) (domain.Trade, error)
+	FindTradesByDepot(depotID int) ([]domain.Trade, error)
+	UpdateTrade(t domain.Trade) error
+	DeleteTrade(id int) error
+	DeleteAllByUser(userID int) error
+}
+
 type TransactionTemplateRepository interface {
 	SaveTransactionTemplate(tt domain.TransactionTemplate) error
 	GetTransactionTemplateByID(id int) (domain.TransactionTemplate, error)
@@ -154,5 +170,6 @@ type Repositories interface {
 	DepotRepository() DepotRepository
 	TransactionRepository() TransactionRepository
 	LotRepository() LotRepository
+	TradeRepository() TradeRepository
 	TransactionTemplateRepository() TransactionTemplateRepository
 }
