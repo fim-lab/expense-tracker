@@ -214,6 +214,19 @@ func (s PortfolioSnapshot) realizedGain() int {
 	return total
 }
 
+func canDeleteTrade(trades []domain.Trade, t domain.Trade) bool {
+	if t.Type != domain.TradeTypeBuy {
+		return true
+	}
+	remaining := make([]domain.Trade, 0, len(trades))
+	for _, other := range trades {
+		if other.ID != t.ID {
+			remaining = append(remaining, other)
+		}
+	}
+	return validateTradeHistory(remaining) == nil
+}
+
 func (s PortfolioSnapshot) tradeDTOs(trades []domain.Trade) []domain.TradeDTO {
 	costByTrade := map[int]int{}
 	proceedsByTrade := map[int]int{}
@@ -243,6 +256,7 @@ func (s PortfolioSnapshot) tradeDTOs(trades []domain.Trade) []domain.TradeDTO {
 			dto.ProceedsInCents = proceedsByTrade[t.ID]
 			dto.RealizedGainInCents = dto.ProceedsInCents - dto.CostBasisInCents
 		}
+		dto.CanDelete = canDeleteTrade(sorted, t)
 		dtos = append(dtos, dto)
 	}
 	return dtos

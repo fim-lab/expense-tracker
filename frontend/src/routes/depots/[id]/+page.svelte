@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { formatCurrency } from '$lib/utils';
-	import type { Lot, TradeType } from '$lib/types';
+	import type { Lot, Position, TradeDTO, TradeType } from '$lib/types';
 
 	let { data } = $props();
 
@@ -16,8 +16,19 @@
 	const hasPositions = $derived(data.portfolio.positions.length > 0);
 	const hasTrades = $derived(data.trades.length > 0);
 
-	// The backend stores the total the bank charged and derives the share price
-	// from it, so the form asks for the total and not for a price per share.
+	const heldWKNs = $derived(data.portfolio.positions.map((p: Position) => p.wkn));
+	let expandedWKNs = $state<string[]>([]);
+
+	function isExpanded(wknToCheck: string) {
+		return expandedWKNs.includes(wknToCheck);
+	}
+
+	function toggleLots(wknToToggle: string) {
+		expandedWKNs = isExpanded(wknToToggle)
+			? expandedWKNs.filter((w) => w !== wknToToggle)
+			: [...expandedWKNs, wknToToggle];
+	}
+
 	function pricePerShare(totalInCents: number, shares: number) {
 		return shares > 0 ? formatCurrency(Math.round(totalInCents / shares)) : '-';
 	}
@@ -112,7 +123,12 @@
 			</label>
 			<label>
 				WKN
-				<input type="text" bind:value={wkn} placeholder="A1JX52" required />
+				<input type="text" list="wkn-options" bind:value={wkn} autocomplete="on" required />
+				<datalist id="wkn-options">
+					{#each heldWKNs as option (option)}
+						<option value={option}></option>
+					{/each}
+				</datalist>
 			</label>
 		</div>
 		<div class="grid">
@@ -141,37 +157,48 @@
 <article>
 	<header><strong>Positions</strong></header>
 	{#if hasPositions}
-		{#each data.portfolio.positions as position (position.wkn)}
-			<table>
-				<thead>
+		<table>
+			<thead>
+				<tr>
+					<th>Position</th>
+					<th>Quantity</th>
+					<th>Average price</th>
+					<th>Invested</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each data.portfolio.positions as position (position.wkn)}
 					<tr>
-						<th>{position.wkn}</th>
-						<th>Quantity</th>
-						<th>Invested</th>
-						<th>Avg price</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td>Position</td>
+						<td>
+							<button
+								class="toggle"
+								aria-expanded={isExpanded(position.wkn)}
+								onclick={() => toggleLots(position.wkn)}
+							>
+								<span class="caret">{isExpanded(position.wkn) ? '▾' : '▸'}</span>
+								{position.wkn}
+							</button>
+						</td>
 						<td>{position.quantity}</td>
-						<td>{formatCurrency(position.investedInCents)}</td>
 						<td>{formatCurrency(position.avgPriceInCents)}</td>
+						<td>{formatCurrency(position.investedInCents)}</td>
 					</tr>
-					{#each position.lots as lot (lot.tradeId)}
-						<tr class="lot">
-							<td>{new Date(lot.dateOfPurchase).toLocaleDateString('de-DE')}</td>
-							<td>{lotLabel(lot)}</td>
-							<td>{formatCurrency(lot.remainingCostInCents)}</td>
-							<td>{pricePerShare(lot.totalInCents, lot.quantity)}</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		{/each}
-		<small class="muted"
-			>Lots are listed oldest first - that is the order a sale consumes them.</small
-		>
+					{#if isExpanded(position.wkn)}
+						{#each position.lots as lot (lot.tradeId)}
+							<tr class="lot">
+								<td>{new Date(lot.dateOfPurchase).toLocaleDateString('de-DE')}</td>
+								<td>{lotLabel(lot)}</td>
+								<td>{pricePerShare(lot.totalInCents, lot.quantity)}</td>
+								<td>{formatCurrency(lot.remainingCostInCents)}</td>
+							</tr>
+						{/each}
+					{/if}
+				{/each}
+			</tbody>
+		</table>
+		<small class="muted">
+			Click a position to show its lots, oldest first - that is the order a sale consumes them.
+		</small>
 	{:else}
 		<p>No shares held in this depot.</p>
 	{/if}
@@ -206,9 +233,14 @@
 						>
 							{trade.type === 'SELL' ? formatCurrency(trade.realizedGainInCents) : '-'}
 						</td>
-						<td>
-							<button class="secondary outline" onclick={() => deleteTrade(trade.id)}>Delete</button
+						<td title={trade.canDelete ? '' : 'Shares from this buy have already been sold'}>
+							<button
+								class="secondary outline"
+								disabled={!trade.canDelete}
+								onclick={() => deleteTrade(trade.id)}
 							>
+								Delete
+							</button>
 						</td>
 					</tr>
 				{/each}
@@ -233,6 +265,22 @@
 	.totals div {
 		display: flex;
 		flex-direction: column;
+	}
+
+	.toggle {
+		background: none;
+		border: none;
+		padding: 0;
+		margin: 0;
+		width: auto;
+		color: inherit;
+		font-weight: inherit;
+		text-align: left;
+	}
+
+	.caret {
+		color: var(--pico-muted-color);
+		margin-right: 0.25rem;
 	}
 
 	.lot td {

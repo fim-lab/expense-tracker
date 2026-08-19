@@ -121,3 +121,38 @@ func TestPortfolioService_OutputIsSortedDeterministically(t *testing.T) {
 		t.Errorf("expected the lots in purchase order, got %v before %v", lots[0].DateOfPurchase, lots[1].DateOfPurchase)
 	}
 }
+
+func TestPortfolioService_TradesReportWhetherTheyCanBeDeleted(t *testing.T) {
+	f := newStockFixture(t)
+	soldBuyID := f.mustBuy(t, 1, 10, 100000)
+	untouchedBuyID := f.mustBuy(t, 2, 5, 60000)
+	sellID := f.mustSell(t, 3, 10, 120000)
+
+	trades, err := f.portfolioSvc.GetTrades(f.userID, f.depotID)
+	if err != nil {
+		t.Fatalf("could not read the trades: %v", err)
+	}
+
+	canDelete := map[int]bool{}
+	for _, trade := range trades {
+		canDelete[trade.ID] = trade.CanDelete
+	}
+
+	if canDelete[soldBuyID] {
+		t.Error("expected the buy whose shares were sold to be undeletable")
+	}
+	if !canDelete[untouchedBuyID] {
+		t.Error("expected the untouched buy to be deletable")
+	}
+	if !canDelete[sellID] {
+		t.Error("expected a sell to always be deletable")
+	}
+
+	// The flag must agree with what DeleteTrade actually does.
+	if err := f.tradeSvc.DeleteTrade(f.userID, soldBuyID); err != domain.ErrInsufficientShares {
+		t.Errorf("expected deleting the sold buy to fail, got %v", err)
+	}
+	if err := f.tradeSvc.DeleteTrade(f.userID, untouchedBuyID); err != nil {
+		t.Errorf("expected deleting the untouched buy to succeed, got %v", err)
+	}
+}

@@ -116,6 +116,7 @@ export interface TradeDTO extends Trade {
 	costBasisInCents: number;
 	proceedsInCents: number;
 	realizedGainInCents: number;
+	canDelete: boolean;
 }
 
 export interface Lot {

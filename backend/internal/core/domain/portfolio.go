@@ -55,4 +55,5 @@ type TradeDTO struct {
 	CostBasisInCents    int       `json:"costBasisInCents"`
 	ProceedsInCents     int       `json:"proceedsInCents"`
 	RealizedGainInCents int       `json:"realizedGainInCents"`
+	CanDelete           bool      `json:"canDelete"`
 }
