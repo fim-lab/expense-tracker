@@ -102,8 +102,10 @@
 			if (res.ok) {
 				depots = depots.filter((d) => d.id !== depotId);
 			} else {
-				console.error('Failed to delete depot');
-				alert('Failed to delete depot');
+				// A depot that still holds trades cannot be deleted; show why.
+				const reason = await res.text();
+				console.error('Failed to delete depot', reason);
+				alert(reason || 'Failed to delete depot');
 			}
 		}
 	}
@@ -185,7 +187,7 @@
 							{#if depot.isEditing}
 								<input type="text" bind:value={depot.newName} />
 							{:else}
-								{depot.name}
+								<a href="/depots/{depot.id}">{depot.name}</a>
 							{/if}
 						</td>
 						<td>

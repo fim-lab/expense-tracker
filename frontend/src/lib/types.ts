@@ -83,15 +83,63 @@ export interface Depot {
 }
 
 export interface TransactionTemplate {
-    id: number;
-    userId: number;
-    day: number; // Day of the month (1-31)
-    budgetId: number | null;
-    walletId: number;
-    description: string;
-    amountInCents: number;
-    type: TransactionType;
-    tags?: string[];
-    budgetName?: string;
-    walletName?: string;
+	id: number;
+	userId: number;
+	day: number; // Day of the month (1-31)
+	budgetId: number | null;
+	walletId: number;
+	description: string;
+	amountInCents: number;
+	type: TransactionType;
+	tags?: string[];
+	budgetName?: string;
+	walletName?: string;
+}
+
+export type TradeType = 'BUY' | 'SELL';
+
+export interface Trade {
+	id: number;
+	depotId: number;
+	walletTransactionId: number | null;
+	wkn: string;
+	type: TradeType;
+	quantity: number;
+	totalInCents: number;
+	feesInCents: number;
+	taxesInCents: number;
+	timestamp: string;
+}
+
+export interface TradeDTO extends Trade {
+	costBasisInCents: number;
+	proceedsInCents: number;
+	realizedGainInCents: number;
+}
+
+export interface Lot {
+	tradeId: number;
+	depotId: number;
+	wkn: string;
+	dateOfPurchase: string;
+	quantity: number;
+	remaining: number;
+	totalInCents: number;
+	remainingCostInCents: number;
+}
+
+export interface Position {
+	depotId: number;
+	wkn: string;
+	quantity: number;
+	investedInCents: number;
+	avgPriceInCents: number;
+	lots: Lot[];
+}
+
+export interface Portfolio {
+	depotId: number;
+	positions: Position[];
+	investedInCents: number;
+	realizedGainInCents: number;
 }
