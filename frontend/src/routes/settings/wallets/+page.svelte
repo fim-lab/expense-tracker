@@ -1,19 +1,30 @@
 <script lang="ts">
-	import type { Wallet } from '$lib/types';
+	import type { Wallet, Depot } from '$lib/types';
 
 	let { data } = $props();
 
 	let wallets = $state<Wallet[]>(
 		// svelte-ignore state_referenced_locally
-		data.wallets.map((w: Wallet) => ({ ...w, isEditing: false, newName: '' }))
+		(data.wallets || []).map((w: Wallet) => ({ ...w, isEditing: false, newName: '' }))
 	);
 
-	function startEditing(wallet: Wallet) {
+	let depots = $state<Depot[]>(
+		// svelte-ignore state_referenced_locally
+		data.depots?.map((d: Depot) => ({
+			...d,
+			isEditing: false,
+			newName: '',
+			newWalletId: d.walletId
+		}))
+	);
+
+	// Wallets logic
+	function startEditingWallet(wallet: Wallet) {
 		wallet.isEditing = true;
 		wallet.newName = wallet.name;
 	}
 
-	function cancelEditing(wallet: Wallet) {
+	function cancelEditingWallet(wallet: Wallet) {
 		wallet.isEditing = false;
 	}
 
@@ -49,54 +60,165 @@
 			}
 		}
 	}
+
+	// Depots logic
+	function startEditingDepot(depot: Depot) {
+		depot.isEditing = true;
+		depot.newName = depot.name;
+		depot.newWalletId = depot.walletId;
+	}
+
+	function cancelEditingDepot(depot: Depot) {
+		depot.isEditing = false;
+	}
+
+	async function updateDepot(depot: Depot) {
+		if (!depot.newName) {
+			alert('Enter a name.');
+			return;
+		}
+		const res = await fetch(`/api/depots/${depot.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ ...depot, name: depot.newName, walletId: depot.newWalletId })
+		});
+
+		if (res.ok) {
+			depot.name = depot.newName;
+			depot.walletId = depot.newWalletId!;
+			depot.isEditing = false;
+		} else {
+			console.error('Failed to update depot');
+			alert('Failed to update depot');
+		}
+	}
+
+	async function deleteDepot(depotId: number) {
+		if (confirm('Are you sure you want to delete this depot?')) {
+			const res = await fetch(`/api/depots/${depotId}`, {
+				method: 'DELETE'
+			});
+
+			if (res.ok) {
+				depots = depots.filter((d) => d.id !== depotId);
+			} else {
+				// A depot that still holds trades cannot be deleted; show why.
+				const reason = await res.text();
+				console.error('Failed to delete depot', reason);
+				alert(reason || 'Failed to delete depot');
+			}
+		}
+	}
+
+	function getWalletName(walletId: number) {
+		return wallets.find((w) => w.id === walletId)?.name || 'Unknown Wallet';
+	}
 </script>
 
-<h1>Wallets</h1>
+<h1>Wallets & Depots</h1>
 
-{#if wallets.length > 0}
-	<table>
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each wallets as wallet (wallet.id)}
+<section>
+	<h2>Wallets</h2>
+	{#if wallets.length > 0}
+		<table>
+			<thead>
 				<tr>
-					<td>
-						{#if wallet.isEditing}
-							<input type="text" bind:value={wallet.newName} />
-						{:else}
-							{wallet.name}
-						{/if}
-					</td>
-					<td>
-						{#if wallet.isEditing}
-							<button onclick={() => updateWallet(wallet)}>OK</button>
-							<button class="secondary" onclick={() => cancelEditing(wallet)}>Cancel</button>
-						{:else}
-							<button onclick={() => startEditing(wallet)}>Edit</button>
-							<span
-								title={!wallet.canDelete
-									? 'Only budgets with a balance of 0 and no transactions can be deleted.'
-									: ''}
-							>
-								<button
-									class="secondary"
-									onclick={() => deleteWallet(wallet.id)}
-									disabled={!wallet.canDelete}>Delete</button
-								>
-							</span>
-						{/if}
-					</td>
+					<th>Name</th>
+					<th>Actions</th>
 				</tr>
-			{/each}
-		</tbody>
-	</table>
-{:else}
-	<p>No wallets found.</p>
-{/if}
+			</thead>
+			<tbody>
+				{#each wallets as wallet (wallet.id)}
+					<tr>
+						<td>
+							{#if wallet.isEditing}
+								<input type="text" bind:value={wallet.newName} />
+							{:else}
+								{wallet.name}
+							{/if}
+						</td>
+						<td>
+							{#if wallet.isEditing}
+								<button onclick={() => updateWallet(wallet)}>OK</button>
+								<button class="secondary" onclick={() => cancelEditingWallet(wallet)}>Cancel</button
+								>
+							{:else}
+								<button onclick={() => startEditingWallet(wallet)}>Edit</button>
+								<span
+									title={!wallet.canDelete
+										? 'Only budgets with a balance of 0 and no transactions can be deleted.'
+										: ''}
+								>
+									<button
+										class="secondary"
+										onclick={() => deleteWallet(wallet.id)}
+										disabled={!wallet.canDelete}>Delete</button
+									>
+								</span>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{:else}
+		<p>No wallets found.</p>
+	{/if}
+	<a href="/wallets/add" role="button">Add Wallet</a>
+</section>
+
+<hr />
+
+<section>
+	<h2>Depots</h2>
+	{#if depots?.length > 0}
+		<table>
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Wallet</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each depots as depot (depot.id)}
+					<tr>
+						<td>
+							{#if depot.isEditing}
+								<input type="text" bind:value={depot.newName} />
+							{:else}
+								<a href="/depots/{depot.id}">{depot.name}</a>
+							{/if}
+						</td>
+						<td>
+							{#if depot.isEditing}
+								<select bind:value={depot.newWalletId}>
+									{#each wallets as wallet}
+										<option value={wallet.id}>{wallet.name}</option>
+									{/each}
+								</select>
+							{:else}
+								{getWalletName(depot.walletId)}
+							{/if}
+						</td>
+						<td>
+							{#if depot.isEditing}
+								<button onclick={() => updateDepot(depot)}>OK</button>
+								<button class="secondary" onclick={() => cancelEditingDepot(depot)}>Cancel</button>
+							{:else}
+								<button onclick={() => startEditingDepot(depot)}>Edit</button>
+								<button class="secondary" onclick={() => deleteDepot(depot.id)}>Delete</button>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{:else}
+		<p>No depots found.</p>
+	{/if}
+	<a href="/depots/add" role="button">Add Depot</a>
+</section>
 
 <style>
 	table {
@@ -107,11 +229,16 @@
 		text-align: left;
 		padding: 0.5rem;
 	}
+	th:last-child,
 	td:last-child {
 		text-align: right;
 		white-space: nowrap;
 	}
-	input {
+	input,
+	select {
 		margin-bottom: 0;
+	}
+	section {
+		margin-bottom: 2rem;
 	}
 </style>

@@ -6,3 +6,10 @@ type Depot struct {
 	UserID   int    `json:"userId"`
 	WalletID int    `json:"walletId"`
 }
+
+type DepotDTO struct {
+	ID              int    `json:"id"`
+	Name            string `json:"name"`
+	WalletID        int    `json:"walletId"`
+	InvestedInCents int    `json:"investedInCents"`
+}

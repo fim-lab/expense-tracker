@@ -26,6 +26,12 @@ func (r *DepotRepository) GetDepotByID(id int) (domain.Depot, error) {
 	return d, err
 }
 
+func (r *DepotRepository) UpdateDepot(d domain.Depot) error {
+	query := `UPDATE depots SET wallet_id = $1, name = $2 WHERE id = $3`
+	_, err := r.db.Exec(query, d.WalletID, d.Name, d.ID)
+	return err
+}
+
 func (r *DepotRepository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
 	query := `SELECT id, user_id, wallet_id, name FROM depots WHERE user_id = $1`
 	rows, err := r.db.Query(query, userID)
@@ -47,5 +53,10 @@ func (r *DepotRepository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
 
 func (r *DepotRepository) DeleteDepot(id int) error {
 	_, err := r.db.Exec("DELETE FROM depots WHERE id = $1", id)
+	return err
+}
+
+func (r *DepotRepository) DeleteAllByUser(userID int) error {
+	_, err := r.db.Exec("DELETE FROM depots WHERE user_id = $1", userID)
 	return err
 }

@@ -15,7 +15,7 @@
 	);
 
 	let budgets = $state<Budget[]>(
-		data.budgets.map((b: Budget) => ({
+		(data.budgets || []).map((b: Budget) => ({
 			...b,
 			isEditing: false,
 			newName: '',
@@ -174,6 +174,7 @@
 {/if}
 
 {#if user}
+	<h2>Salary</h2>
 	<table>
 		<thead>
 			<tr>
@@ -276,6 +277,8 @@
 	<p>No budgets found.</p>
 {/if}
 
+<a href="/budgets/add" role="button">Add new Budget</a>
+
 <style>
 	table {
 		width: 100%;
@@ -286,6 +289,7 @@
 		text-align: left;
 		padding: 0.5rem;
 	}
+	th:last-child,
 	td:last-child {
 		text-align: right;
 		white-space: nowrap;

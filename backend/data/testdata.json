@@ -11,7 +11,8 @@
     ],
     "wallets": [
       { "name": "Girokonto", "isDepot": false },
-      { "name": "Cash", "isDepot": false }
+      { "name": "Cash", "isDepot": false },
+      { "name": "Depot", "isDepot": true }
     ]
   },
   "transactions": [

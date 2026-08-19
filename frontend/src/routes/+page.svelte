@@ -2,14 +2,19 @@
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
+	import DepotCard from '$lib/components/DepotCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import TransactionSearchForm from '$lib/components/TransactionSearchForm.svelte';
 	import WalletCard from '$lib/components/WalletCard.svelte';
+	import type { Wallet } from '$lib/types';
 
 	const pageNr = page.data.page;
 	const pageSize = page.data.pageSize;
 	const totalPages = $derived(Math.ceil(page.data.total / pageSize));
+	const hasWallets = $derived(page.data?.wallets?.length > 0);
+	const hasDepots = $derived(page.data?.depots?.length > 0);
+	const hasBudgets = $derived(page.data?.budgets?.length > 0);
 
 	async function deleteTransaction(id: number) {
 		if (!confirm('Are you sure you want to delete this transaction?')) return;
@@ -38,6 +43,10 @@
 	}
 
 	const isSearchActive = $derived(page.url.searchParams.size > 0);
+
+	function walletName(walletId: number) {
+		return page.data.wallets?.find((w: Wallet) => w.id === walletId)?.name ?? '';
+	}
 </script>
 
 <div class="grid">
@@ -46,16 +55,28 @@
 			<header><strong>Search</strong></header>
 			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
 		</article>
-		<article>
-			<header><strong>Wallets</strong></header>
-			{#each page.data.wallets as wallet}
-				<WalletCard {wallet} />
-			{/each}
-			<header><strong>Budgets</strong></header>
-			{#each page.data.budgets as budget}
-				<BudgetCard {budget} />
-			{/each}
-		</article>
+		{#if hasBudgets || hasWallets || hasDepots}
+			<article>
+				{#if hasWallets}
+					<header><strong>Wallets</strong></header>
+					{#each page.data.wallets as wallet}
+						<WalletCard {wallet} />
+					{/each}
+				{/if}
+				{#if hasDepots}
+					<header><strong>Depots</strong></header>
+					{#each page.data.depots as depot (depot.id)}
+						<DepotCard {depot} subtitle={walletName(depot.walletId)} />
+					{/each}
+				{/if}
+				{#if hasBudgets}
+					<header><strong>Budgets</strong></header>
+					{#each page.data.budgets as budget}
+						<BudgetCard {budget} />
+					{/each}
+				{/if}
+			</article>
+		{/if}
 	</aside>
 
 	<article>

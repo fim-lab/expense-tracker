@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"sort"
 	"strings"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
@@ -11,10 +12,11 @@ import (
 type depotService struct {
 	depotRepo  ports.DepotRepository
 	walletRepo ports.WalletRepository
+	tradeRepo  ports.TradeRepository
 }
 
-func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository) ports.DepotService {
-	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo}
+func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository, tradeRepo ports.TradeRepository) ports.DepotService {
+	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo, tradeRepo: tradeRepo}
 }
 
 func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
@@ -32,16 +34,76 @@ func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
 	return s.depotRepo.SaveDepot(d)
 }
 
-func (s *depotService) GetDepots(userID int) ([]domain.Depot, error) {
-	return s.depotRepo.FindDepotsByUser(userID)
+func (s *depotService) GetDepots(userID int) ([]domain.DepotDTO, error) {
+	depots, err := s.depotRepo.FindDepotsByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := make([]domain.DepotDTO, 0, len(depots))
+	for _, depot := range depots {
+		trades, err := s.tradeRepo.FindTradesByDepot(depot.ID)
+		if err != nil {
+			return nil, err
+		}
+		dtos = append(dtos, domain.DepotDTO{
+			ID:              depot.ID,
+			Name:            depot.Name,
+			WalletID:        depot.WalletID,
+			InvestedInCents: investedInCents(trades),
+		})
+	}
+
+	sort.Slice(dtos, func(i, j int) bool { return dtos[i].Name < dtos[j].Name })
+
+	return dtos, nil
 }
 
-// TODO: func (s *depotService) UpdateDepots(...
+func (s *depotService) GetDepotByID(userID int, id int) (domain.Depot, error) {
+	depot, err := s.depotRepo.GetDepotByID(id)
+	if err != nil {
+		return domain.Depot{}, domain.ErrDepotNotFound
+	}
+	if depot.UserID != userID {
+		return domain.Depot{}, domain.ErrUnauthorized
+	}
+	return depot, nil
+}
 
-func (s *depotService) DeleteDepot(userID int, id int) error {
-	existing, err := s.depotRepo.GetDepotByID(id)
-	if err != nil || existing.UserID != userID {
+func (s *depotService) UpdateDepot(userID int, d domain.Depot) error {
+	existing, err := s.depotRepo.GetDepotByID(d.ID)
+	if err != nil {
+		return err
+	}
+	if existing.UserID != userID {
 		return domain.ErrUnauthorized
 	}
+
+	if strings.TrimSpace(d.Name) == "" {
+		return errors.New("depot name is required")
+	}
+
+	wallet, err := s.walletRepo.GetWalletByID(d.WalletID)
+	if err != nil || wallet.UserID != userID {
+		return errors.New("invalid wallet for depot")
+	}
+
+	d.UserID = userID
+	return s.depotRepo.UpdateDepot(d)
+}
+
+func (s *depotService) DeleteDepot(userID int, id int) error {
+	if _, err := s.GetDepotByID(userID, id); err != nil {
+		return err
+	}
+
+	tradeCount, err := s.tradeRepo.CountTradesByDepot(id)
+	if err != nil {
+		return err
+	}
+	if tradeCount > 0 {
+		return domain.ErrNotEmpty
+	}
+
 	return s.depotRepo.DeleteDepot(id)
 }

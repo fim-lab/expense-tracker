@@ -18,18 +18,18 @@ func NewTransactionService(transactionRepo ports.TransactionRepository, budgetRe
 	return &transactionService{transactionRepo: transactionRepo, budgetRepo: budgetRepo, walletRepo: walletRepo}
 }
 
-func (s *transactionService) CreateTransaction(userID int, t domain.Transaction) error {
+func (s *transactionService) CreateTransaction(userID int, t domain.Transaction) (int, error) {
 	t.UserID = userID
 
 	if t.BudgetID != nil {
 		budget, err := s.budgetRepo.GetBudgetByID(*t.BudgetID)
 		if err != nil || budget.UserID != userID {
-			return domain.ErrBudgetNotFound
+			return 0, domain.ErrBudgetNotFound
 		}
 	}
 
 	if t.AmountInCents <= 0 {
-		return domain.ErrInvalidAmount
+		return 0, domain.ErrInvalidAmount
 	}
 
 	return s.transactionRepo.SaveTransaction(t)

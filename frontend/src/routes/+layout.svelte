@@ -20,9 +20,8 @@
 			<li><a href="/">Dashboard</a></li>
 			<li><a href="/transactions/add">Add TX</a></li>
 			<li><a href="/salary">Salary</a></li>
-			<li><a href="/budgets/add">Add Budget</a></li>
-			<li><a href="/wallets/add">Add Wallet</a></li>
 			<li><a href="/wallets/transfer">Transfer</a></li>
+			<li><a href="/depots">Depots</a></li>
 			<li><a href="/settings">Settings</a></li>
 			<li>
 				<button class="secondary outline" onclick={handleLogout}> Logout </button>

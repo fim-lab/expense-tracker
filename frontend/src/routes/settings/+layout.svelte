@@ -6,10 +6,11 @@
 	<aside class="container">
 		<nav>
 			<ul>
-				<li><a href="/settings/budgets">Salary/Budget</a></li>
-				<li><a href="/settings/wallets">Wallets</a></li>
+				<li><a href="/settings/budgets">Salary & Budgets</a></li>
+				<li><a href="/settings/wallets">Wallets & Depots</a></li>
 				<li><a href="/settings/import">Import</a></li>
 				<li><a href="/settings/appearance">Appearance</a></li>
+				<li><a href="/settings/delete-data" style="color: var(--pico-color-red-600);">Delete Data</a></li>
 			</ul>
 		</nav>
 	</aside>
@@ -20,7 +21,7 @@
 
 <style>
 	aside {
-        padding-right: 1rem;
+		padding-right: 1rem;
 		border-right: 1px solid var(--pico-muted-border-color);
 	}
 </style>

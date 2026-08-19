@@ -38,7 +38,7 @@
 		});
 
 		if (res.ok) {
-			goto('/');
+			goto('/settings/wallets');
 		} else {
 			alert('Failed to save wallet');
 			isSubmitting = false;

@@ -63,3 +63,8 @@ func (r *WalletRepository) DeleteWallet(id int) error {
 	_, err := r.db.Exec("DELETE FROM wallets WHERE id = $1", id)
 	return err
 }
+
+func (r *WalletRepository) DeleteAllByUser(userID int) error {
+	_, err := r.db.Exec("DELETE FROM wallets WHERE user_id = $1", userID)
+	return err
+}

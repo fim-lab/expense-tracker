@@ -16,33 +16,36 @@ func NewTransactionRepository(db *sql.DB) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 
-func (r *TransactionRepository) SaveTransaction(t domain.Transaction) error {
+func (r *TransactionRepository) SaveTransaction(t domain.Transaction) (int, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
-		return fmt.Errorf("could not start transaction: %w", err)
+		return 0, fmt.Errorf("could not start transaction: %w", err)
 	}
 	defer tx.Rollback()
 	tags, _ := json.Marshal(t.Tags)
 
 	query := `INSERT INTO transactions (user_id, date, budget_id, wallet_id, description, amount_in_cents, type, is_pending, is_debt, tags)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-	_, err = tx.Exec(query, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
+	var id int
+	err = tx.QueryRow(query, t.UserID, t.Date, t.BudgetID, t.WalletID, t.Description, t.AmountInCents, t.Type, t.IsPending, t.IsDebt, tags).Scan(&id)
 	if err != nil {
-		return fmt.Errorf("failed to insert transaction: %w", err)
+		return 0, fmt.Errorf("failed to insert transaction: %w", err)
 	}
 	adjustment := t.AmountInCents
 	if t.Type == domain.Expense {
 		adjustment = -t.AmountInCents
 	}
 
-	queryBudget := `
-		UPDATE budgets 
-		SET balance_cents = balance_cents + $1 
-		WHERE id = $2 AND user_id = $3
-	`
-	_, err = tx.Exec(queryBudget, adjustment, t.BudgetID, t.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to update budget balance: %w", err)
+	if t.BudgetID != nil {
+		queryBudget := `
+			UPDATE budgets 
+			SET balance_cents = balance_cents + $1 
+			WHERE id = $2 AND user_id = $3
+		`
+		_, err = tx.Exec(queryBudget, adjustment, t.BudgetID, t.UserID)
+		if err != nil {
+			return 0, fmt.Errorf("failed to update budget balance: %w", err)
+		}
 	}
 
 	queryWallet := `
@@ -52,14 +55,14 @@ func (r *TransactionRepository) SaveTransaction(t domain.Transaction) error {
 	`
 	_, err = tx.Exec(queryWallet, adjustment, t.WalletID, t.UserID)
 	if err != nil {
-		return fmt.Errorf("failed to update wallet balance: %w", err)
+		return 0, fmt.Errorf("failed to update wallet balance: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return nil
+	return id, nil
 }
 
 func (r *TransactionRepository) UpdateTransaction(t domain.Transaction) error {
@@ -365,6 +368,11 @@ func (r *TransactionRepository) DeleteTransaction(id int) error {
 	}
 
 	return tx.Commit()
+}
+
+func (r *TransactionRepository) DeleteAllByUser(userID int) error {
+	_, err := r.db.Exec("DELETE FROM transactions WHERE user_id = $1", userID)
+	return err
 }
 
 func (r *TransactionRepository) CreateTransfer(from, to domain.Transaction) error {

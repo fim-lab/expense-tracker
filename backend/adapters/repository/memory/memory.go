@@ -17,7 +17,7 @@ type inMemoryRepositories struct {
 	users                map[string]domain.User
 	sessions             map[string]domain.Session
 	depots               map[int]domain.Depot
-	stocks               map[int]domain.Stock
+	trades               map[int]domain.Trade
 	transactionTemplates map[int]domain.TransactionTemplate
 	lastID               int
 }
@@ -40,7 +40,7 @@ func NewInMemoryRepositories() *inMemoryRepositories {
 		users:                make(map[string]domain.User),
 		sessions:             make(map[string]domain.Session),
 		depots:               make(map[int]domain.Depot),
-		stocks:               make(map[int]domain.Stock),
+		trades:               make(map[int]domain.Trade),
 		transactionTemplates: make(map[int]domain.TransactionTemplate),
 		lastID:               0,
 	}
@@ -89,8 +89,8 @@ func (r *inMemoryRepositories) DepotRepository() ports.DepotRepository {
 	return &DepotRepository{repo: r}
 }
 
-func (r *inMemoryRepositories) StockRepository() ports.StockRepository {
-	return &StockRepository{repo: r}
+func (r *inMemoryRepositories) TradeRepository() ports.TradeRepository {
+	return &TradeRepository{repo: r}
 }
 
 func (r *inMemoryRepositories) TransactionRepository() ports.TransactionRepository {

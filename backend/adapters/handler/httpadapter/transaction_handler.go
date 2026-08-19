@@ -140,7 +140,7 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 
 	transaction.UserID = userID
 
-	err = h.service.CreateTransaction(userID, transaction)
+	_, err = h.service.CreateTransaction(userID, transaction)
 	if err != nil {
 		http.Error(w, "Error creating transaction", http.StatusInternalServerError)
 		return
@@ -304,6 +304,18 @@ func (h *TransactionHandler) ImportTestData(w http.ResponseWriter, r *http.Reque
 	userID := r.Context().Value("userID").(int)
 
 	err := h.importService.ImportTestData(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *TransactionHandler) DeleteAllUserData(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+
+	err := h.importService.DeleteAllUserData(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

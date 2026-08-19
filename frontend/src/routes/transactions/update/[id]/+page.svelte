@@ -4,9 +4,11 @@
 	export let data: PageData;
 	export let form: ActionData;
 
-	const { transaction, wallets, budgets } = data;
+	const { transaction } = data;
+	const wallets = data.wallets || [];
+	const budgets = data.budgets || [];
 
-	const formattedDate = new Date(transaction.date).toISOString().split('T')[0];
+	const formattedDate = transaction.date ? new Date(transaction.date).toISOString().split('T')[0] : '';
 </script>
 
 <article>

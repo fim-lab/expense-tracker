@@ -4,7 +4,7 @@ import "github.com/fim-lab/expense-tracker/internal/core/domain"
 
 // --- Driving Ports ---
 type TransactionService interface {
-	CreateTransaction(userID int, t domain.Transaction) error
+	CreateTransaction(userID int, t domain.Transaction) (int, error)
 	CreateTransfer(userID, fromWalletID, toWalletID, amount int) error
 	GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
 	Search(userID int, criteria domain.TransactionSearchCriteria) (*domain.PaginatedTransactions, error)
@@ -46,14 +46,21 @@ type SessionService interface {
 
 type DepotService interface {
 	CreateDepot(userID int, d domain.Depot) error
-	GetDepots(userID int) ([]domain.Depot, error)
+	GetDepots(userID int) ([]domain.DepotDTO, error)
+	GetDepotByID(userID int, id int) (domain.Depot, error)
+	UpdateDepot(userID int, d domain.Depot) error
 	DeleteDepot(userID int, id int) error
 }
 
-type StockService interface {
-	CreateStock(userID int, s domain.Stock) error
-	GetStocks(userID int) ([]domain.Stock, error)
-	DeleteStock(userID int, id int) error
+type TradeService interface {
+	CreateTrade(userID int, t domain.Trade) (domain.Trade, error)
+	UpdateTrade(userID int, t domain.Trade) error
+	DeleteTrade(userID int, id int) error
+}
+
+type PortfolioService interface {
+	GetPortfolio(userID int, depotID int) (domain.Portfolio, error)
+	GetTrades(userID int, depotID int) ([]domain.TradeDTO, error)
 }
 
 type TransactionTemplateService interface {
@@ -67,6 +74,7 @@ type TransactionTemplateService interface {
 type ImportService interface {
 	ImportData(userID int, data domain.FullImportData) error
 	ImportTestData(userID int) error
+	DeleteAllUserData(userID int) error
 }
 
 // --- Driven Ports  ---
@@ -90,6 +98,7 @@ type BudgetRepository interface {
 	UpdateBudget(budget domain.Budget) error
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
 	DeleteBudget(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type WalletRepository interface {
@@ -98,17 +107,20 @@ type WalletRepository interface {
 	UpdateWallet(wallet domain.Wallet) error
 	FindWalletsByUser(userID int) ([]domain.Wallet, error)
 	DeleteWallet(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type DepotRepository interface {
 	SaveDepot(d domain.Depot) error
 	GetDepotByID(id int) (domain.Depot, error)
+	UpdateDepot(d domain.Depot) error
 	FindDepotsByUser(userID int) ([]domain.Depot, error)
 	DeleteDepot(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type TransactionRepository interface {
-	SaveTransaction(t domain.Transaction) error
+	SaveTransaction(t domain.Transaction) (int, error)
 	GetTransactionByID(id int) (domain.Transaction, error)
 	GetTransactionCount(userId int) (int, error)
 	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
@@ -116,16 +128,21 @@ type TransactionRepository interface {
 	CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error)
 	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
+	DeleteAllByUser(userID int) error
 	CreateTransfer(from, to domain.Transaction) error
 	CountTransactionsByBudgetID(budgetID int) (int, error)
 	CountTransactionsByWalletID(walletID int) (int, error)
 }
 
-type StockRepository interface {
-	SaveStock(s domain.Stock) error
-	GetStockByID(id int) (domain.Stock, error)
-	FindStocksByUser(userID int) ([]domain.Stock, error)
-	DeleteStock(id int) error
+type TradeRepository interface {
+	SaveTrade(t domain.Trade) (int, error)
+	GetTradeByID(id int) (domain.Trade, error)
+	FindTradesByDepot(depotID int) ([]domain.Trade, error)
+	CountTradesByDepot(depotID int) (int, error)
+	UpdateTrade(t domain.Trade) error
+	DeleteTrade(id int) error
+	DeleteAllTradesOfDepot(depotID int) error
+	DeleteAllByUser(userID int) error
 }
 
 type TransactionTemplateRepository interface {
@@ -134,6 +151,7 @@ type TransactionTemplateRepository interface {
 	FindTransactionTemplatesByUser(userID int) ([]domain.TransactionTemplate, error)
 	UpdateTransactionTemplate(tt domain.TransactionTemplate) error
 	DeleteTransactionTemplate(id int) error
+	DeleteAllByUser(userID int) error
 }
 
 type Repositories interface {
@@ -143,6 +161,6 @@ type Repositories interface {
 	WalletRepository() WalletRepository
 	DepotRepository() DepotRepository
 	TransactionRepository() TransactionRepository
-	StockRepository() StockRepository
+	TradeRepository() TradeRepository
 	TransactionTemplateRepository() TransactionTemplateRepository
 }

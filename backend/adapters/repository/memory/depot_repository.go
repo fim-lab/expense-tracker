@@ -28,6 +28,13 @@ func (r *DepotRepository) GetDepotByID(id int) (domain.Depot, error) {
 	return d, nil
 }
 
+func (r *DepotRepository) UpdateDepot(d domain.Depot) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	r.repo.depots[d.ID] = d
+	return nil
+}
+
 func (r *DepotRepository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
 	r.repo.mu.RLock()
 	defer r.repo.mu.RUnlock()
@@ -44,5 +51,16 @@ func (r *DepotRepository) DeleteDepot(id int) error {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()
 	delete(r.repo.depots, id)
+	return nil
+}
+
+func (r *DepotRepository) DeleteAllByUser(userID int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	for id, d := range r.repo.depots {
+		if d.UserID == userID {
+			delete(r.repo.depots, id)
+		}
+	}
 	return nil
 }

@@ -16,14 +16,14 @@
 	);
 
 	let budgets = $state<Budget[]>(
-		data.budgets.map((b: Budget) => ({
+		data.budgets?.map((b: Budget) => ({
 			...b,
 			isEditing: false,
 			newLimitEuros: b.limitCents / 100
-		}))
+		})) || []
 	);
 
-	let wallets: Wallet[] = data.wallets;
+	let wallets: Wallet[] = data.wallets || [];
 	let selectedWalletId = $state<number | undefined>(wallets.length > 0 ? wallets[0].id : undefined);
 
 	let transactionDescription = $state<string>('');
@@ -167,7 +167,7 @@
 	</article>
 {/if}
 
-{#if user && budgets.length > 0 && wallets.length > 0}
+{#if user && budgets?.length > 0 && wallets?.length > 0}
 	<div>
 		<label for="wallet-select">Select Wallet:</label>
 		<select id="wallet-select" bind:value={selectedWalletId}>
@@ -220,20 +220,21 @@
 			{/each}
 		</tbody>
 	</table>
-{:else if user && budgets.length > 0 && wallets.length === 0}
+	<button
+		onclick={generateSalaryTransactions}
+		disabled={salaryMismatch !== 0 ||
+			selectedWalletId === undefined ||
+			!transactionDescription.trim()}
+	>
+		Generate Salary Transactions
+	</button>
+{:else if !user}
+	<p>Failed to load User data.</p>
+{:else if !wallets || wallets.length === 0}
 	<p>No wallets found. Please create a wallet to generate transactions.</p>
 {:else}
-	<p>Loading of user data or budgets failed.</p>
+	<p>No Budgets found.</p>
 {/if}
-
-<button
-	onclick={generateSalaryTransactions}
-	disabled={salaryMismatch !== 0 ||
-		selectedWalletId === undefined ||
-		!transactionDescription.trim()}
->
-	Generate Salary Transactions
-</button>
 
 <style>
 	table {
