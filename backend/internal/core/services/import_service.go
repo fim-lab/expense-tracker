@@ -16,7 +16,7 @@ type importService struct {
 	walletRepo              ports.WalletRepository
 	depotRepo               ports.DepotRepository
 	transactionRepo         ports.TransactionRepository
-	lotRepo                 ports.LotRepository
+	tradeRepo               ports.TradeRepository
 	transactionTemplateRepo ports.TransactionTemplateRepository
 }
 
@@ -26,7 +26,7 @@ func NewImportService(
 	walletRepo ports.WalletRepository,
 	depotRepo ports.DepotRepository,
 	transactionRepo ports.TransactionRepository,
-	lotRepo ports.LotRepository,
+	tradeRepo ports.TradeRepository,
 	transactionTemplateRepo ports.TransactionTemplateRepository,
 ) ports.ImportService {
 	return &importService{
@@ -35,7 +35,7 @@ func NewImportService(
 		walletRepo:              walletRepo,
 		depotRepo:               depotRepo,
 		transactionRepo:         transactionRepo,
-		lotRepo:                 lotRepo,
+		tradeRepo:               tradeRepo,
 		transactionTemplateRepo: transactionTemplateRepo,
 	}
 }
@@ -49,8 +49,8 @@ func (s *importService) DeleteAllUserData(userID int) error {
 		return fmt.Errorf("failed to delete templates: %w", err)
 	}
 
-	if err := s.lotRepo.DeleteAllByUser(userID); err != nil {
-		return fmt.Errorf("failed to delete lots: %w", err)
+	if err := s.tradeRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete trades: %w", err)
 	}
 
 	if err := s.depotRepo.DeleteAllByUser(userID); err != nil {
@@ -206,7 +206,7 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 			}
 		}
 
-		if err := s.transactionRepo.SaveTransaction(t); err != nil {
+		if _, err := s.transactionRepo.SaveTransaction(t); err != nil {
 			return fmt.Errorf("failed to save transaction: %w", err)
 		}
 	}

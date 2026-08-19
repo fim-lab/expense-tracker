@@ -140,7 +140,7 @@ func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Re
 
 	transaction.UserID = userID
 
-	err = h.service.CreateTransaction(userID, transaction)
+	_, err = h.service.CreateTransaction(userID, transaction)
 	if err != nil {
 		http.Error(w, "Error creating transaction", http.StatusInternalServerError)
 		return

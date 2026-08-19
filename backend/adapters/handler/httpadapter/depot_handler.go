@@ -38,6 +38,28 @@ func (h *DepotHandler) GetDepots(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(depots)
 }
 
+func (h *DepotHandler) GetDepot(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromContext(w, r)
+	if !ok {
+		return
+	}
+	id, ok := idFromURL(w, r, "id")
+	if !ok {
+		return
+	}
+
+	depot, err := h.service.GetDepotByID(userID, id)
+	if err != nil {
+		log.Printf("Error fetching depot %d for user %d: %v", id, userID, err)
+		writeStockError(w, err, "Could not fetch depot")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(depot)
+}
+
 func (h *DepotHandler) CreateDepot(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {
@@ -132,7 +154,7 @@ func (h *DepotHandler) DeleteDepot(w http.ResponseWriter, r *http.Request) {
 	err = h.service.DeleteDepot(userID, id)
 	if err != nil {
 		log.Printf("Error deleting depot: %v", err)
-		http.Error(w, "Error deleting depot", http.StatusInternalServerError)
+		writeStockError(w, err, "Error deleting depot")
 		return
 	}
 

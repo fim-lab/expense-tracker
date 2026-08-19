@@ -11,10 +11,11 @@ import (
 type depotService struct {
 	depotRepo  ports.DepotRepository
 	walletRepo ports.WalletRepository
+	tradeRepo  ports.TradeRepository
 }
 
-func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository) ports.DepotService {
-	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo}
+func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository, tradeRepo ports.TradeRepository) ports.DepotService {
+	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo, tradeRepo: tradeRepo}
 }
 
 func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
@@ -34,6 +35,17 @@ func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
 
 func (s *depotService) GetDepots(userID int) ([]domain.Depot, error) {
 	return s.depotRepo.FindDepotsByUser(userID)
+}
+
+func (s *depotService) GetDepotByID(userID int, id int) (domain.Depot, error) {
+	depot, err := s.depotRepo.GetDepotByID(id)
+	if err != nil {
+		return domain.Depot{}, domain.ErrDepotNotFound
+	}
+	if depot.UserID != userID {
+		return domain.Depot{}, domain.ErrUnauthorized
+	}
+	return depot, nil
 }
 
 func (s *depotService) UpdateDepot(userID int, d domain.Depot) error {
@@ -59,9 +71,17 @@ func (s *depotService) UpdateDepot(userID int, d domain.Depot) error {
 }
 
 func (s *depotService) DeleteDepot(userID int, id int) error {
-	existing, err := s.depotRepo.GetDepotByID(id)
-	if err != nil || existing.UserID != userID {
-		return domain.ErrUnauthorized
+	if _, err := s.GetDepotByID(userID, id); err != nil {
+		return err
 	}
+
+	tradeCount, err := s.tradeRepo.CountTradesByDepot(id)
+	if err != nil {
+		return err
+	}
+	if tradeCount > 0 {
+		return domain.ErrNotEmpty
+	}
+
 	return s.depotRepo.DeleteDepot(id)
 }

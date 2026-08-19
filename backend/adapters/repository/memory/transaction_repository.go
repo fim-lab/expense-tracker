@@ -11,13 +11,12 @@ type TransactionRepository struct {
 	repo *inMemoryRepositories
 }
 
-func (r *TransactionRepository) SaveTransaction(t domain.Transaction) error {
+func (r *TransactionRepository) SaveTransaction(t domain.Transaction) (int, error) {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()
 	if t.ID == 0 {
 		t.ID = r.repo.nextID()
 	}
-	r.repo.transactions[t.ID] = t
 
 	if t.BudgetID != nil {
 		budget, ok := r.repo.budgets[*t.BudgetID]
@@ -41,7 +40,8 @@ func (r *TransactionRepository) SaveTransaction(t domain.Transaction) error {
 		r.repo.wallets[t.WalletID] = wallet
 	}
 
-	return nil
+	r.repo.transactions[t.ID] = t
+	return t.ID, nil
 }
 
 func (r *TransactionRepository) GetTransactionByID(id int) (domain.Transaction, error) {

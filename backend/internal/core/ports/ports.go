@@ -4,7 +4,7 @@ import "github.com/fim-lab/expense-tracker/internal/core/domain"
 
 // --- Driving Ports ---
 type TransactionService interface {
-	CreateTransaction(userID int, t domain.Transaction) error
+	CreateTransaction(userID int, t domain.Transaction) (int, error)
 	CreateTransfer(userID, fromWalletID, toWalletID, amount int) error
 	GetTransactions(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
 	Search(userID int, criteria domain.TransactionSearchCriteria) (*domain.PaginatedTransactions, error)
@@ -47,21 +47,20 @@ type SessionService interface {
 type DepotService interface {
 	CreateDepot(userID int, d domain.Depot) error
 	GetDepots(userID int) ([]domain.Depot, error)
+	GetDepotByID(userID int, id int) (domain.Depot, error)
 	UpdateDepot(userID int, d domain.Depot) error
 	DeleteDepot(userID int, id int) error
 }
 
-type LotService interface {
-	CreateLot(userID int, l domain.Lot) error
-	GetLots(userID int) ([]domain.Lot, error)
-	DeleteLot(userID int, id int) error
-}
-
 type TradeService interface {
-	CreateTrade(userID int, t domain.Trade) error
-	GetTradesByDepot(userID int, depotID int) ([]domain.Trade, error)
+	CreateTrade(userID int, t domain.Trade) (domain.Trade, error)
 	UpdateTrade(userID int, t domain.Trade) error
 	DeleteTrade(userID int, id int) error
+}
+
+type PortfolioService interface {
+	GetPortfolio(userID int, depotID int) (domain.Portfolio, error)
+	GetTrades(userID int, depotID int) ([]domain.TradeDTO, error)
 }
 
 type TransactionTemplateService interface {
@@ -121,7 +120,7 @@ type DepotRepository interface {
 }
 
 type TransactionRepository interface {
-	SaveTransaction(t domain.Transaction) error
+	SaveTransaction(t domain.Transaction) (int, error)
 	GetTransactionByID(id int) (domain.Transaction, error)
 	GetTransactionCount(userId int) (int, error)
 	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
@@ -135,21 +134,14 @@ type TransactionRepository interface {
 	CountTransactionsByWalletID(walletID int) (int, error)
 }
 
-type LotRepository interface {
-	SaveLot(l domain.Lot) error
-	GetLotByID(id int) (domain.Lot, error)
-	FindLotsByDepot(depotID int) ([]domain.Lot, error)
-	DeleteLot(id int) error
-	DeleteAllLotsOfDepot(depotID int) error
-	DeleteAllByUser(userID int) error
-}
-
 type TradeRepository interface {
-	SaveTrade(t domain.Trade) error
+	SaveTrade(t domain.Trade) (int, error)
 	GetTradeByID(id int) (domain.Trade, error)
 	FindTradesByDepot(depotID int) ([]domain.Trade, error)
+	CountTradesByDepot(depotID int) (int, error)
 	UpdateTrade(t domain.Trade) error
 	DeleteTrade(id int) error
+	DeleteAllTradesOfDepot(depotID int) error
 	DeleteAllByUser(userID int) error
 }
 
@@ -169,7 +161,6 @@ type Repositories interface {
 	WalletRepository() WalletRepository
 	DepotRepository() DepotRepository
 	TransactionRepository() TransactionRepository
-	LotRepository() LotRepository
 	TradeRepository() TradeRepository
 	TransactionTemplateRepository() TransactionTemplateRepository
 }
