@@ -11,7 +11,7 @@ import (
 func TestImportTransactions(t *testing.T) {
 	repos := memory.NewCleanRepositories()
 	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
-	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.LotRepository(), repos.TransactionTemplateRepository())
+	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository())
 
 	userID := 1
 	repos.UserRepository().SaveUser(domain.User{ID: userID, Username: "test"})
@@ -30,7 +30,7 @@ func TestImportTransactions(t *testing.T) {
 			Wallets: []domain.ImportWallet{
 				{Name: "Cash", IsDepot: false}, // Existing
 				{Name: "Bank", IsDepot: false}, // New
-				{Name: "Lots", IsDepot: true}, // New Depot
+				{Name: "Lots", IsDepot: true},  // New Depot
 			},
 		},
 		Transactions: []domain.ImportTransaction{
@@ -89,5 +89,37 @@ func TestImportTransactions(t *testing.T) {
 	user, _ := repos.UserRepository().GetUserByID(userID)
 	if user.SalaryCents != 300000 {
 		t.Errorf("Expected salary 300000, got %d", user.SalaryCents)
+	}
+}
+
+func TestDeleteAllUserDataRemovesTrades(t *testing.T) {
+	f := newStockFixture(t)
+	importSvc := NewImportService(
+		f.repos.UserRepository(),
+		f.repos.BudgetRepository(),
+		f.repos.WalletRepository(),
+		f.repos.DepotRepository(),
+		f.repos.TransactionRepository(),
+		f.repos.TradeRepository(),
+		f.repos.TransactionTemplateRepository(),
+	)
+	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {
+		t.Fatalf("could not seed the user: %v", err)
+	}
+	f.mustBuy(t, 1, 10, 10000)
+	f.mustSell(t, 2, 4, 5000)
+
+	if err := importSvc.DeleteAllUserData(f.userID); err != nil {
+		t.Fatalf("deleting all user data failed: %v", err)
+	}
+
+	if count := f.tradeCount(t); count != 0 {
+		t.Errorf("expected all trades to be deleted, got %d", count)
+	}
+	if count := f.transactionCount(t); count != 0 {
+		t.Errorf("expected all transactions to be deleted, got %d", count)
+	}
+	if depots, err := f.repos.DepotRepository().FindDepotsByUser(f.userID); err != nil || len(depots) != 0 {
+		t.Errorf("expected no depots left, got %v (err %v)", depots, err)
 	}
 }

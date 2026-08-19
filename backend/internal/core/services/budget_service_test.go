@@ -107,7 +107,7 @@ func TestGetBudgetCanDelete(t *testing.T) {
 		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		createdBudget := budgets[0]
 
-		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
+		_, err := repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			BudgetID:      &createdBudget.ID,
 			AmountInCents: 100,
@@ -155,7 +155,7 @@ func TestGetBudgetsCanDelete(t *testing.T) {
 	budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 	createdBudget2 := budgets[1]
 
-	_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
+	_, err := repos.TransactionRepository().SaveTransaction(domain.Transaction{
 		UserID:        userID,
 		BudgetID:      &createdBudget2.ID,
 		AmountInCents: 100,
@@ -219,7 +219,7 @@ func TestDeleteBudget(t *testing.T) {
 		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
 		testBudget := budgets[0]
 
-		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
+		_, err := repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			BudgetID:      &testBudget.ID,
 			AmountInCents: 100,
@@ -227,7 +227,7 @@ func TestDeleteBudget(t *testing.T) {
 			Date:          time.Now(),
 		})
 
-		err := svc.DeleteBudget(userID, testBudget.ID)
+		err = svc.DeleteBudget(userID, testBudget.ID)
 		if err != domain.ErrNotEmpty {
 			t.Errorf("Expected ErrNotEmpty, got %v", err)
 		}

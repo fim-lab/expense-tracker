@@ -95,7 +95,7 @@ func TestGetWalletCanDelete(t *testing.T) {
 		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		createdWallet := wallets[0]
 
-		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
+		_, err := repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			WalletID:      createdWallet.ID,
 			AmountInCents: 100,
@@ -142,7 +142,7 @@ func TestGetWalletsCanDelete(t *testing.T) {
 	wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 	createdWallet2 := wallets[1]
 
-	_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
+	_, err := repos.TransactionRepository().SaveTransaction(domain.Transaction{
 		UserID:        userID,
 		WalletID:      createdWallet2.ID,
 		AmountInCents: 100,
@@ -205,14 +205,14 @@ func TestDeleteWallet(t *testing.T) {
 		wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
 		testWallet := wallets[0]
 
-		_ = repos.TransactionRepository().SaveTransaction(domain.Transaction{
+		_, err := repos.TransactionRepository().SaveTransaction(domain.Transaction{
 			UserID:        userID,
 			WalletID:      testWallet.ID,
 			AmountInCents: 100,
 			Description:   "Test Transaction",
 		})
 
-		err := svc.DeleteWallet(userID, testWallet.ID)
+		err = svc.DeleteWallet(userID, testWallet.ID)
 		if err != domain.ErrNotEmpty {
 			t.Errorf("Expected ErrNotEmpty, got %v", err)
 		}
