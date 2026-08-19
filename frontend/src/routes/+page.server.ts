@@ -21,6 +21,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 	};
 
 	const wallets = (await authedApiFetch('/wallets')) || [];
+	const depots = (await authedApiFetch('/depots')) || [];
 	const budgets = (await authedApiFetch('/budgets')) || [];
 	const transactions = (await authedApiFetch(`/transactions/search?${url.searchParams}`)) ?? {
 		data: [],
@@ -35,6 +36,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		page: transactions.page,
 		pageSize: transactions.pageSize,
 		wallets,
+		depots,
 		budgets
 	};
 };

@@ -74,9 +74,10 @@ export interface Budget {
 
 export interface Depot {
 	id: number;
-	userId: number;
+	userId?: number;
 	walletId: number;
 	name: string;
+	investedInCents?: number;
 	isEditing?: boolean;
 	newName?: string;
 	newWalletId?: number;

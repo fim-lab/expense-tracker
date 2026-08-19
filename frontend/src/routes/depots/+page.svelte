@@ -1,9 +1,14 @@
 <script lang="ts">
-	import type { Wallet } from '$lib/types';
+	import DepotCard from '$lib/components/DepotCard.svelte';
+	import { formatCurrency } from '$lib/utils';
+	import type { Depot, Wallet } from '$lib/types';
 
 	let { data } = $props();
 
 	const hasDepots = $derived(data.depots.length > 0);
+	const totalInvested = $derived(
+		data.depots.reduce((sum: number, depot: Depot) => sum + (depot.investedInCents ?? 0), 0)
+	);
 
 	function walletName(walletId: number) {
 		return data.wallets.find((w: Wallet) => w.id === walletId)?.name || 'Unknown Wallet';
@@ -14,11 +19,11 @@
 	<header><strong>Depots</strong></header>
 	{#if hasDepots}
 		{#each data.depots as depot (depot.id)}
-			<div class="depot">
-				<a href="/depots/{depot.id}">{depot.name}</a>
-				<small>{walletName(depot.walletId)}</small>
-			</div>
+			<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
 		{/each}
+		<p class="total">
+			Invested in total <strong>{formatCurrency(totalInvested)}</strong>
+		</p>
 	{:else}
 		<p>No depots yet.</p>
 	{/if}
@@ -26,19 +31,9 @@
 </article>
 
 <style>
-	.depot {
+	.total {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
-		padding: 1rem;
-		margin-bottom: 0.75rem;
-		background: var(--pico-card-background-color);
-		border-radius: var(--pico-border-radius);
-		box-shadow: var(--pico-card-box-shadow);
-		border-left: 4px solid var(--pico-primary);
-	}
-
-	.depot small {
 		color: var(--pico-muted-color);
 	}
 </style>

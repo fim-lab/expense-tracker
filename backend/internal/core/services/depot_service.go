@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"sort"
 	"strings"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
@@ -33,8 +34,29 @@ func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
 	return s.depotRepo.SaveDepot(d)
 }
 
-func (s *depotService) GetDepots(userID int) ([]domain.Depot, error) {
-	return s.depotRepo.FindDepotsByUser(userID)
+func (s *depotService) GetDepots(userID int) ([]domain.DepotDTO, error) {
+	depots, err := s.depotRepo.FindDepotsByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := make([]domain.DepotDTO, 0, len(depots))
+	for _, depot := range depots {
+		trades, err := s.tradeRepo.FindTradesByDepot(depot.ID)
+		if err != nil {
+			return nil, err
+		}
+		dtos = append(dtos, domain.DepotDTO{
+			ID:              depot.ID,
+			Name:            depot.Name,
+			WalletID:        depot.WalletID,
+			InvestedInCents: investedInCents(trades),
+		})
+	}
+
+	sort.Slice(dtos, func(i, j int) bool { return dtos[i].Name < dtos[j].Name })
+
+	return dtos, nil
 }
 
 func (s *depotService) GetDepotByID(userID int, id int) (domain.Depot, error) {

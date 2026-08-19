@@ -198,6 +198,14 @@ func (s PortfolioSnapshot) positions(depotID int) []domain.Position {
 	return positions
 }
 
+func investedInCents(trades []domain.Trade) int {
+	var total int
+	for _, lot := range buildPortfolio(trades).openLots {
+		total += lot.RemainingCostInCents
+	}
+	return total
+}
+
 func (s PortfolioSnapshot) realizedGain() int {
 	var total int
 	for _, allocation := range s.allocations {
