@@ -92,6 +92,104 @@ func TestImportTransactions(t *testing.T) {
 	}
 }
 
+func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
+	f := newStockFixture(t)
+	importSvc := NewImportService(
+		f.repos.UserRepository(),
+		f.repos.BudgetRepository(),
+		f.repos.WalletRepository(),
+		f.repos.DepotRepository(),
+		f.repos.TransactionRepository(),
+		f.repos.TradeRepository(),
+		f.repos.TransactionTemplateRepository(),
+	)
+	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {
+		t.Fatalf("could not seed the user: %v", err)
+	}
+
+	importData := domain.FullImportData{
+		Transactions: []domain.ImportTransaction{
+			{
+				Date:          time.Now(),
+				Budget:        "Übertrag",
+				Wallet:        "Main Wallet",
+				Description:   "Splitwise",
+				AmountInCents: -1030,
+				Type:          "expense",
+				IsDebt:        true,
+			},
+			{
+				Date:          time.Now(),
+				Budget:        "Investments",
+				Wallet:        "Main Wallet",
+				Description:   "Buy 1.5Stk. TEST",
+				AmountInCents: -25000,
+				Type:          "expense",
+			},
+			{
+				Date:          time.Now().Add(24 * time.Hour),
+				Budget:        "Investments",
+				Wallet:        "Main Wallet",
+				Description:   "Sell 1 Stk. TEST",
+				AmountInCents: 20000,
+				Type:          "income",
+			},
+		},
+	}
+
+	if err := importSvc.ImportData(f.userID, importData); err != nil {
+		t.Fatalf("ImportData failed: %v", err)
+	}
+
+	trades, err := f.repos.TradeRepository().FindTradesByDepot(f.depotID)
+	if err != nil {
+		t.Fatalf("could not read trades: %v", err)
+	}
+	if len(trades) != 2 {
+		t.Fatalf("expected 2 trades to be created, got %d", len(trades))
+	}
+	for _, trade := range trades {
+		if trade.WKN != "TEST" {
+			t.Errorf("expected WKN TEST, got %s", trade.WKN)
+		}
+		if trade.WalletTransactionID == nil {
+			t.Errorf("expected trade %d to be linked to a wallet transaction", trade.ID)
+		}
+	}
+
+	dtos, err := f.repos.TransactionRepository().FindTransactionsByUser(f.userID, 10, 0)
+	if err != nil {
+		t.Fatalf("could not read transactions: %v", err)
+	}
+	if len(dtos) != 3 {
+		t.Fatalf("expected 3 transactions, got %d", len(dtos))
+	}
+
+	var splitwiseID int
+	for _, dto := range dtos {
+		if dto.Description == "Splitwise" {
+			splitwiseID = dto.ID
+			if dto.BudgetName != "" {
+				t.Errorf("expected 'Übertrag' to import with no budget, got %q", dto.BudgetName)
+			}
+		}
+		if dto.AmountInCents <= 0 {
+			t.Errorf("expected imported amounts to always be positive, got %d for %q", dto.AmountInCents, dto.Description)
+		}
+	}
+	if splitwiseID == 0 {
+		t.Fatalf("could not find the Splitwise transaction")
+	}
+
+	splitwise, err := f.txSvc.GetTransactionByID(f.userID, splitwiseID)
+	if err != nil {
+		t.Fatalf("could not read the Splitwise transaction: %v", err)
+	}
+	if splitwise.IsDebt == nil || !*splitwise.IsDebt {
+		t.Errorf("expected the Splitwise transaction to keep isDebt=true")
+	}
+}
+
 func TestDeleteAllUserDataRemovesTrades(t *testing.T) {
 	f := newStockFixture(t)
 	importSvc := NewImportService(
