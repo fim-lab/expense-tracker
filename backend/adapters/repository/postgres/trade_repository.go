@@ -14,19 +14,19 @@ func NewTradeRepository(db *sql.DB) *TradeRepository {
 	return &TradeRepository{db: db}
 }
 
-const tradeColumns = `id, depot_id, wallet_transaction_id, wkn, type, quantity, total_in_cents, fees_in_cents, taxes_in_cents, timestamp`
+const tradeColumns = `id, depot_id, wallet_transaction_id, stock_id, type, quantity, total_in_cents, fees_in_cents, taxes_in_cents, timestamp`
 
 func scanTrade(row interface{ Scan(...any) error }) (domain.Trade, error) {
 	var t domain.Trade
-	err := row.Scan(&t.ID, &t.DepotID, &t.WalletTransactionID, &t.WKN, &t.Type, &t.Quantity, &t.TotalInCents, &t.FeesInCents, &t.TaxesInCents, &t.Timestamp)
+	err := row.Scan(&t.ID, &t.DepotID, &t.WalletTransactionID, &t.StockID, &t.Type, &t.Quantity, &t.TotalInCents, &t.FeesInCents, &t.TaxesInCents, &t.Timestamp)
 	return t, err
 }
 
 func (r *TradeRepository) SaveTrade(t domain.Trade) (int, error) {
-	query := `INSERT INTO trades (depot_id, wallet_transaction_id, wkn, type, quantity, total_in_cents, fees_in_cents, taxes_in_cents, timestamp)
+	query := `INSERT INTO trades (depot_id, wallet_transaction_id, stock_id, type, quantity, total_in_cents, fees_in_cents, taxes_in_cents, timestamp)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
 	var id int
-	err := r.db.QueryRow(query, t.DepotID, t.WalletTransactionID, t.WKN, t.Type, t.Quantity, t.TotalInCents, t.FeesInCents, t.TaxesInCents, t.Timestamp).Scan(&id)
+	err := r.db.QueryRow(query, t.DepotID, t.WalletTransactionID, t.StockID, t.Type, t.Quantity, t.TotalInCents, t.FeesInCents, t.TaxesInCents, t.Timestamp).Scan(&id)
 	return id, err
 }
 
@@ -62,10 +62,16 @@ func (r *TradeRepository) CountTradesByDepot(depotID int) (int, error) {
 	return count, err
 }
 
+func (r *TradeRepository) CountTradesByStock(stockID int) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM trades WHERE stock_id = $1`, stockID).Scan(&count)
+	return count, err
+}
+
 func (r *TradeRepository) UpdateTrade(t domain.Trade) error {
-	query := `UPDATE trades SET depot_id = $1, wallet_transaction_id = $2, wkn = $3, type = $4, quantity = $5, total_in_cents = $6, fees_in_cents = $7, taxes_in_cents = $8, timestamp = $9
+	query := `UPDATE trades SET depot_id = $1, wallet_transaction_id = $2, stock_id = $3, type = $4, quantity = $5, total_in_cents = $6, fees_in_cents = $7, taxes_in_cents = $8, timestamp = $9
 	          WHERE id = $10`
-	res, err := r.db.Exec(query, t.DepotID, t.WalletTransactionID, t.WKN, t.Type, t.Quantity, t.TotalInCents, t.FeesInCents, t.TaxesInCents, t.Timestamp, t.ID)
+	res, err := r.db.Exec(query, t.DepotID, t.WalletTransactionID, t.StockID, t.Type, t.Quantity, t.TotalInCents, t.FeesInCents, t.TaxesInCents, t.Timestamp, t.ID)
 	if err != nil {
 		return err
 	}

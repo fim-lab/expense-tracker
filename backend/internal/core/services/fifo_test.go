@@ -8,6 +8,7 @@ import (
 )
 
 const testWKN = "A1JX52"
+const testStockID = 1
 
 func tradeDay(day int) time.Time {
 	return time.Date(2026, time.March, day, 12, 0, 0, 0, time.UTC)
@@ -18,6 +19,7 @@ func buyTrade(id int, day int, quantity float64, totalInCents int) domain.Trade 
 		ID:           id,
 		DepotID:      1,
 		WKN:          testWKN,
+		StockID:      testStockID,
 		Type:         domain.TradeTypeBuy,
 		Quantity:     quantity,
 		TotalInCents: totalInCents,
@@ -30,6 +32,7 @@ func sellTrade(id int, day int, quantity float64, totalInCents int) domain.Trade
 		ID:           id,
 		DepotID:      1,
 		WKN:          testWKN,
+		StockID:      testStockID,
 		Type:         domain.TradeTypeSell,
 		Quantity:     quantity,
 		TotalInCents: totalInCents,
@@ -170,7 +173,7 @@ func TestFIFO_FloatResidualClampedToZero(t *testing.T) {
 
 func TestFIFO_SeparateWKNsDoNotCrossFeed(t *testing.T) {
 	other := sellTrade(2, 2, 5, 6000)
-	other.WKN = "716460"
+	other.StockID = 2
 	trades := []domain.Trade{buyTrade(1, 1, 10, 10000), other}
 
 	if err := validateTradeHistory(trades); err != domain.ErrInsufficientShares {
@@ -194,8 +197,8 @@ func TestFIFO_SellBeforeAnyBuyOfWKN(t *testing.T) {
 	}
 
 	snapshot := buildPortfolio(trades)
-	if snapshot.unmatched[testWKN] != 5 {
-		t.Errorf("expected 5 unmatched shares, got %v", snapshot.unmatched[testWKN])
+	if snapshot.unmatched[testStockID] != 5 {
+		t.Errorf("expected 5 unmatched shares, got %v", snapshot.unmatched[testStockID])
 	}
 	if snapshot.realizedGain() != 0 {
 		t.Errorf("expected no realized gain from an uncovered sell, got %d", snapshot.realizedGain())

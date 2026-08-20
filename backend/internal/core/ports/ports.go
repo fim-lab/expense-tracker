@@ -77,6 +77,14 @@ type ImportService interface {
 	DeleteAllUserData(userID int) error
 }
 
+type StockService interface {
+	GetStocks() ([]domain.Stock, error)
+	GetOrCreateByWKN(wkn string, fallbackPriceInCents int) (domain.Stock, error)
+	CreateStock(s domain.Stock) (domain.Stock, error)
+	UpdateStock(s domain.Stock) (domain.Stock, error)
+	DeleteStock(id int) error
+}
+
 // --- Driven Ports  ---
 
 type UserRepository interface {
@@ -139,10 +147,20 @@ type TradeRepository interface {
 	GetTradeByID(id int) (domain.Trade, error)
 	FindTradesByDepot(depotID int) ([]domain.Trade, error)
 	CountTradesByDepot(depotID int) (int, error)
+	CountTradesByStock(stockID int) (int, error)
 	UpdateTrade(t domain.Trade) error
 	DeleteTrade(id int) error
 	DeleteAllTradesOfDepot(depotID int) error
 	DeleteAllByUser(userID int) error
+}
+
+type StockRepository interface {
+	FindAllStocks() ([]domain.Stock, error)
+	GetStockByID(id int) (domain.Stock, error)
+	FindStockByWKN(wkn string) (domain.Stock, error)
+	SaveStock(s domain.Stock) (int, error)
+	UpdateStock(s domain.Stock) error
+	DeleteStock(id int) error
 }
 
 type TransactionTemplateRepository interface {
@@ -163,4 +181,5 @@ type Repositories interface {
 	TransactionRepository() TransactionRepository
 	TradeRepository() TradeRepository
 	TransactionTemplateRepository() TransactionTemplateRepository
+	StockRepository() StockRepository
 }

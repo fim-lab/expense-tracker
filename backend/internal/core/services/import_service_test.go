@@ -11,7 +11,8 @@ import (
 func TestImportTransactions(t *testing.T) {
 	repos := memory.NewCleanRepositories()
 	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
-	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository())
+	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository())
+	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository(), stockSvc)
 
 	userID := 1
 	repos.UserRepository().SaveUser(domain.User{ID: userID, Username: "test"})
@@ -102,6 +103,7 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 		f.repos.TransactionRepository(),
 		f.repos.TradeRepository(),
 		f.repos.TransactionTemplateRepository(),
+		f.stockSvc,
 	)
 	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {
 		t.Fatalf("could not seed the user: %v", err)
@@ -149,8 +151,12 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 		t.Fatalf("expected 2 trades to be created, got %d", len(trades))
 	}
 	for _, trade := range trades {
-		if trade.WKN != "TEST" {
-			t.Errorf("expected WKN TEST, got %s", trade.WKN)
+		stock, err := f.repos.StockRepository().GetStockByID(trade.StockID)
+		if err != nil {
+			t.Fatalf("could not read stock %d: %v", trade.StockID, err)
+		}
+		if stock.WKN != "TEST" {
+			t.Errorf("expected WKN TEST, got %s", stock.WKN)
 		}
 		if trade.WalletTransactionID == nil {
 			t.Errorf("expected trade %d to be linked to a wallet transaction", trade.ID)
@@ -200,6 +206,7 @@ func TestDeleteAllUserDataRemovesTrades(t *testing.T) {
 		f.repos.TransactionRepository(),
 		f.repos.TradeRepository(),
 		f.repos.TransactionTemplateRepository(),
+		f.stockSvc,
 	)
 	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {
 		t.Fatalf("could not seed the user: %v", err)

@@ -4,8 +4,8 @@ import "time"
 
 type Lot struct {
 	TradeID              int       `json:"tradeId"`
-	DepotID              int       `json:"depotId"`
-	WKN                  string    `json:"wkn"`
+	DepotID               int       `json:"depotId"`
+	StockID              int       `json:"stockId"`
 	DateOfPurchase       time.Time `json:"dateOfPurchase"`
 	Quantity             float64   `json:"quantity"`
 	Remaining            float64   `json:"remaining"`
@@ -14,18 +14,23 @@ type Lot struct {
 }
 
 type Position struct {
-	DepotID         int     `json:"depotId"`
-	WKN             string  `json:"wkn"`
-	Quantity        float64 `json:"quantity"`
-	InvestedInCents int     `json:"investedInCents"`
-	AvgPriceInCents int     `json:"avgPriceInCents"`
-	Lots            []Lot   `json:"lots"`
+	DepotID                int     `json:"depotId"`
+	StockID                int     `json:"stockId"`
+	WKN                    string  `json:"wkn"`
+	Ticker                 string  `json:"ticker"`
+	Quantity               float64 `json:"quantity"`
+	InvestedInCents        int     `json:"investedInCents"`
+	AvgPriceInCents        int     `json:"avgPriceInCents"`
+	CurrentPriceInCents    int     `json:"currentPriceInCents"`
+	CurrentValueInCents    int     `json:"currentValueInCents"`
+	UnrealizedGainInCents  int     `json:"unrealizedGainInCents"`
+	Lots                   []Lot   `json:"lots"`
 }
 
 type SellAllocation struct {
 	SellTradeID         int       `json:"sellTradeId"`
 	BuyTradeID          int       `json:"buyTradeId"`
-	WKN                 string    `json:"wkn"`
+	StockID             int       `json:"stockId"`
 	Quantity            float64   `json:"quantity"`
 	CostBasisInCents    int       `json:"costBasisInCents"`
 	ProceedsInCents     int       `json:"proceedsInCents"`
@@ -35,16 +40,19 @@ type SellAllocation struct {
 }
 
 type Portfolio struct {
-	DepotID             int        `json:"depotId"`
-	Positions           []Position `json:"positions"`
-	InvestedInCents     int        `json:"investedInCents"`
-	RealizedGainInCents int        `json:"realizedGainInCents"`
+	DepotID                int        `json:"depotId"`
+	Positions              []Position `json:"positions"`
+	InvestedInCents        int        `json:"investedInCents"`
+	RealizedGainInCents    int        `json:"realizedGainInCents"`
+	CurrentValueInCents    int        `json:"currentValueInCents"`
+	UnrealizedGainInCents  int        `json:"unrealizedGainInCents"`
 }
 
 type TradeDTO struct {
 	ID                  int       `json:"id"`
 	DepotID             int       `json:"depotId"`
 	WalletTransactionID *int      `json:"walletTransactionId"`
+	StockID             int       `json:"stockId"`
 	WKN                 string    `json:"wkn"`
 	Type                TradeType `json:"type"`
 	Quantity            float64   `json:"quantity"`

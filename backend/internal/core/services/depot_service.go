@@ -10,14 +10,15 @@ import (
 )
 
 type depotService struct {
-	depotRepo  ports.DepotRepository
-	walletRepo ports.WalletRepository
-	budgetRepo ports.BudgetRepository
-	tradeRepo  ports.TradeRepository
+	depotRepo    ports.DepotRepository
+	walletRepo   ports.WalletRepository
+	budgetRepo   ports.BudgetRepository
+	tradeRepo    ports.TradeRepository
+	stockService ports.StockService
 }
 
-func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository, budgetRepo ports.BudgetRepository, tradeRepo ports.TradeRepository) ports.DepotService {
-	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo, budgetRepo: budgetRepo, tradeRepo: tradeRepo}
+func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository, budgetRepo ports.BudgetRepository, tradeRepo ports.TradeRepository, stockService ports.StockService) ports.DepotService {
+	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo, budgetRepo: budgetRepo, tradeRepo: tradeRepo, stockService: stockService}
 }
 
 func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
@@ -46,18 +47,29 @@ func (s *depotService) GetDepots(userID int) ([]domain.DepotDTO, error) {
 		return nil, err
 	}
 
+	stocks, err := s.stockService.GetStocks()
+	if err != nil {
+		return nil, err
+	}
+	priceByStockID := make(map[int]int, len(stocks))
+	for _, stock := range stocks {
+		priceByStockID[stock.ID] = stock.PriceInCents
+	}
+
 	dtos := make([]domain.DepotDTO, 0, len(depots))
 	for _, depot := range depots {
 		trades, err := s.tradeRepo.FindTradesByDepot(depot.ID)
 		if err != nil {
 			return nil, err
 		}
+		positions := buildPortfolio(trades).positions(depot.ID)
 		dtos = append(dtos, domain.DepotDTO{
-			ID:              depot.ID,
-			Name:            depot.Name,
-			WalletID:        depot.WalletID,
-			BudgetID:        depot.BudgetID,
-			InvestedInCents: investedInCents(trades),
+			ID:                  depot.ID,
+			Name:                depot.Name,
+			WalletID:            depot.WalletID,
+			BudgetID:            depot.BudgetID,
+			InvestedInCents:     investedInCents(trades),
+			CurrentValueInCents: currentValueInCents(positions, priceByStockID),
 		})
 	}
 

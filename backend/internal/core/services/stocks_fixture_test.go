@@ -14,6 +14,7 @@ type stockFixture struct {
 	txSvc        ports.TransactionService
 	tradeSvc     ports.TradeService
 	portfolioSvc ports.PortfolioService
+	stockSvc     ports.StockService
 	userID       int
 	walletID     int
 	budgetID     int
@@ -36,15 +37,17 @@ func newStockFixture(t *testing.T) stockFixture {
 		t.Fatalf("could not seed the depot: %v", err)
 	}
 
-	depotSvc := NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TradeRepository())
+	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository())
+	depotSvc := NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TradeRepository(), stockSvc)
 	txSvc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 
 	return stockFixture{
 		repos:        repos,
 		depotSvc:     depotSvc,
 		txSvc:        txSvc,
-		tradeSvc:     NewTradeService(repos.TradeRepository(), depotSvc, txSvc),
-		portfolioSvc: NewPortfolioService(repos.TradeRepository(), depotSvc),
+		tradeSvc:     NewTradeService(repos.TradeRepository(), depotSvc, txSvc, stockSvc),
+		portfolioSvc: NewPortfolioService(repos.TradeRepository(), depotSvc, stockSvc),
+		stockSvc:     stockSvc,
 		userID:       userID,
 		walletID:     walletID,
 		budgetID:     budgetID,

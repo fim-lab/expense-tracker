@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
@@ -52,6 +53,7 @@ type importService struct {
 	transactionRepo         ports.TransactionRepository
 	tradeRepo               ports.TradeRepository
 	transactionTemplateRepo ports.TransactionTemplateRepository
+	stockService            ports.StockService
 }
 
 func NewImportService(
@@ -62,6 +64,7 @@ func NewImportService(
 	transactionRepo ports.TransactionRepository,
 	tradeRepo ports.TradeRepository,
 	transactionTemplateRepo ports.TransactionTemplateRepository,
+	stockService ports.StockService,
 ) ports.ImportService {
 	return &importService{
 		userRepo:                userRepo,
@@ -71,6 +74,7 @@ func NewImportService(
 		transactionRepo:         transactionRepo,
 		tradeRepo:               tradeRepo,
 		transactionTemplateRepo: transactionTemplateRepo,
+		stockService:            stockService,
 	}
 }
 
@@ -273,10 +277,17 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 			return fmt.Errorf("transaction %q looks like a trade but wallet %q has no depot", importTx.Description, importTx.Wallet)
 		}
 
+		fallback := int(math.Round(float64(amount) / quantity))
+		stock, err := s.stockService.GetOrCreateByWKN(wkn, fallback)
+		if err != nil {
+			return fmt.Errorf("failed to resolve stock %q: %w", wkn, err)
+		}
+
 		trade := domain.Trade{
 			DepotID:             depotID,
 			WalletTransactionID: &transactionID,
 			WKN:                 wkn,
+			StockID:             stock.ID,
 			Type:                tradeType,
 			Quantity:            quantity,
 			TotalInCents:        amount,
