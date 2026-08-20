@@ -14,26 +14,26 @@ func NewDepotRepository(db *sql.DB) *DepotRepository {
 }
 
 func (r *DepotRepository) SaveDepot(d domain.Depot) error {
-	query := `INSERT INTO depots (user_id, wallet_id, name) VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(query, d.UserID, d.WalletID, d.Name)
+	query := `INSERT INTO depots (user_id, wallet_id, budget_id, name) VALUES ($1, $2, $3, $4)`
+	_, err := r.db.Exec(query, d.UserID, d.WalletID, d.BudgetID, d.Name)
 	return err
 }
 
 func (r *DepotRepository) GetDepotByID(id int) (domain.Depot, error) {
 	var d domain.Depot
-	query := `SELECT id, user_id, wallet_id, name FROM depots WHERE id = $1`
-	err := r.db.QueryRow(query, id).Scan(&d.ID, &d.UserID, &d.WalletID, &d.Name)
+	query := `SELECT id, user_id, wallet_id, budget_id, name FROM depots WHERE id = $1`
+	err := r.db.QueryRow(query, id).Scan(&d.ID, &d.UserID, &d.WalletID, &d.BudgetID, &d.Name)
 	return d, err
 }
 
 func (r *DepotRepository) UpdateDepot(d domain.Depot) error {
-	query := `UPDATE depots SET wallet_id = $1, name = $2 WHERE id = $3`
-	_, err := r.db.Exec(query, d.WalletID, d.Name, d.ID)
+	query := `UPDATE depots SET wallet_id = $1, budget_id = $2, name = $3 WHERE id = $4`
+	_, err := r.db.Exec(query, d.WalletID, d.BudgetID, d.Name, d.ID)
 	return err
 }
 
 func (r *DepotRepository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
-	query := `SELECT id, user_id, wallet_id, name FROM depots WHERE user_id = $1`
+	query := `SELECT id, user_id, wallet_id, budget_id, name FROM depots WHERE user_id = $1`
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (r *DepotRepository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
 	var depots []domain.Depot
 	for rows.Next() {
 		var d domain.Depot
-		if err := rows.Scan(&d.ID, &d.UserID, &d.WalletID, &d.Name); err != nil {
+		if err := rows.Scan(&d.ID, &d.UserID, &d.WalletID, &d.BudgetID, &d.Name); err != nil {
 			return nil, err
 		}
 		depots = append(depots, d)

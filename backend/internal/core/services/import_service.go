@@ -117,33 +117,6 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 		firstWalletID = existingWallets[0].ID
 	}
 
-	if firstWalletID != 0 {
-		existingDepots, err := s.depotRepo.FindDepotsByUser(userID)
-		if err != nil {
-			return fmt.Errorf("failed to fetch existing depots: %w", err)
-		}
-		depotMap := make(map[string]bool)
-		for _, d := range existingDepots {
-			depotMap[d.Name] = true
-		}
-
-		for _, importWallet := range data.Settings.Wallets {
-			if !importWallet.IsDepot {
-				continue
-			}
-			if !depotMap[importWallet.Name] {
-				d := domain.Depot{
-					UserID:   userID,
-					Name:     importWallet.Name,
-					WalletID: firstWalletID,
-				}
-				if err := s.depotRepo.SaveDepot(d); err != nil {
-					return fmt.Errorf("failed to save depot %s: %w", importWallet.Name, err)
-				}
-			}
-		}
-	}
-
 	existingBudgets, err := s.budgetRepo.FindBudgetsByUser(userID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch existing budgets: %w", err)
@@ -176,6 +149,39 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 	}
 	for _, b := range existingBudgets {
 		budgetMap[b.Name] = b.ID
+	}
+
+	var firstBudgetID int
+	if len(existingBudgets) > 0 {
+		firstBudgetID = existingBudgets[0].ID
+	}
+
+	if firstWalletID != 0 && firstBudgetID != 0 {
+		existingDepots, err := s.depotRepo.FindDepotsByUser(userID)
+		if err != nil {
+			return fmt.Errorf("failed to fetch existing depots: %w", err)
+		}
+		depotMap := make(map[string]bool)
+		for _, d := range existingDepots {
+			depotMap[d.Name] = true
+		}
+
+		for _, importWallet := range data.Settings.Wallets {
+			if !importWallet.IsDepot {
+				continue
+			}
+			if !depotMap[importWallet.Name] {
+				d := domain.Depot{
+					UserID:   userID,
+					Name:     importWallet.Name,
+					WalletID: firstWalletID,
+					BudgetID: firstBudgetID,
+				}
+				if err := s.depotRepo.SaveDepot(d); err != nil {
+					return fmt.Errorf("failed to save depot %s: %w", importWallet.Name, err)
+				}
+			}
+		}
 	}
 
 	for _, importTx := range data.Transactions {

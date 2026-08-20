@@ -76,11 +76,13 @@ export interface Depot {
 	id: number;
 	userId?: number;
 	walletId: number;
+	budgetId: number;
 	name: string;
 	investedInCents?: number;
 	isEditing?: boolean;
 	newName?: string;
 	newWalletId?: number;
+	newBudgetId?: number;
 }
 
 export interface TransactionTemplate {

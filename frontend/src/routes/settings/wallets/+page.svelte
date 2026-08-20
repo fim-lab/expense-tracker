@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Wallet, Depot } from '$lib/types';
+	import type { Wallet, Depot, Budget } from '$lib/types';
 
 	let { data } = $props();
 
@@ -8,13 +8,19 @@
 		(data.wallets || []).map((w: Wallet) => ({ ...w, isEditing: false, newName: '' }))
 	);
 
+	let budgets = $state<Budget[]>(
+		// svelte-ignore state_referenced_locally
+		data.budgets || []
+	);
+
 	let depots = $state<Depot[]>(
 		// svelte-ignore state_referenced_locally
 		data.depots?.map((d: Depot) => ({
 			...d,
 			isEditing: false,
 			newName: '',
-			newWalletId: d.walletId
+			newWalletId: d.walletId,
+			newBudgetId: d.budgetId
 		}))
 	);
 
@@ -66,6 +72,7 @@
 		depot.isEditing = true;
 		depot.newName = depot.name;
 		depot.newWalletId = depot.walletId;
+		depot.newBudgetId = depot.budgetId;
 	}
 
 	function cancelEditingDepot(depot: Depot) {
@@ -80,12 +87,18 @@
 		const res = await fetch(`/api/depots/${depot.id}`, {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ ...depot, name: depot.newName, walletId: depot.newWalletId })
+			body: JSON.stringify({
+				...depot,
+				name: depot.newName,
+				walletId: depot.newWalletId,
+				budgetId: depot.newBudgetId
+			})
 		});
 
 		if (res.ok) {
 			depot.name = depot.newName;
 			depot.walletId = depot.newWalletId!;
+			depot.budgetId = depot.newBudgetId!;
 			depot.isEditing = false;
 		} else {
 			console.error('Failed to update depot');
@@ -112,6 +125,10 @@
 
 	function getWalletName(walletId: number) {
 		return wallets.find((w) => w.id === walletId)?.name || 'Unknown Wallet';
+	}
+
+	function getBudgetName(budgetId: number) {
+		return budgets.find((b) => b.id === budgetId)?.name || 'Unknown Budget';
 	}
 </script>
 
@@ -177,6 +194,7 @@
 				<tr>
 					<th>Name</th>
 					<th>Wallet</th>
+					<th>Budget</th>
 					<th>Actions</th>
 				</tr>
 			</thead>
@@ -199,6 +217,17 @@
 								</select>
 							{:else}
 								{getWalletName(depot.walletId)}
+							{/if}
+						</td>
+						<td>
+							{#if depot.isEditing}
+								<select bind:value={depot.newBudgetId}>
+									{#each budgets as budget}
+										<option value={budget.id}>{budget.name}</option>
+									{/each}
+								</select>
+							{:else}
+								{getBudgetName(depot.budgetId)}
 							{/if}
 						</td>
 						<td>

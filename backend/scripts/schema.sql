@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS depots (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     wallet_id INT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    budget_id INT NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     UNIQUE(user_id, name)
 );

@@ -254,7 +254,7 @@ func TestTradeService_BackdatedSellIsValidatedAgainstEarlierBuysOnly(t *testing.
 func TestTradeService_DepotChangeRejected(t *testing.T) {
 	f := newStockFixture(t)
 	otherDepotID := 2
-	if err := f.repos.DepotRepository().SaveDepot(domain.Depot{ID: otherDepotID, UserID: f.userID, Name: "Second Depot", WalletID: f.walletID}); err != nil {
+	if err := f.repos.DepotRepository().SaveDepot(domain.Depot{ID: otherDepotID, UserID: f.userID, Name: "Second Depot", WalletID: f.walletID, BudgetID: f.budgetID}); err != nil {
 		t.Fatalf("could not seed the second depot: %v", err)
 	}
 	tradeID := f.mustBuy(t, 1, 10, 10000)

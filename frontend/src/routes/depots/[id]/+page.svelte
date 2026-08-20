@@ -92,6 +92,9 @@
 		{#if data.wallet}
 			<span class="muted"> settled via {data.wallet.name}</span>
 		{/if}
+		{#if data.budget}
+			<span class="muted"> · budget {data.budget.name}</span>
+		{/if}
 	</header>
 	<div class="totals">
 		<div>
