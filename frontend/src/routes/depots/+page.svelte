@@ -6,8 +6,11 @@
 	let { data } = $props();
 
 	const hasDepots = $derived(data.depots.length > 0);
-	const totalInvested = $derived(
-		data.depots.reduce((sum: number, depot: Depot) => sum + (depot.investedInCents ?? 0), 0)
+	const totalCurrentValue = $derived(
+		data.depots.reduce(
+			(sum: number, depot: Depot) => sum + (depot.currentValueInCents ?? depot.investedInCents ?? 0),
+			0
+		)
 	);
 
 	function walletName(walletId: number) {
@@ -30,7 +33,7 @@
 			/>
 		{/each}
 		<p class="total">
-			Invested in total <strong>{formatCurrency(totalInvested)}</strong>
+			Current value in total <strong>{formatCurrency(totalCurrentValue)}</strong>
 		</p>
 	{:else}
 		<p>No depots yet.</p>

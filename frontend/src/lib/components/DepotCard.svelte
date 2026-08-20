@@ -12,7 +12,9 @@
 			{:else}
 				{depot.name}
 			{/if}
-			<span class="card-amount">{formatCurrency(depot.investedInCents ?? 0)}</span>
+			<span class="card-amount"
+				>{formatCurrency(depot.currentValueInCents ?? depot.investedInCents ?? 0)}</span
+			>
 		</p>
 		{#if subtitle}
 			<small class="card-subtitle">{subtitle}</small>

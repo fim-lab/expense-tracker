@@ -167,6 +167,8 @@
 					<th>Quantity</th>
 					<th>Average price</th>
 					<th>Invested</th>
+					<th>Current Value</th>
+					<th>+/-</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -185,6 +187,13 @@
 						<td>{position.quantity}</td>
 						<td>{formatCurrency(position.avgPriceInCents)}</td>
 						<td>{formatCurrency(position.investedInCents)}</td>
+						<td>{formatCurrency(position.currentValueInCents ?? 0)}</td>
+						<td
+							class:gain={(position.unrealizedGainInCents ?? 0) > 0}
+							class:loss={(position.unrealizedGainInCents ?? 0) < 0}
+						>
+							{formatCurrency(position.unrealizedGainInCents ?? 0)}
+						</td>
 					</tr>
 					{#if isExpanded(position.wkn)}
 						{#each position.lots as lot (lot.tradeId)}
@@ -193,6 +202,8 @@
 								<td>{lotLabel(lot)}</td>
 								<td>{pricePerShare(lot.totalInCents, lot.quantity)}</td>
 								<td>{formatCurrency(lot.remainingCostInCents)}</td>
+								<td></td>
+								<td></td>
 							</tr>
 						{/each}
 					{/if}

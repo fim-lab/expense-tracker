@@ -79,6 +79,7 @@ export interface Depot {
 	budgetId: number;
 	name: string;
 	investedInCents?: number;
+	currentValueInCents?: number;
 	isEditing?: boolean;
 	newName?: string;
 	newWalletId?: number;
@@ -105,6 +106,7 @@ export interface Trade {
 	id: number;
 	depotId: number;
 	walletTransactionId: number | null;
+	stockId?: number;
 	wkn: string;
 	type: TradeType;
 	quantity: number;
@@ -124,7 +126,7 @@ export interface TradeDTO extends Trade {
 export interface Lot {
 	tradeId: number;
 	depotId: number;
-	wkn: string;
+	stockId: number;
 	dateOfPurchase: string;
 	quantity: number;
 	remaining: number;
@@ -134,10 +136,15 @@ export interface Lot {
 
 export interface Position {
 	depotId: number;
+	stockId: number;
 	wkn: string;
+	ticker?: string;
 	quantity: number;
 	investedInCents: number;
 	avgPriceInCents: number;
+	currentPriceInCents?: number;
+	currentValueInCents?: number;
+	unrealizedGainInCents?: number;
 	lots: Lot[];
 }
 
@@ -146,4 +153,18 @@ export interface Portfolio {
 	positions: Position[];
 	investedInCents: number;
 	realizedGainInCents: number;
+	currentValueInCents?: number;
+	unrealizedGainInCents?: number;
+}
+
+export interface Stock {
+	id: number;
+	wkn: string;
+	ticker: string;
+	priceInCents: number;
+	lastFetched: string | null;
+	isEditing?: boolean;
+	newWkn?: string;
+	newTicker?: string;
+	newPriceEuros?: number;
 }
