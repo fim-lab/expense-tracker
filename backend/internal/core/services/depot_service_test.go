@@ -40,7 +40,7 @@ func TestDepotService_MissingDepotReportsDepotNotFound(t *testing.T) {
 func TestDepotService_GetDepotsCarryTheInvestedSum(t *testing.T) {
 	f := newStockFixture(t)
 	secondDepotID := 2
-	if err := f.repos.DepotRepository().SaveDepot(domain.Depot{ID: secondDepotID, UserID: f.userID, Name: "Alpha Depot", WalletID: f.walletID}); err != nil {
+	if err := f.repos.DepotRepository().SaveDepot(domain.Depot{ID: secondDepotID, UserID: f.userID, Name: "Alpha Depot", WalletID: f.walletID, BudgetID: f.budgetID}); err != nil {
 		t.Fatalf("could not seed the second depot: %v", err)
 	}
 	f.mustBuy(t, 1, 10, 100000)

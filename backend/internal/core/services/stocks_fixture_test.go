@@ -16,6 +16,7 @@ type stockFixture struct {
 	portfolioSvc ports.PortfolioService
 	userID       int
 	walletID     int
+	budgetID     int
 	depotID      int
 }
 
@@ -23,16 +24,19 @@ func newStockFixture(t *testing.T) stockFixture {
 	t.Helper()
 
 	repos := memory.NewCleanRepositories()
-	userID, walletID, depotID := 1, 1, 1
+	userID, walletID, budgetID, depotID := 1, 1, 1, 1
 
 	if err := repos.WalletRepository().SaveWallet(domain.Wallet{ID: walletID, UserID: userID, Name: "Main Wallet"}); err != nil {
 		t.Fatalf("could not seed the wallet: %v", err)
 	}
-	if err := repos.DepotRepository().SaveDepot(domain.Depot{ID: depotID, UserID: userID, Name: "Main Depot", WalletID: walletID}); err != nil {
+	if err := repos.BudgetRepository().SaveBudget(domain.Budget{ID: budgetID, UserID: userID, Name: "Investments", LimitCents: 1000000}); err != nil {
+		t.Fatalf("could not seed the budget: %v", err)
+	}
+	if err := repos.DepotRepository().SaveDepot(domain.Depot{ID: depotID, UserID: userID, Name: "Main Depot", WalletID: walletID, BudgetID: budgetID}); err != nil {
 		t.Fatalf("could not seed the depot: %v", err)
 	}
 
-	depotSvc := NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.TradeRepository())
+	depotSvc := NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TradeRepository())
 	txSvc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 
 	return stockFixture{
@@ -43,6 +47,7 @@ func newStockFixture(t *testing.T) stockFixture {
 		portfolioSvc: NewPortfolioService(repos.TradeRepository(), depotSvc),
 		userID:       userID,
 		walletID:     walletID,
+		budgetID:     budgetID,
 		depotID:      depotID,
 	}
 }

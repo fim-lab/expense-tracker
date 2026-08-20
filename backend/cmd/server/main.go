@@ -44,7 +44,7 @@ func main() {
 	sessionService := services.NewSessionService(repos.SessionRepository())
 	budgetService := services.NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 	walletService := services.NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
-	depotService := services.NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.TradeRepository())
+	depotService := services.NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TradeRepository())
 	transactionService := services.NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	tradeService := services.NewTradeService(repos.TradeRepository(), depotService, transactionService)
 	portfolioService := services.NewPortfolioService(repos.TradeRepository(), depotService)

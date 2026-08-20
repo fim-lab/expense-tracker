@@ -12,11 +12,12 @@ import (
 type depotService struct {
 	depotRepo  ports.DepotRepository
 	walletRepo ports.WalletRepository
+	budgetRepo ports.BudgetRepository
 	tradeRepo  ports.TradeRepository
 }
 
-func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository, tradeRepo ports.TradeRepository) ports.DepotService {
-	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo, tradeRepo: tradeRepo}
+func NewDepotService(depotRepo ports.DepotRepository, walletRepo ports.WalletRepository, budgetRepo ports.BudgetRepository, tradeRepo ports.TradeRepository) ports.DepotService {
+	return &depotService{depotRepo: depotRepo, walletRepo: walletRepo, budgetRepo: budgetRepo, tradeRepo: tradeRepo}
 }
 
 func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
@@ -29,6 +30,11 @@ func (s *depotService) CreateDepot(userID int, d domain.Depot) error {
 	wallet, err := s.walletRepo.GetWalletByID(d.WalletID)
 	if err != nil || wallet.UserID != userID {
 		return errors.New("invalid wallet for depot")
+	}
+
+	budget, err := s.budgetRepo.GetBudgetByID(d.BudgetID)
+	if err != nil || budget.UserID != userID {
+		return domain.ErrBudgetNotFound
 	}
 
 	return s.depotRepo.SaveDepot(d)
@@ -50,6 +56,7 @@ func (s *depotService) GetDepots(userID int) ([]domain.DepotDTO, error) {
 			ID:              depot.ID,
 			Name:            depot.Name,
 			WalletID:        depot.WalletID,
+			BudgetID:        depot.BudgetID,
 			InvestedInCents: investedInCents(trades),
 		})
 	}
@@ -86,6 +93,11 @@ func (s *depotService) UpdateDepot(userID int, d domain.Depot) error {
 	wallet, err := s.walletRepo.GetWalletByID(d.WalletID)
 	if err != nil || wallet.UserID != userID {
 		return errors.New("invalid wallet for depot")
+	}
+
+	budget, err := s.budgetRepo.GetBudgetByID(d.BudgetID)
+	if err != nil || budget.UserID != userID {
+		return domain.ErrBudgetNotFound
 	}
 
 	d.UserID = userID

@@ -40,6 +40,7 @@ type ImportTransaction struct {
 	AmountInCents int       `json:"amountInCents"`
 	Type          string    `json:"type"`
 	IsPending     bool      `json:"isPending"`
+	IsDebt        bool      `json:"isDebt"`
 }
 
 type ImportBudget struct {

@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { Depot, Portfolio, TradeDTO, Wallet } from '$lib/types';
+import type { Depot, Portfolio, TradeDTO, Wallet, Budget } from '$lib/types';
 
 export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 	const cookieHeader = cookies
@@ -38,11 +38,13 @@ export const load: PageServerLoad = async ({ fetch, cookies, params }) => {
 	};
 	const trades = ((await authedApiFetch(`/depots/${params.id}/trades`)) as TradeDTO[]) ?? [];
 	const wallets = ((await authedApiFetch('/wallets')) as Wallet[]) ?? [];
+	const budgets = ((await authedApiFetch('/budgets')) as Budget[]) ?? [];
 
 	return {
 		depot,
 		portfolio,
 		trades,
-		wallet: wallets.find((w) => w.id === depot.walletId)
+		wallet: wallets.find((w) => w.id === depot.walletId),
+		budget: budgets.find((b) => b.id === depot.budgetId)
 	};
 };

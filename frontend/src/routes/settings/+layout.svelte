@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { children } = $props();
+	let { data, children } = $props();
 </script>
 
 <div class="grid">
@@ -8,7 +8,9 @@
 			<ul>
 				<li><a href="/settings/budgets">Salary & Budgets</a></li>
 				<li><a href="/settings/wallets">Wallets & Depots</a></li>
-				<li><a href="/settings/import">Import</a></li>
+				{#if data.showImport}
+					<li><a href="/settings/import">Import</a></li>
+				{/if}
 				<li><a href="/settings/appearance">Appearance</a></li>
 				<li><a href="/settings/delete-data" style="color: var(--pico-color-red-600);">Delete Data</a></li>
 			</ul>

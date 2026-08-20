@@ -177,6 +177,7 @@ func (s *tradeService) syncCashTransaction(userID int, depot domain.Depot, t *do
 		UserID:        userID,
 		Date:          t.Timestamp,
 		WalletID:      depot.WalletID,
+		BudgetID:      &depot.BudgetID,
 		Description:   description,
 		AmountInCents: t.CashFlowInCents(),
 		Type:          transactionType,

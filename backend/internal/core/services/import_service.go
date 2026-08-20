@@ -4,11 +4,45 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
+
+const importTransferBudget = "Übertrag"
+
+var tradeDescriptionPattern = regexp.MustCompile(`(?i)^(buy|sell)\s+(\d+(?:\.\d+)?)\s*stk\.\s*(\S+)\s*$`)
+
+// parseTradeDescription recognizes descriptions like "Buy 1.86511Stk. A1JX52"
+func parseTradeDescription(description string) (tradeType domain.TradeType, quantity float64, wkn string, ok bool) {
+	normalized := strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return ' '
+		}
+		return r
+	}, description)
+
+	match := tradeDescriptionPattern.FindStringSubmatch(normalized)
+	if match == nil {
+		return "", 0, "", false
+	}
+
+	quantity, err := strconv.ParseFloat(match[2], 64)
+	if err != nil {
+		return "", 0, "", false
+	}
+
+	tradeType = domain.TradeTypeBuy
+	if strings.EqualFold(match[1], "sell") {
+		tradeType = domain.TradeTypeSell
+	}
+
+	return tradeType, quantity, strings.ToUpper(match[3]), true
+}
 
 type importService struct {
 	userRepo                ports.UserRepository
@@ -117,33 +151,6 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 		firstWalletID = existingWallets[0].ID
 	}
 
-	if firstWalletID != 0 {
-		existingDepots, err := s.depotRepo.FindDepotsByUser(userID)
-		if err != nil {
-			return fmt.Errorf("failed to fetch existing depots: %w", err)
-		}
-		depotMap := make(map[string]bool)
-		for _, d := range existingDepots {
-			depotMap[d.Name] = true
-		}
-
-		for _, importWallet := range data.Settings.Wallets {
-			if !importWallet.IsDepot {
-				continue
-			}
-			if !depotMap[importWallet.Name] {
-				d := domain.Depot{
-					UserID:   userID,
-					Name:     importWallet.Name,
-					WalletID: firstWalletID,
-				}
-				if err := s.depotRepo.SaveDepot(d); err != nil {
-					return fmt.Errorf("failed to save depot %s: %w", importWallet.Name, err)
-				}
-			}
-		}
-	}
-
 	existingBudgets, err := s.budgetRepo.FindBudgetsByUser(userID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch existing budgets: %w", err)
@@ -178,7 +185,50 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 		budgetMap[b.Name] = b.ID
 	}
 
-	for _, importTx := range data.Transactions {
+	var firstBudgetID int
+	if len(existingBudgets) > 0 {
+		firstBudgetID = existingBudgets[0].ID
+	}
+
+	if firstWalletID != 0 && firstBudgetID != 0 {
+		existingDepots, err := s.depotRepo.FindDepotsByUser(userID)
+		if err != nil {
+			return fmt.Errorf("failed to fetch existing depots: %w", err)
+		}
+		depotMap := make(map[string]bool)
+		for _, d := range existingDepots {
+			depotMap[d.Name] = true
+		}
+
+		for _, importWallet := range data.Settings.Wallets {
+			if !importWallet.IsDepot {
+				continue
+			}
+			if !depotMap[importWallet.Name] {
+				d := domain.Depot{
+					UserID:   userID,
+					Name:     importWallet.Name,
+					WalletID: firstWalletID,
+					BudgetID: firstBudgetID,
+				}
+				if err := s.depotRepo.SaveDepot(d); err != nil {
+					return fmt.Errorf("failed to save depot %s: %w", importWallet.Name, err)
+				}
+			}
+		}
+	}
+
+	existingDepots, err := s.depotRepo.FindDepotsByUser(userID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch existing depots: %w", err)
+	}
+	depotByWallet := make(map[int]int)
+	for _, d := range existingDepots {
+		depotByWallet[d.WalletID] = d.ID
+	}
+
+	for i := len(data.Transactions) - 1; i >= 0; i-- {
+		importTx := data.Transactions[i]
 		walletID, ok := walletMap[importTx.Wallet]
 		if !ok {
 			continue
@@ -190,6 +240,7 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 			amount = -amount
 		}
 
+		isDebt := importTx.IsDebt
 		t := domain.Transaction{
 			UserID:        userID,
 			Date:          importTx.Date,
@@ -197,17 +248,42 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 			AmountInCents: amount,
 			Type:          txType,
 			IsPending:     importTx.IsPending,
+			IsDebt:        &isDebt,
 			WalletID:      walletID,
 		}
 
-		if importTx.Budget != "" {
+		if importTx.Budget != "" && importTx.Budget != importTransferBudget {
 			if budgetId, ok := budgetMap[importTx.Budget]; ok {
 				t.BudgetID = &budgetId
 			}
 		}
 
-		if _, err := s.transactionRepo.SaveTransaction(t); err != nil {
+		transactionID, err := s.transactionRepo.SaveTransaction(t)
+		if err != nil {
 			return fmt.Errorf("failed to save transaction: %w", err)
+		}
+
+		tradeType, quantity, wkn, isTrade := parseTradeDescription(importTx.Description)
+		if !isTrade {
+			continue
+		}
+
+		depotID, ok := depotByWallet[walletID]
+		if !ok {
+			return fmt.Errorf("transaction %q looks like a trade but wallet %q has no depot", importTx.Description, importTx.Wallet)
+		}
+
+		trade := domain.Trade{
+			DepotID:             depotID,
+			WalletTransactionID: &transactionID,
+			WKN:                 wkn,
+			Type:                tradeType,
+			Quantity:            quantity,
+			TotalInCents:        amount,
+			Timestamp:           normalizeTradeTimestamp(t.Date),
+		}
+		if _, err := s.tradeRepo.SaveTrade(trade); err != nil {
+			return fmt.Errorf("failed to save trade for transaction %q: %w", importTx.Description, err)
 		}
 	}
 
