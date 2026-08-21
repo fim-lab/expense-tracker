@@ -15,18 +15,30 @@ type tradeService struct {
 	tradeRepo          ports.TradeRepository
 	depotService       ports.DepotService
 	transactionService ports.TransactionService
+	stockService       ports.StockService
 }
 
 func NewTradeService(
 	tradeRepo ports.TradeRepository,
 	depotService ports.DepotService,
 	transactionService ports.TransactionService,
+	stockService ports.StockService,
 ) ports.TradeService {
 	return &tradeService{
 		tradeRepo:          tradeRepo,
 		depotService:       depotService,
 		transactionService: transactionService,
+		stockService:       stockService,
 	}
+}
+
+func resolveStockID(stockService ports.StockService, t domain.Trade) (int, error) {
+	fallback := int(math.Round(float64(t.TotalInCents) / t.Quantity))
+	stock, err := stockService.GetOrCreateByWKN(t.WKN, fallback)
+	if err != nil {
+		return 0, err
+	}
+	return stock.ID, nil
 }
 
 func (s *tradeService) CreateTrade(userID int, t domain.Trade) (domain.Trade, error) {
@@ -41,6 +53,12 @@ func (s *tradeService) CreateTrade(userID int, t domain.Trade) (domain.Trade, er
 	}
 	t.ID = 0
 	t.WalletTransactionID = nil
+
+	stockID, err := resolveStockID(s.stockService, t)
+	if err != nil {
+		return domain.Trade{}, err
+	}
+	t.StockID = stockID
 
 	existing, err := s.tradeRepo.FindTradesByDepot(t.DepotID)
 	if err != nil {
@@ -92,6 +110,12 @@ func (s *tradeService) UpdateTrade(userID int, t domain.Trade) error {
 	if err != nil {
 		return err
 	}
+
+	stockID, err := resolveStockID(s.stockService, t)
+	if err != nil {
+		return err
+	}
+	t.StockID = stockID
 
 	existing, err := s.tradeRepo.FindTradesByDepot(t.DepotID)
 	if err != nil {

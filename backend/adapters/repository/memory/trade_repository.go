@@ -14,6 +14,7 @@ func (r *TradeRepository) SaveTrade(t domain.Trade) (int, error) {
 	if t.ID == 0 {
 		t.ID = r.repo.nextID()
 	}
+	t.WKN = ""
 	r.repo.trades[t.ID] = t
 	return t.ID, nil
 }
@@ -52,12 +53,25 @@ func (r *TradeRepository) CountTradesByDepot(depotID int) (int, error) {
 	return count, nil
 }
 
+func (r *TradeRepository) CountTradesByStock(stockID int) (int, error) {
+	r.repo.mu.RLock()
+	defer r.repo.mu.RUnlock()
+	count := 0
+	for _, t := range r.repo.trades {
+		if t.StockID == stockID {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (r *TradeRepository) UpdateTrade(t domain.Trade) error {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()
 	if _, ok := r.repo.trades[t.ID]; !ok {
 		return domain.ErrTradeNotFound
 	}
+	t.WKN = ""
 	r.repo.trades[t.ID] = t
 	return nil
 }

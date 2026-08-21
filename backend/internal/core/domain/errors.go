@@ -24,4 +24,5 @@ var (
 	ErrInvalidTradeType            = errors.New("trade type must be BUY or SELL")
 	ErrInsufficientShares          = errors.New("not enough shares available to sell")
 	ErrTradeDepotChange            = errors.New("a trade cannot be moved to another depot: delete it and create a new one")
+	ErrStockNotFound               = errors.New("stock not found")
 )

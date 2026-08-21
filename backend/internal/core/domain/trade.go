@@ -13,6 +13,7 @@ type Trade struct {
 	ID                  int       `json:"id"`
 	DepotID             int       `json:"depotId"`
 	WalletTransactionID *int      `json:"walletTransactionId"`
+	StockID             int       `json:"stockId"`
 	WKN                 string    `json:"wkn"`
 	Type                TradeType `json:"type"`
 	Quantity            float64   `json:"quantity"`

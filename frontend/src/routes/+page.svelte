@@ -7,7 +7,8 @@
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import TransactionSearchForm from '$lib/components/TransactionSearchForm.svelte';
 	import WalletCard from '$lib/components/WalletCard.svelte';
-	import type { Wallet } from '$lib/types';
+	import { formatCurrency } from '$lib/utils';
+	import type { Depot, Wallet } from '$lib/types';
 
 	const pageNr = page.data.page;
 	const pageSize = page.data.pageSize;
@@ -15,6 +16,13 @@
 	const hasWallets = $derived(page.data?.wallets?.length > 0);
 	const hasDepots = $derived(page.data?.depots?.length > 0);
 	const hasBudgets = $derived(page.data?.budgets?.length > 0);
+	const totalWealth = $derived(
+		(page.data?.wallets ?? []).reduce((sum: number, w: Wallet) => sum + w.balanceCents, 0) +
+			(page.data?.depots ?? []).reduce(
+				(sum: number, d: Depot) => sum + (d.currentValueInCents ?? d.investedInCents ?? 0),
+				0
+			)
+	);
 
 	async function deleteTransaction(id: number) {
 		if (!confirm('Are you sure you want to delete this transaction?')) return;
@@ -57,6 +65,11 @@
 		</article>
 		{#if hasBudgets || hasWallets || hasDepots}
 			<article>
+				{#if hasWallets || hasDepots}
+					<p class="total">
+						Total wealth <strong>{formatCurrency(totalWealth)}</strong>
+					</p>
+				{/if}
 				{#if hasWallets}
 					<header><strong>Wallets</strong></header>
 					{#each page.data.wallets as wallet}
@@ -84,6 +97,9 @@
 
 		<div class="transaction-list">
 			{#if page.data.transactions?.length > 0}
+				<p class="total">
+					Sum <strong>{formatCurrency(page.data.sumInCents)}</strong>
+				</p>
 				{#each page.data.transactions as tx (tx.id)}
 					<TransactionCard transaction={tx} ondelete={deleteTransaction} />
 				{/each}
@@ -99,3 +115,11 @@
 		{/if}
 	</article>
 </div>
+
+<style>
+	.total {
+		display: flex;
+		justify-content: space-between;
+		color: var(--pico-muted-color);
+	}
+</style>

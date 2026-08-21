@@ -9,9 +9,10 @@ type Depot struct {
 }
 
 type DepotDTO struct {
-	ID              int    `json:"id"`
-	Name            string `json:"name"`
-	WalletID        int    `json:"walletId"`
-	BudgetID        int    `json:"budgetId"`
-	InvestedInCents int    `json:"investedInCents"`
+	ID                  int    `json:"id"`
+	Name                string `json:"name"`
+	WalletID            int    `json:"walletId"`
+	BudgetID            int    `json:"budgetId"`
+	InvestedInCents     int    `json:"investedInCents"`
+	CurrentValueInCents int    `json:"currentValueInCents"`
 }

@@ -29,13 +29,13 @@ func clampQuantity(q float64) float64 {
 type PortfolioSnapshot struct {
 	openLots    []domain.Lot
 	allocations []domain.SellAllocation
-	unmatched   map[string]float64
+	unmatched   map[int]float64
 }
 
 func buildPortfolio(trades []domain.Trade) PortfolioSnapshot {
-	snapshot := PortfolioSnapshot{unmatched: map[string]float64{}}
+	snapshot := PortfolioSnapshot{unmatched: map[int]float64{}}
 
-	lotsByWKN := map[string][]*domain.Lot{}
+	lotsByStockID := map[int][]*domain.Lot{}
 	var lots []*domain.Lot
 
 	for _, t := range sortTradesChronologically(trades) {
@@ -44,7 +44,7 @@ func buildPortfolio(trades []domain.Trade) PortfolioSnapshot {
 			lot := &domain.Lot{
 				TradeID:              t.ID,
 				DepotID:              t.DepotID,
-				WKN:                  t.WKN,
+				StockID:              t.StockID,
 				DateOfPurchase:       t.Timestamp,
 				Quantity:             t.Quantity,
 				Remaining:            t.Quantity,
@@ -52,9 +52,9 @@ func buildPortfolio(trades []domain.Trade) PortfolioSnapshot {
 				RemainingCostInCents: t.TotalInCents,
 			}
 			lots = append(lots, lot)
-			lotsByWKN[t.WKN] = append(lotsByWKN[t.WKN], lot)
+			lotsByStockID[t.StockID] = append(lotsByStockID[t.StockID], lot)
 		case domain.TradeTypeSell:
-			snapshot.applySell(t, lotsByWKN[t.WKN])
+			snapshot.applySell(t, lotsByStockID[t.StockID])
 		}
 	}
 
@@ -114,7 +114,7 @@ func (s *PortfolioSnapshot) applySell(sell domain.Trade, lots []*domain.Lot) {
 		s.allocations = append(s.allocations, domain.SellAllocation{
 			SellTradeID:         sell.ID,
 			BuyTradeID:          lot.TradeID,
-			WKN:                 sell.WKN,
+			StockID:             sell.StockID,
 			Quantity:            take,
 			CostBasisInCents:    costBasis,
 			ProceedsInCents:     proceeds,
@@ -125,7 +125,7 @@ func (s *PortfolioSnapshot) applySell(sell domain.Trade, lots []*domain.Lot) {
 	}
 
 	if toSell > 0 {
-		s.unmatched[sell.WKN] += toSell
+		s.unmatched[sell.StockID] += toSell
 	}
 }
 
@@ -169,25 +169,25 @@ func validateTradeHistory(trades []domain.Trade) error {
 }
 
 func (s PortfolioSnapshot) positions(depotID int) []domain.Position {
-	byWKN := map[string]*domain.Position{}
-	var order []string
+	byStockID := map[int]*domain.Position{}
+	var order []int
 
 	for _, lot := range s.openLots {
-		position, ok := byWKN[lot.WKN]
+		position, ok := byStockID[lot.StockID]
 		if !ok {
-			position = &domain.Position{DepotID: depotID, WKN: lot.WKN, Lots: []domain.Lot{}}
-			byWKN[lot.WKN] = position
-			order = append(order, lot.WKN)
+			position = &domain.Position{DepotID: depotID, StockID: lot.StockID, Lots: []domain.Lot{}}
+			byStockID[lot.StockID] = position
+			order = append(order, lot.StockID)
 		}
 		position.Quantity += lot.Remaining
 		position.InvestedInCents += lot.RemainingCostInCents
 		position.Lots = append(position.Lots, lot)
 	}
 
-	sort.Strings(order)
+	sort.Ints(order)
 	positions := make([]domain.Position, 0, len(order))
-	for _, wkn := range order {
-		position := byWKN[wkn]
+	for _, stockID := range order {
+		position := byStockID[stockID]
 		position.Quantity = clampQuantity(position.Quantity)
 		if position.Quantity <= 0 {
 			continue
@@ -196,6 +196,14 @@ func (s PortfolioSnapshot) positions(depotID int) []domain.Position {
 		positions = append(positions, *position)
 	}
 	return positions
+}
+
+func currentValueInCents(positions []domain.Position, priceByStockID map[int]int) int {
+	var total int
+	for _, position := range positions {
+		total += int(math.Round(position.Quantity * float64(priceByStockID[position.StockID])))
+	}
+	return total
 }
 
 func investedInCents(trades []domain.Trade) int {
@@ -243,7 +251,7 @@ func (s PortfolioSnapshot) tradeDTOs(trades []domain.Trade) []domain.TradeDTO {
 			ID:                  t.ID,
 			DepotID:             t.DepotID,
 			WalletTransactionID: t.WalletTransactionID,
-			WKN:                 t.WKN,
+			StockID:             t.StockID,
 			Type:                t.Type,
 			Quantity:            t.Quantity,
 			TotalInCents:        t.TotalInCents,

@@ -27,6 +27,7 @@ type TransactionSearchCriteria struct {
 type PaginatedTransactions struct {
 	Transactions []TransactionDTO `json:"transactions"`
 	Total        int              `json:"total"`
+	SumInCents   int              `json:"sumInCents"`
 	Page         int              `json:"page"`
 	PageSize     int              `json:"pageSize"`
 }
