@@ -30,6 +30,10 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		page: 0,
 		pageSize: 0
 	};
+	const debtSummary = (await authedApiFetch('/transactions/search?debt=true&pageSize=1')) ?? {
+		total: 0,
+		sumInCents: 0
+	};
 
 	return {
 		transactions: transactions.transactions,
@@ -39,6 +43,8 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		pageSize: transactions.pageSize,
 		wallets,
 		depots,
-		budgets
+		budgets,
+		debtTotal: debtSummary.total,
+		debtSumInCents: debtSummary.sumInCents
 	};
 };

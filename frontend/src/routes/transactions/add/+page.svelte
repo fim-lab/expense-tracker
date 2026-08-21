@@ -13,9 +13,14 @@
 	let walletId = $state(Number(urlParams.get('walletId')) || 0);
 	let budgetId = $state(Number(urlParams.get('budgetId')) || 0);
 	let type = $state(urlParams.get('type') || 'EXPENSE');
+	let isDebt = $state(false);
 	let errorMessage = $state('');
 
 	let templates: TransactionTemplate[] = $state(data.templates || []);
+
+	$effect(() => {
+		if (isDebt) budgetId = 0;
+	});
 
 	function handleFocus(event: FocusEvent) {
 		const input = event.target as HTMLInputElement;
@@ -68,9 +73,10 @@
 			description: description,
 			amountInCents: Math.round(amount * 100),
 			walletId: Number(walletId),
-			budgetId: Number(budgetId),
+			budgetId: isDebt ? null : Number(budgetId),
 			type: type,
 			isPending: false,
+			isDebt: isDebt,
 			tags: []
 		};
 
@@ -78,8 +84,12 @@
 			errorMessage = 'Amount must be greater than zero.';
 			return;
 		}
-		if (payload.walletId === 0 || payload.budgetId === 0) {
-			errorMessage = 'Please select a wallet and a budget.';
+		if (payload.walletId === 0) {
+			errorMessage = 'Please select a wallet.';
+			return;
+		}
+		if (!isDebt && payload.budgetId === 0) {
+			errorMessage = 'Please select a budget.';
 			return;
 		}
 
@@ -190,8 +200,13 @@
 		</div>
 
 		<label>
+			<input type="checkbox" bind:checked={isDebt} />
+			This is a debt transaction
+		</label>
+
+		<label>
 			Budget
-			<select bind:value={budgetId} required>
+			<select bind:value={budgetId} disabled={isDebt} required={!isDebt}>
 				<option value={0} disabled>Select Budget Category</option>
 				{#each data.budgets || [] as budget}
 					<option value={budget.id}>{budget.name}</option>

@@ -25,6 +25,7 @@
 		const typeParam = page.url.searchParams.get('type');
 		return (typeParam === 'INCOME' || typeParam === 'EXPENSE') ? typeParam : 'all';
 	});
+	const debtOnly = $derived(page.url.searchParams.get('debt') === 'true');
 
 	const debouncedUpdateParams = debounce((value: string) => {
 		updateParams({ q: value });
@@ -79,6 +80,11 @@
 			</select>
 		</label>
 	</div>
+	<label for="debt">
+		<input type="checkbox" id="debt" name="debt" checked={debtOnly}
+			onchange={(e) => updateParams({ debt: e.currentTarget.checked ? 'true' : undefined })} />
+		Debt only
+	</label>
 </form>
 
 <style>

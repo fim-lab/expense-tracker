@@ -11,6 +11,7 @@ type TransactionDTO struct {
 	BudgetName    string          `json:"budgetName"`
 	WalletName    string          `json:"walletName"`
 	IsPending     bool            `json:"isPending"`
+	IsDebt        bool            `json:"isDebt"`
 }
 
 type TransactionSearchCriteria struct {
@@ -20,6 +21,7 @@ type TransactionSearchCriteria struct {
 	BudgetID   *int
 	WalletID   *int
 	Type       *TransactionType
+	IsDebt     *bool
 	Page       int
 	PageSize   int
 }
