@@ -13,7 +13,6 @@ import (
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 	"github.com/fim-lab/expense-tracker/internal/core/services"
 	"github.com/go-chi/chi/v5"
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	_ "github.com/lib/pq"
 )
 
@@ -63,7 +62,7 @@ func main() {
 
 	// Setup router
 	router := chi.NewRouter()
-	router.Use(chimiddleware.Logger)
+	router.Use(middleware.RequestLogger)
 
 	// Mount routers
 	router.Mount("/auth", authRouter(&userService, &sessionService))
@@ -78,7 +77,8 @@ func main() {
 func authRouter(userService *ports.UserService, sessionService *ports.SessionService) http.Handler {
 	r := chi.NewRouter()
 	authHandler := httpadapter.NewAuthHandler(userService, sessionService)
-	r.Post("/login", authHandler.Login)
+	loginLimiter := middleware.NewLoginLimiter()
+	r.With(loginLimiter.Handle).Post("/login", authHandler.Login)
 	r.Post("/logout", authHandler.Logout)
 	return r
 }
