@@ -99,9 +99,15 @@ func (s *transactionService) Search(userID int, criteria domain.TransactionSearc
 		return nil, err
 	}
 
+	sum, err := s.transactionRepo.SumSearchedTransactionAmounts(userID, criteria)
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.PaginatedTransactions{
 		Transactions: transactions,
 		Total:        total,
+		SumInCents:   sum,
 		Page:         criteria.Page,
 		PageSize:     criteria.PageSize,
 	}, nil

@@ -97,6 +97,9 @@
 
 		<div class="transaction-list">
 			{#if page.data.transactions?.length > 0}
+				<p class="total">
+					Sum <strong>{formatCurrency(page.data.sumInCents)}</strong>
+				</p>
 				{#each page.data.transactions as tx (tx.id)}
 					<TransactionCard transaction={tx} ondelete={deleteTransaction} />
 				{/each}
@@ -112,3 +115,11 @@
 		{/if}
 	</article>
 </div>
+
+<style>
+	.total {
+		display: flex;
+		justify-content: space-between;
+		color: var(--pico-muted-color);
+	}
+</style>

@@ -39,6 +39,7 @@ export interface TransactionDTO {
 export interface PaginatedTransactions {
 	transactions: TransactionDTO[];
 	total: number;
+	sumInCents: number;
 	page: number;
 	pageSize: number;
 }

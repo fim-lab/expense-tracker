@@ -253,6 +253,57 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 	return count, nil
 }
 
+func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criteria domain.TransactionSearchCriteria) (int, error) {
+	r.repo.mu.RLock()
+	defer r.repo.mu.RUnlock()
+
+	var sum int
+	for _, t := range r.repo.transactions {
+		if t.UserID != userID {
+			continue
+		}
+
+		if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+			term := strings.ToLower(*criteria.SearchTerm)
+			if !strings.Contains(strings.ToLower(t.Description), term) {
+				continue
+			}
+		}
+
+		if criteria.FromDate != nil && t.Date.Before(*criteria.FromDate) {
+			continue
+		}
+		if criteria.UntilDate != nil && t.Date.After(*criteria.UntilDate) {
+			continue
+		}
+
+		if criteria.BudgetID != nil {
+			if t.BudgetID == nil {
+				continue
+			}
+			if *t.BudgetID != *criteria.BudgetID {
+				continue
+			}
+		}
+
+		if criteria.WalletID != nil && t.WalletID != *criteria.WalletID {
+			continue
+		}
+
+		if criteria.Type != nil && t.Type != *criteria.Type {
+			continue
+		}
+
+		if t.Type == domain.Expense {
+			sum -= t.AmountInCents
+		} else {
+			sum += t.AmountInCents
+		}
+	}
+
+	return sum, nil
+}
+
 func (r *TransactionRepository) DeleteTransaction(id int) error {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()

@@ -134,6 +134,7 @@ type TransactionRepository interface {
 	FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error)
 	SearchTransactions(userID int, criteria domain.TransactionSearchCriteria) ([]domain.TransactionDTO, error)
 	CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error)
+	SumSearchedTransactionAmounts(userID int, criteria domain.TransactionSearchCriteria) (int, error)
 	UpdateTransaction(t domain.Transaction) error
 	DeleteTransaction(id int) error
 	DeleteAllByUser(userID int) error

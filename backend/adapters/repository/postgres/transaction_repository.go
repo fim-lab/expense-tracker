@@ -317,6 +317,52 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 	return count, nil
 }
 
+func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criteria domain.TransactionSearchCriteria) (int, error) {
+	query := `SELECT COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN -t.amount_in_cents ELSE t.amount_in_cents END), 0) FROM transactions t`
+	whereClause := " WHERE t.user_id = $1"
+	args := []interface{}{userID}
+	argID := 2
+
+	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
+		args = append(args, "%"+*criteria.SearchTerm+"%")
+		argID++
+	}
+	if criteria.FromDate != nil {
+		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)
+		args = append(args, *criteria.FromDate)
+		argID++
+	}
+	if criteria.UntilDate != nil {
+		whereClause += fmt.Sprintf(" AND t.date <= $%d", argID)
+		args = append(args, *criteria.UntilDate)
+		argID++
+	}
+	if criteria.BudgetID != nil {
+		whereClause += fmt.Sprintf(" AND t.budget_id = $%d", argID)
+		args = append(args, *criteria.BudgetID)
+		argID++
+	}
+	if criteria.WalletID != nil {
+		whereClause += fmt.Sprintf(" AND t.wallet_id = $%d", argID)
+		args = append(args, *criteria.WalletID)
+		argID++
+	}
+	if criteria.Type != nil {
+		whereClause += fmt.Sprintf(" AND t.type = $%d", argID)
+		args = append(args, *criteria.Type)
+		argID++
+	}
+
+	query += whereClause
+	var sum int
+	err := r.db.QueryRow(query, args...).Scan(&sum)
+	if err != nil {
+		return 0, err
+	}
+	return sum, nil
+}
+
 func (r *TransactionRepository) DeleteTransaction(id int) error {
 	tx, err := r.db.Begin()
 	if err != nil {
