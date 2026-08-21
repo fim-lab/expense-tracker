@@ -1,25 +1,35 @@
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import type { Depot, Portfolio, Stock } from '$lib/types';
 
-export const load: PageServerLoad = async ({ fetch }) => {
-	const [walletsRes, depotsRes, budgetsRes, stocksRes] = await Promise.all([
-		fetch('/api/wallets'),
-		fetch('/api/depots'),
-		fetch('/api/budgets'),
-		fetch('/api/stocks')
-	]);
+export const load: PageServerLoad = async ({ fetch, cookies }) => {
+	const cookieHeader = cookies
+		.getAll()
+		.map((c) => `${c.name}=${c.value}`)
+		.join('; ');
 
-	const wallets = (walletsRes.ok ? await walletsRes.json() : []) ?? [];
-	const depots: Depot[] = (depotsRes.ok ? await depotsRes.json() : []) ?? [];
-	const budgets = (budgetsRes.ok ? await budgetsRes.json() : []) ?? [];
-	const allStocks: Stock[] = (stocksRes.ok ? await stocksRes.json() : []) ?? [];
+	const authedApiFetch = async (path: string) => {
+		const res = await fetch(`/api${path}`, {
+			headers: { Cookie: cookieHeader }
+		});
 
-	const portfolioResponses = await Promise.all(
-		depots.map((depot: Depot) => fetch(`/api/depots/${depot.id}/portfolio`))
-	);
-	const portfolios: Portfolio[] = await Promise.all(
-		portfolioResponses.map((res) => (res.ok ? res.json() : { positions: [] }))
-	);
+		if (res.status === 401) {
+			throw redirect(302, '/login');
+		}
+
+		if (!res.ok) return null;
+		return res.json();
+	};
+
+	const wallets = (await authedApiFetch('/wallets')) ?? [];
+	const depots: Depot[] = (await authedApiFetch('/depots')) ?? [];
+	const budgets = (await authedApiFetch('/budgets')) ?? [];
+	const allStocks: Stock[] = (await authedApiFetch('/stocks')) ?? [];
+
+	const portfolios: Portfolio[] = [];
+	for (const depot of depots) {
+		portfolios.push((await authedApiFetch(`/depots/${depot.id}/portfolio`)) ?? { positions: [] });
+	}
 	const heldStockIds = new Set(
 		portfolios.flatMap((portfolio) => portfolio.positions.map((p) => p.stockId))
 	);

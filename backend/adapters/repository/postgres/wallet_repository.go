@@ -56,7 +56,7 @@ func (r *WalletRepository) FindWalletsByUser(userID int) ([]domain.Wallet, error
 		}
 		res = append(res, w)
 	}
-	return res, nil
+	return res, rows.Err()
 }
 
 func (r *WalletRepository) DeleteWallet(id int) error {

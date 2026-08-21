@@ -48,7 +48,7 @@ func (r *DepotRepository) FindDepotsByUser(userID int) ([]domain.Depot, error) {
 		}
 		depots = append(depots, d)
 	}
-	return depots, nil
+	return depots, rows.Err()
 }
 
 func (r *DepotRepository) DeleteDepot(id int) error {
