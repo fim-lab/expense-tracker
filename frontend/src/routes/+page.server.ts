@@ -45,6 +45,6 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		depots,
 		budgets,
 		debtTotal: debtSummary.total,
-		debtSumInCents: debtSummary.sumInCents
+		debtSumInCents: debtSummary.sumInCents * -1 // -1, because if you lend someone money (expense/negative), that does effectively mean, you own more money than is in your pocket (so add it/positive)
 	};
 };

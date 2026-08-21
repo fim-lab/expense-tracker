@@ -23,7 +23,7 @@
 			(page.data?.depots ?? []).reduce(
 				(sum: number, d: Depot) => sum + (d.currentValueInCents ?? d.investedInCents ?? 0),
 				0
-			) -
+			) +
 			(page.data?.debtSumInCents ?? 0)
 	);
 
