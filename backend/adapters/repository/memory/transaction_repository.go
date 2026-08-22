@@ -112,7 +112,7 @@ func (r *TransactionRepository) FindTransactionsByUser(userID int, limit int, of
 			Type:          t.Type,
 			BudgetName:    budgetName,
 			WalletName:    wallet.Name,
-			IsPending:     t.IsPending,
+			IsPending:     t.IsPending != nil && *t.IsPending,
 			IsDebt:        t.IsDebt != nil && *t.IsDebt,
 		})
 	}
@@ -207,7 +207,7 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 			Type:          t.Type,
 			BudgetName:    budgetName,
 			WalletName:    wallet.Name,
-			IsPending:     t.IsPending,
+			IsPending:     t.IsPending != nil && *t.IsPending,
 			IsDebt:        t.IsDebt != nil && *t.IsDebt,
 		})
 	}

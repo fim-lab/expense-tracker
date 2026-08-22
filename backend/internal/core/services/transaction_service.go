@@ -127,6 +127,15 @@ func (s *transactionService) UpdateTransaction(userID int, t domain.Transaction)
 		return domain.ErrUnauthorized
 	}
 	t.UserID = userID
+	if t.IsDebt == nil {
+		t.IsDebt = existing.IsDebt
+	}
+	if t.IsPending == nil {
+		t.IsPending = existing.IsPending
+	}
+	if t.Tags == nil {
+		t.Tags = existing.Tags
+	}
 	if t.IsDebt != nil && *t.IsDebt {
 		t.BudgetID = nil
 	}

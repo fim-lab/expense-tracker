@@ -245,13 +245,14 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 		}
 
 		isDebt := importTx.IsDebt
+		isPending := importTx.IsPending
 		t := domain.Transaction{
 			UserID:        userID,
 			Date:          importTx.Date,
 			Description:   importTx.Description,
 			AmountInCents: amount,
 			Type:          txType,
-			IsPending:     importTx.IsPending,
+			IsPending:     &isPending,
 			IsDebt:        &isDebt,
 			WalletID:      walletID,
 		}
