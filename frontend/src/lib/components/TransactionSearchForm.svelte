@@ -30,6 +30,36 @@
 	const debouncedUpdateParams = debounce((value: string) => {
 		updateParams({ q: value });
 	}, 500);
+
+	const currentMonthLabel = new Date().toLocaleDateString('de-DE', { month: 'long' });
+	const currentYearLabel = String(new Date().getFullYear());
+
+	function formatDateISO(date: Date): string {
+		const year = date.getFullYear();
+		const month = String(date.getMonth() + 1).padStart(2, '0');
+		const day = String(date.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	}
+
+	function setCurrentMonth() {
+		const now = new Date();
+		updateParams({ from: formatDateISO(new Date(now.getFullYear(), now.getMonth(), 1)), until: undefined });
+	}
+
+	function setMonthToDate() {
+		const now = new Date();
+		updateParams({ from: formatDateISO(new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())), until: undefined });
+	}
+
+	function setCurrentYear() {
+		const now = new Date();
+		updateParams({ from: formatDateISO(new Date(now.getFullYear(), 0, 1)), until: undefined });
+	}
+
+	function setYearToDate() {
+		const now = new Date();
+		updateParams({ from: formatDateISO(new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())), until: undefined });
+	}
 </script>
 
 <form>
@@ -42,6 +72,12 @@
 		<div></div>
 	</div>
 
+	<div class="grid quick-range-buttons">
+		<button type="button" class="secondary outline" onclick={setCurrentMonth}>{currentMonthLabel}</button>
+		<button type="button" class="secondary outline" onclick={setMonthToDate}>MTD</button>
+		<button type="button" class="secondary outline" onclick={setCurrentYear}>{currentYearLabel}</button>
+		<button type="button" class="secondary outline" onclick={setYearToDate}>YTD</button>
+	</div>
 	<div class="grid">
 		<label for="from">
 			From
@@ -90,5 +126,10 @@
 <style>
 	form {
 		margin-bottom: 2rem;
+	}
+
+	.quick-range-buttons button {
+		padding: 0.25rem 0.75rem;
+		font-size: 0.85rem;
 	}
 </style>
