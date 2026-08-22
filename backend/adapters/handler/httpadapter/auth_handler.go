@@ -53,7 +53,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	sessionToken := generateToken(32)
 
-	expireDate := time.Now().Add(24 * time.Hour)
+	expireDate := time.Now().Add(28 * 24 * time.Hour)
 
 	session := domain.Session{
 		UserID:       user.ID,

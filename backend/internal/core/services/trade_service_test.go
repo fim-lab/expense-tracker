@@ -189,10 +189,11 @@ func TestTradeService_UpdatePreservesBudgetAndTagsOnLinkedTransaction(t *testing
 
 	tradeID := f.mustBuy(t, 1, 10, 10000)
 
+	isPending := true
 	transaction := f.linkedTransaction(t, tradeID)
 	transaction.BudgetID = &budgetID
 	transaction.Tags = []string{"etf"}
-	transaction.IsPending = true
+	transaction.IsPending = &isPending
 	if err := f.txSvc.UpdateTransaction(f.userID, transaction); err != nil {
 		t.Fatalf("could not annotate the wallet transaction: %v", err)
 	}
@@ -210,7 +211,7 @@ func TestTradeService_UpdatePreservesBudgetAndTagsOnLinkedTransaction(t *testing
 	if len(updated.Tags) != 1 || updated.Tags[0] != "etf" {
 		t.Errorf("expected the tags to survive the update, got %v", updated.Tags)
 	}
-	if !updated.IsPending {
+	if updated.IsPending == nil || !*updated.IsPending {
 		t.Error("expected the pending flag to survive the update")
 	}
 	if updated.AmountInCents != 11000 {

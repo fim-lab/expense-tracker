@@ -169,7 +169,7 @@ func (r *TransactionRepository) GetTransactionCount(userID int) (int, error) {
 
 func (r *TransactionRepository) FindTransactionsByUser(userID int, limit int, offset int) ([]domain.TransactionDTO, error) {
 	query := `
-		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, b.name as budget_name, w.name as wallet_name
+		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, t.is_debt, b.name as budget_name, w.name as wallet_name
 		FROM transactions t
 		LEFT JOIN budgets b ON t.budget_id = b.id
 		LEFT JOIN wallets w ON t.wallet_id = w.id
@@ -186,10 +186,12 @@ func (r *TransactionRepository) FindTransactionsByUser(userID int, limit int, of
 	for rows.Next() {
 		var t domain.TransactionDTO
 		var nullBudgetName sql.NullString
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &nullBudgetName, &t.WalletName)
+		var isDebt *bool
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &isDebt, &nullBudgetName, &t.WalletName)
 		if err != nil {
 			return nil, err
 		}
+		t.IsDebt = isDebt != nil && *isDebt
 		if nullBudgetName.Valid {
 			t.BudgetName = nullBudgetName.String
 		} else {
@@ -202,7 +204,7 @@ func (r *TransactionRepository) FindTransactionsByUser(userID int, limit int, of
 
 func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.TransactionSearchCriteria) ([]domain.TransactionDTO, error) {
 	query := `
-		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, b.name as budget_name, w.name as wallet_name
+		SELECT t.id, t.date, t.description, t.amount_in_cents, t.type, t.is_pending, t.is_debt, b.name as budget_name, w.name as wallet_name
 		FROM transactions t
 		LEFT JOIN budgets b ON t.budget_id = b.id
 		LEFT JOIN wallets w ON t.wallet_id = w.id
@@ -241,6 +243,11 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 		args = append(args, *criteria.Type)
 		argID++
 	}
+	if criteria.IsDebt != nil {
+		whereClause += fmt.Sprintf(" AND COALESCE(t.is_debt, false) = $%d", argID)
+		args = append(args, *criteria.IsDebt)
+		argID++
+	}
 
 	query += whereClause
 	query += " ORDER BY t.date DESC, t.id DESC"
@@ -257,10 +264,12 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 	for rows.Next() {
 		var t domain.TransactionDTO
 		var nullBudgetName sql.NullString
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &nullBudgetName, &t.WalletName)
+		var isDebt *bool
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &isDebt, &nullBudgetName, &t.WalletName)
 		if err != nil {
 			return nil, err
 		}
+		t.IsDebt = isDebt != nil && *isDebt
 		if nullBudgetName.Valid {
 			t.BudgetName = nullBudgetName.String
 		} else {
@@ -307,6 +316,11 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 		args = append(args, *criteria.Type)
 		argID++
 	}
+	if criteria.IsDebt != nil {
+		whereClause += fmt.Sprintf(" AND COALESCE(t.is_debt, false) = $%d", argID)
+		args = append(args, *criteria.IsDebt)
+		argID++
+	}
 
 	query += whereClause
 	var count int
@@ -351,6 +365,11 @@ func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criter
 	if criteria.Type != nil {
 		whereClause += fmt.Sprintf(" AND t.type = $%d", argID)
 		args = append(args, *criteria.Type)
+		argID++
+	}
+	if criteria.IsDebt != nil {
+		whereClause += fmt.Sprintf(" AND COALESCE(t.is_debt, false) = $%d", argID)
+		args = append(args, *criteria.IsDebt)
 		argID++
 	}
 

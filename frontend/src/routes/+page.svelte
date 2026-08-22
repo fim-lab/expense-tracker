@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
+	import DebtCard from '$lib/components/DebtCard.svelte';
 	import DepotCard from '$lib/components/DepotCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
@@ -16,12 +17,14 @@
 	const hasWallets = $derived(page.data?.wallets?.length > 0);
 	const hasDepots = $derived(page.data?.depots?.length > 0);
 	const hasBudgets = $derived(page.data?.budgets?.length > 0);
+	const hasDebts = $derived((page.data?.debtTotal ?? 0) > 0);
 	const totalWealth = $derived(
 		(page.data?.wallets ?? []).reduce((sum: number, w: Wallet) => sum + w.balanceCents, 0) +
 			(page.data?.depots ?? []).reduce(
 				(sum: number, d: Depot) => sum + (d.currentValueInCents ?? d.investedInCents ?? 0),
 				0
-			)
+			) +
+			(page.data?.debtSumInCents ?? 0)
 	);
 
 	async function deleteTransaction(id: number) {
@@ -63,9 +66,9 @@
 			<header><strong>Search</strong></header>
 			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
 		</article>
-		{#if hasBudgets || hasWallets || hasDepots}
+		{#if hasBudgets || hasWallets || hasDepots || hasDebts}
 			<article>
-				{#if hasWallets || hasDepots}
+				{#if hasWallets || hasDepots || hasDebts}
 					<p class="total">
 						Total wealth <strong>{formatCurrency(totalWealth)}</strong>
 					</p>
@@ -75,6 +78,10 @@
 					{#each page.data.wallets as wallet}
 						<WalletCard {wallet} />
 					{/each}
+				{/if}
+				{#if hasDebts}
+					<header><strong>Debt</strong></header>
+					<DebtCard amountInCents={page.data.debtSumInCents} />
 				{/if}
 				{#if hasDepots}
 					<header><strong>Depots</strong></header>

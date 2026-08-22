@@ -64,16 +64,18 @@
 			</label>
 		</div>
 
-		<label>
-			Budget
-			<select name="budgetId" required>
-				{#each budgets as budget}
-					<option value={budget.id} selected={budget.id === transaction.budgetId}>
-						{budget.name}
-					</option>
-				{/each}
-			</select>
-		</label>
+		{#if !transaction.isDebt}
+			<label>
+				Budget
+				<select name="budgetId" required>
+					{#each budgets as budget}
+						<option value={budget.id} selected={budget.id === transaction.budgetId}>
+							{budget.name}
+						</option>
+					{/each}
+				</select>
+			</label>
+		{/if}
 
 		{#if form?.error}
 			<p class="error-message">{form.error}</p>

@@ -118,6 +118,12 @@ func (h *TransactionHandler) SearchTransactions(w http.ResponseWriter, r *http.R
 		}
 	}
 
+	if debtStr := query.Get("debt"); debtStr != "" {
+		if debt, err := strconv.ParseBool(debtStr); err == nil {
+			criteria.IsDebt = &debt
+		}
+	}
+
 	result, err := h.service.Search(userID, criteria)
 	if err != nil {
 		http.Error(w, "Failed to search transactions", http.StatusInternalServerError)

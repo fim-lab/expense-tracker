@@ -41,12 +41,14 @@ export const actions: Actions = {
 
 		const rfc3339Date = new Date(data.get('date') as string).toISOString();
 
+		const budgetId = data.get('budgetId');
+
 		const payload = {
 			description: data.get('description'),
 			amountInCents: Math.round(Number(data.get('amount')) * 100),
 			date: rfc3339Date,
 			walletId: Number(data.get('walletId')),
-			budgetId: Number(data.get('budgetId')),
+			budgetId: budgetId ? Number(budgetId) : null,
 			type: data.get('type')
 		};
 

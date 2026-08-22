@@ -7,6 +7,7 @@ export interface TransactionSearchCriteria {
 	budget_id?: number;
 	wallet_id?: number;
 	type?: TransactionType;
+	debt?: boolean;
 	page?: number;
 	pageSize?: number;
 }
@@ -34,6 +35,7 @@ export interface TransactionDTO {
 	budgetName: string;
 	walletName: string;
 	isPending: boolean;
+	isDebt: boolean;
 }
 
 export interface PaginatedTransactions {

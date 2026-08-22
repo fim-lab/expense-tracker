@@ -112,7 +112,8 @@ func (r *TransactionRepository) FindTransactionsByUser(userID int, limit int, of
 			Type:          t.Type,
 			BudgetName:    budgetName,
 			WalletName:    wallet.Name,
-			IsPending:     t.IsPending,
+			IsPending:     t.IsPending != nil && *t.IsPending,
+			IsDebt:        t.IsDebt != nil && *t.IsDebt,
 		})
 	}
 
@@ -160,6 +161,13 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 			continue
 		}
 
+		if criteria.IsDebt != nil {
+			isDebt := t.IsDebt != nil && *t.IsDebt
+			if isDebt != *criteria.IsDebt {
+				continue
+			}
+		}
+
 		filtered = append(filtered, t)
 	}
 
@@ -199,7 +207,8 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 			Type:          t.Type,
 			BudgetName:    budgetName,
 			WalletName:    wallet.Name,
-			IsPending:     t.IsPending,
+			IsPending:     t.IsPending != nil && *t.IsPending,
+			IsDebt:        t.IsDebt != nil && *t.IsDebt,
 		})
 	}
 
@@ -247,6 +256,13 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 			continue
 		}
 
+		if criteria.IsDebt != nil {
+			isDebt := t.IsDebt != nil && *t.IsDebt
+			if isDebt != *criteria.IsDebt {
+				continue
+			}
+		}
+
 		count++
 	}
 
@@ -292,6 +308,13 @@ func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criter
 
 		if criteria.Type != nil && t.Type != *criteria.Type {
 			continue
+		}
+
+		if criteria.IsDebt != nil {
+			isDebt := t.IsDebt != nil && *t.IsDebt
+			if isDebt != *criteria.IsDebt {
+				continue
+			}
 		}
 
 		if t.Type == domain.Expense {

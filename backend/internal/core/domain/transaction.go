@@ -18,7 +18,7 @@ type Transaction struct {
 	Description   string          `json:"description"`
 	AmountInCents int             `json:"amountInCents"`
 	Type          TransactionType `json:"type"`
-	IsPending     bool            `json:"isPending"`
+	IsPending     *bool           `json:"isPending,omitempty"`
 	IsDebt        *bool           `json:"isDebt,omitempty"`
 	Tags          []string        `json:"tags,omitempty"`
 }
