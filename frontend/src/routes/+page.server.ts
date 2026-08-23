@@ -23,6 +23,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 	const wallets = (await authedApiFetch('/wallets')) || [];
 	const depots = (await authedApiFetch('/depots')) || [];
 	const budgets = (await authedApiFetch('/budgets')) || [];
+	const budgetGroups = (await authedApiFetch('/budget-groups')) || [];
 	const transactions = (await authedApiFetch(`/transactions/search?${url.searchParams}`)) ?? {
 		data: [],
 		total: 0,
@@ -44,6 +45,7 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 		wallets,
 		depots,
 		budgets,
+		budgetGroups,
 		debtTotal: debtSummary.total,
 		debtSumInCents: debtSummary.sumInCents * -1 // -1, because if you lend someone money (expense/negative), that does effectively mean, you own more money than is in your pocket (so add it/positive)
 	};

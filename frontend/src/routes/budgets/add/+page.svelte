@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import type { BudgetGroup } from '$lib/types';
+
+	let { data } = $props();
+
+	let budgetGroups: BudgetGroup[] = data.budgetGroups || [];
 
 	let name = $state('');
 	let limitInEuro = $state(0);
+	let groupId: number | undefined = $state(undefined);
 	let isSubmitting = $state(false);
 
 	function handleFocus(event: FocusEvent) {
@@ -26,10 +32,11 @@
 		isSubmitting = true;
 
 		const payload = {
-			id: 0, // Backend handles this
-			userId: 0, // Backend handles via session
+			id: 0,
+			userId: 0,
 			name: name,
-			limitCents: Math.round(limitInEuro * 100)
+			limitCents: Math.round(limitInEuro * 100),
+			groupId: groupId ?? null
 		};
 
 		const res = await fetch('/api/budgets', {
@@ -65,6 +72,16 @@
 				onfocus={handleFocus}
 				onblur={handleBlur}
 			/>
+		</label>
+
+		<label>
+			Group
+			<select bind:value={groupId}>
+				<option value={undefined}>Ungrouped</option>
+				{#each budgetGroups as group (group.id)}
+					<option value={group.id}>{group.name}</option>
+				{/each}
+			</select>
 		</label>
 
 		<button type="submit" aria-busy={isSubmitting}>Create Budget</button>
