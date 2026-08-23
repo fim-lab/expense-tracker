@@ -105,6 +105,12 @@ func (h *TransactionHandler) SearchTransactions(w http.ResponseWriter, r *http.R
 		}
 	}
 
+	if budgetGroupIDStr := query.Get("budget_group_id"); budgetGroupIDStr != "" {
+		if budgetGroupID, err := strconv.Atoi(budgetGroupIDStr); err == nil {
+			criteria.BudgetGroupID = &budgetGroupID
+		}
+	}
+
 	if walletIDStr := query.Get("wallet_id"); walletIDStr != "" {
 		if walletID, err := strconv.Atoi(walletIDStr); err == nil {
 			criteria.WalletID = &walletID

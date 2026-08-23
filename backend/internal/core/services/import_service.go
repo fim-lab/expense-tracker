@@ -48,6 +48,7 @@ func parseTradeDescription(description string) (tradeType domain.TradeType, quan
 type importService struct {
 	userRepo                ports.UserRepository
 	budgetRepo              ports.BudgetRepository
+	budgetGroupRepo         ports.BudgetGroupRepository
 	walletRepo              ports.WalletRepository
 	depotRepo               ports.DepotRepository
 	transactionRepo         ports.TransactionRepository
@@ -59,6 +60,7 @@ type importService struct {
 func NewImportService(
 	userRepo ports.UserRepository,
 	budgetRepo ports.BudgetRepository,
+	budgetGroupRepo ports.BudgetGroupRepository,
 	walletRepo ports.WalletRepository,
 	depotRepo ports.DepotRepository,
 	transactionRepo ports.TransactionRepository,
@@ -69,6 +71,7 @@ func NewImportService(
 	return &importService{
 		userRepo:                userRepo,
 		budgetRepo:              budgetRepo,
+		budgetGroupRepo:         budgetGroupRepo,
 		walletRepo:              walletRepo,
 		depotRepo:               depotRepo,
 		transactionRepo:         transactionRepo,
@@ -97,6 +100,10 @@ func (s *importService) DeleteAllUserData(userID int) error {
 
 	if err := s.budgetRepo.DeleteAllByUser(userID); err != nil {
 		return fmt.Errorf("failed to delete budgets: %w", err)
+	}
+
+	if err := s.budgetGroupRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete budget groups: %w", err)
 	}
 
 	if err := s.walletRepo.DeleteAllByUser(userID); err != nil {
@@ -164,15 +171,54 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 		budgetMap[b.Name] = b.ID
 	}
 
+	existingGroups, err := s.budgetGroupRepo.FindBudgetGroupsByUser(userID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch existing budget groups: %w", err)
+	}
+	groupMap := make(map[string]int)
+	for _, g := range existingGroups {
+		groupMap[g.Name] = g.ID
+	}
+
 	for _, importBudget := range data.Settings.Budgets {
-		if strings.ToLower(importBudget.Account) != "private" {
+		account := strings.TrimSpace(importBudget.Account)
+		if account == "" || strings.EqualFold(account, "private") {
 			continue
 		}
+		if _, exists := groupMap[account]; !exists {
+			g := domain.BudgetGroup{
+				UserID: userID,
+				Name:   account,
+			}
+			if err := s.budgetGroupRepo.SaveBudgetGroup(g); err != nil {
+				return fmt.Errorf("failed to save budget group %s: %w", account, err)
+			}
+			groupMap[account] = 0 // placeholder until refetch, guards against re-creating in this loop
+		}
+	}
+
+	// Refetch groups to get ids
+	existingGroups, err = s.budgetGroupRepo.FindBudgetGroupsByUser(userID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch budget groups: %w", err)
+	}
+	groupMap = make(map[string]int)
+	for _, g := range existingGroups {
+		groupMap[g.Name] = g.ID
+	}
+
+	for _, importBudget := range data.Settings.Budgets {
 		if _, exists := budgetMap[importBudget.Name]; !exists {
 			b := domain.Budget{
 				UserID:     userID,
 				Name:       importBudget.Name,
 				LimitCents: importBudget.ValueInCents,
+			}
+			account := strings.TrimSpace(importBudget.Account)
+			if account != "" && !strings.EqualFold(account, "private") {
+				if groupID, ok := groupMap[account]; ok {
+					b.GroupID = &groupID
+				}
 			}
 			if err := s.budgetRepo.SaveBudget(b); err != nil {
 				return fmt.Errorf("failed to save budget %s: %w", importBudget.Name, err)

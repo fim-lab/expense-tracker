@@ -12,12 +12,20 @@ CREATE TABLE IF NOT EXISTS sessions (
     expiry TIMESTAMP NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS budget_groups (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    UNIQUE(user_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS budgets (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     limit_cents BIGINT NOT NULL,
     balance_cents BIGINT NOT NULL DEFAULT 0,
+    group_id INT REFERENCES budget_groups(id) ON DELETE SET NULL;
     UNIQUE(user_id, name)
 );
 
@@ -92,6 +100,8 @@ CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_wallet_id ON transactions(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_budget_id ON transactions(budget_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON budgets(user_id);
+CREATE INDEX IF NOT EXISTS idx_budget_groups_user_id ON budget_groups(user_id);
+CREATE INDEX IF NOT EXISTS idx_budgets_group_id ON budgets(group_id);
 CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets(user_id);
 CREATE INDEX IF NOT EXISTS idx_depots_user_id ON depots(user_id);
 CREATE INDEX IF NOT EXISTS idx_trades_depot_id ON trades(depot_id);
