@@ -5,6 +5,7 @@ export interface TransactionSearchCriteria {
 	from?: string;
 	until?: string;
 	budget_id?: number;
+	budget_group_id?: number;
 	wallet_id?: number;
 	type?: TransactionType;
 	debt?: boolean;
@@ -70,9 +71,19 @@ export interface Budget {
 	limitCents: number;
 	balanceCents: number;
 	canDelete: boolean;
+	groupId?: number | null;
 	isEditing?: boolean;
 	newName?: string;
 	newLimitEuros?: number;
+	newGroupId?: number;
+}
+
+export interface BudgetGroup {
+	id: number;
+	userId: number;
+	name: string;
+	isEditing?: boolean;
+	newName?: string;
 }
 
 export interface Depot {

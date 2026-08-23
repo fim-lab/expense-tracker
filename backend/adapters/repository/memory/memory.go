@@ -13,6 +13,7 @@ type inMemoryRepositories struct {
 	mu                   sync.RWMutex
 	transactions         map[int]domain.Transaction
 	budgets              map[int]domain.Budget
+	budgetGroups         map[int]domain.BudgetGroup
 	wallets              map[int]domain.Wallet
 	users                map[string]domain.User
 	sessions             map[string]domain.Session
@@ -37,6 +38,7 @@ func NewInMemoryRepositories() *inMemoryRepositories {
 	return &inMemoryRepositories{
 		transactions:         make(map[int]domain.Transaction),
 		budgets:              make(map[int]domain.Budget),
+		budgetGroups:         make(map[int]domain.BudgetGroup),
 		wallets:              make(map[int]domain.Wallet),
 		users:                make(map[string]domain.User),
 		sessions:             make(map[string]domain.Session),
@@ -81,6 +83,10 @@ func (r *inMemoryRepositories) SessionRepository() ports.SessionRepository {
 
 func (r *inMemoryRepositories) BudgetRepository() ports.BudgetRepository {
 	return &BudgetRepository{repo: r}
+}
+
+func (r *inMemoryRepositories) BudgetGroupRepository() ports.BudgetGroupRepository {
+	return &BudgetGroupRepository{repo: r}
 }
 
 func (r *inMemoryRepositories) WalletRepository() ports.WalletRepository {

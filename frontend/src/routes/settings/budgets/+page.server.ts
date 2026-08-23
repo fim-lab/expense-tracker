@@ -8,11 +8,17 @@ export const load: PageServerLoad = async ({ fetch }) => {
         budgets = await budgetRes.json();
     }
 
+    const budgetGroupRes = await fetch('/api/budget-groups');
+    let budgetGroups = [];
+    if (budgetGroupRes.ok) {
+        budgetGroups = await budgetGroupRes.json();
+    }
+
     const userRes = await fetch('/api/users/me');
     let user: User | null = null;
     if (userRes.ok) {
         user = await userRes.json();
     }
-    
-    return { budgets, user };
+
+    return { budgets, budgetGroups, user };
 };

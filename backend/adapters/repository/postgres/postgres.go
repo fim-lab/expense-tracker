@@ -13,6 +13,7 @@ type postgresRepositoryCollection struct {
 	userRepo                *UserRepository
 	sessionRepo             *SessionRepository
 	budgetRepo              *BudgetRepository
+	budgetGroupRepo         *BudgetGroupRepository
 	walletRepo              *WalletRepository
 	depotRepo               *DepotRepository
 	transactionRepo         *TransactionRepository
@@ -27,6 +28,7 @@ func NewPostgresRepositoryCollection() (*sql.DB, ports.Repositories) {
 		userRepo:                NewUserRepository(db),
 		sessionRepo:             NewSessionRepository(db),
 		budgetRepo:              NewBudgetRepository(db),
+		budgetGroupRepo:         NewBudgetGroupRepository(db),
 		walletRepo:              NewWalletRepository(db),
 		depotRepo:               NewDepotRepository(db),
 		transactionRepo:         NewTransactionRepository(db),
@@ -64,6 +66,10 @@ func (prc *postgresRepositoryCollection) SessionRepository() ports.SessionReposi
 
 func (prc *postgresRepositoryCollection) BudgetRepository() ports.BudgetRepository {
 	return prc.budgetRepo
+}
+
+func (prc *postgresRepositoryCollection) BudgetGroupRepository() ports.BudgetGroupRepository {
+	return prc.budgetGroupRepo
 }
 
 func (prc *postgresRepositoryCollection) WalletRepository() ports.WalletRepository {

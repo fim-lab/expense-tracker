@@ -233,6 +233,11 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 		args = append(args, *criteria.BudgetID)
 		argID++
 	}
+	if criteria.BudgetGroupID != nil {
+		whereClause += fmt.Sprintf(" AND b.group_id = $%d", argID)
+		args = append(args, *criteria.BudgetGroupID)
+		argID++
+	}
 	if criteria.WalletID != nil {
 		whereClause += fmt.Sprintf(" AND t.wallet_id = $%d", argID)
 		args = append(args, *criteria.WalletID)
@@ -281,7 +286,7 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 }
 
 func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria domain.TransactionSearchCriteria) (int, error) {
-	query := `SELECT COUNT(t.id) FROM transactions t`
+	query := `SELECT COUNT(t.id) FROM transactions t LEFT JOIN budgets b ON t.budget_id = b.id`
 	whereClause := " WHERE t.user_id = $1"
 	args := []interface{}{userID}
 	argID := 2
@@ -304,6 +309,11 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 	if criteria.BudgetID != nil {
 		whereClause += fmt.Sprintf(" AND t.budget_id = $%d", argID)
 		args = append(args, *criteria.BudgetID)
+		argID++
+	}
+	if criteria.BudgetGroupID != nil {
+		whereClause += fmt.Sprintf(" AND b.group_id = $%d", argID)
+		args = append(args, *criteria.BudgetGroupID)
 		argID++
 	}
 	if criteria.WalletID != nil {
@@ -332,7 +342,7 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 }
 
 func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criteria domain.TransactionSearchCriteria) (int, error) {
-	query := `SELECT COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN -t.amount_in_cents ELSE t.amount_in_cents END), 0) FROM transactions t`
+	query := `SELECT COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN -t.amount_in_cents ELSE t.amount_in_cents END), 0) FROM transactions t LEFT JOIN budgets b ON t.budget_id = b.id`
 	whereClause := " WHERE t.user_id = $1"
 	args := []interface{}{userID}
 	argID := 2
@@ -355,6 +365,11 @@ func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criter
 	if criteria.BudgetID != nil {
 		whereClause += fmt.Sprintf(" AND t.budget_id = $%d", argID)
 		args = append(args, *criteria.BudgetID)
+		argID++
+	}
+	if criteria.BudgetGroupID != nil {
+		whereClause += fmt.Sprintf(" AND b.group_id = $%d", argID)
+		args = append(args, *criteria.BudgetGroupID)
 		argID++
 	}
 	if criteria.WalletID != nil {

@@ -23,6 +23,13 @@ type BudgetService interface {
 	DeleteBudget(userID int, id int) error
 }
 
+type BudgetGroupService interface {
+	CreateBudgetGroup(userID int, g domain.BudgetGroup) error
+	GetBudgetGroups(userID int) ([]domain.BudgetGroup, error)
+	UpdateBudgetGroup(userID int, g domain.BudgetGroup) error
+	DeleteBudgetGroup(userID int, id int) error
+}
+
 type WalletService interface {
 	CreateWallet(userID int, w domain.Wallet) error
 	GetWallet(userID int, id int) (domain.Wallet, error)
@@ -109,6 +116,14 @@ type BudgetRepository interface {
 	DeleteAllByUser(userID int) error
 }
 
+type BudgetGroupRepository interface {
+	SaveBudgetGroup(g domain.BudgetGroup) error
+	FindBudgetGroupsByUser(userID int) ([]domain.BudgetGroup, error)
+	UpdateBudgetGroup(g domain.BudgetGroup) error
+	DeleteBudgetGroup(id int) error
+	DeleteAllByUser(userID int) error
+}
+
 type WalletRepository interface {
 	SaveWallet(w domain.Wallet) error
 	GetWalletByID(id int) (domain.Wallet, error)
@@ -177,6 +192,7 @@ type Repositories interface {
 	UserRepository() UserRepository
 	SessionRepository() SessionRepository
 	BudgetRepository() BudgetRepository
+	BudgetGroupRepository() BudgetGroupRepository
 	WalletRepository() WalletRepository
 	DepotRepository() DepotRepository
 	TransactionRepository() TransactionRepository

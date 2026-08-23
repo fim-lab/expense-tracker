@@ -15,15 +15,16 @@ type TransactionDTO struct {
 }
 
 type TransactionSearchCriteria struct {
-	SearchTerm *string
-	FromDate   *time.Time
-	UntilDate  *time.Time
-	BudgetID   *int
-	WalletID   *int
-	Type       *TransactionType
-	IsDebt     *bool
-	Page       int
-	PageSize   int
+	SearchTerm    *string
+	FromDate      *time.Time
+	UntilDate     *time.Time
+	BudgetID      *int
+	BudgetGroupID *int
+	WalletID      *int
+	Type          *TransactionType
+	IsDebt        *bool
+	Page          int
+	PageSize      int
 }
 
 type PaginatedTransactions struct {

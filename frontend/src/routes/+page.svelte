@@ -8,16 +8,31 @@
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import TransactionSearchForm from '$lib/components/TransactionSearchForm.svelte';
 	import WalletCard from '$lib/components/WalletCard.svelte';
-	import { formatCurrency } from '$lib/utils';
-	import type { Depot, Wallet } from '$lib/types';
+	import { formatCurrency, updateParams } from '$lib/utils';
+	import type { Budget, BudgetGroup, Depot, Wallet } from '$lib/types';
 
 	const pageNr = page.data.page;
 	const pageSize = page.data.pageSize;
 	const totalPages = $derived(Math.ceil(page.data.total / pageSize));
 	const hasWallets = $derived(page.data?.wallets?.length > 0);
 	const hasDepots = $derived(page.data?.depots?.length > 0);
-	const hasBudgets = $derived(page.data?.budgets?.length > 0);
 	const hasDebts = $derived((page.data?.debtTotal ?? 0) > 0);
+
+	const budgetGroups: BudgetGroup[] = $derived(page.data?.budgetGroups ?? []);
+	const activeGroupId = $derived.by(() => {
+		const id = page.url.searchParams.get('budget_group_id');
+		return id ? Number(id) : undefined;
+	});
+	const visibleBudgets = $derived(
+		activeGroupId
+			? (page.data?.budgets ?? []).filter((b: Budget) => b.groupId === activeGroupId)
+			: (page.data?.budgets ?? [])
+	);
+	const hasBudgets = $derived(visibleBudgets.length > 0);
+
+	function selectGroup(groupId: number | undefined) {
+		updateParams({ budget_group_id: groupId });
+	}
 	const totalWealth = $derived(
 		(page.data?.wallets ?? []).reduce((sum: number, w: Wallet) => sum + w.balanceCents, 0) +
 			(page.data?.depots ?? []).reduce(
@@ -91,7 +106,7 @@
 				{/if}
 				{#if hasBudgets}
 					<header><strong>Budgets</strong></header>
-					{#each page.data.budgets as budget}
+					{#each visibleBudgets as budget}
 						<BudgetCard {budget} />
 					{/each}
 				{/if}
@@ -101,6 +116,29 @@
 
 	<article>
 		<header><strong>Recent Transactions</strong></header>
+
+		{#if budgetGroups.length > 0}
+			<div class="group-tabs">
+				<button
+					type="button"
+					class="secondary outline"
+					class:active={activeGroupId === undefined}
+					onclick={() => selectGroup(undefined)}
+				>
+					All
+				</button>
+				{#each budgetGroups as group (group.id)}
+					<button
+						type="button"
+						class="secondary outline"
+						class:active={activeGroupId === group.id}
+						onclick={() => selectGroup(group.id)}
+					>
+						{group.name}
+					</button>
+				{/each}
+			</div>
+		{/if}
 
 		<div class="transaction-list">
 			{#if page.data.transactions?.length > 0}
@@ -113,7 +151,7 @@
 			{:else}
 				<p>No transactions found.</p>
 				{#if page.data.total === 0 && !isSearchActive}
-					<button on:click={importTestData}>Import Test Data</button>
+					<button onclick={importTestData}>Import Test Data</button>
 				{/if}
 			{/if}
 		</div>
@@ -128,5 +166,24 @@
 		display: flex;
 		justify-content: space-between;
 		color: var(--pico-muted-color);
+	}
+
+	.group-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.group-tabs button {
+		width: auto;
+		margin: 0;
+		padding: 0.25rem 0.75rem;
+		font-size: 0.85rem;
+	}
+
+	.group-tabs button.active {
+		background-color: var(--pico-primary);
+		color: var(--pico-primary-inverse);
 	}
 </style>

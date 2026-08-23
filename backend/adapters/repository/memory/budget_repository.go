@@ -72,6 +72,7 @@ func (r *BudgetRepository) UpdateBudget(b domain.Budget) error {
 	}
 	existingBudget.Name = b.Name
 	existingBudget.LimitCents = b.LimitCents
+	existingBudget.GroupID = b.GroupID
 	r.repo.budgets[b.ID] = existingBudget
 	return nil
 }

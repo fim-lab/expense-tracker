@@ -12,7 +12,7 @@ func TestImportTransactions(t *testing.T) {
 	repos := memory.NewCleanRepositories()
 	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository())
-	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository(), stockSvc)
+	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.BudgetGroupRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository(), stockSvc)
 
 	userID := 1
 	repos.UserRepository().SaveUser(domain.User{ID: userID, Username: "test"})
@@ -24,9 +24,9 @@ func TestImportTransactions(t *testing.T) {
 		Settings: domain.ImportSettings{
 			Gehalt: 300000,
 			Budgets: []domain.ImportBudget{
-				{Name: "Food", ValueInCents: 50000, Account: "Private"},   // Existing
-				{Name: "Rent", ValueInCents: 100000, Account: "Private"},  // New
-				{Name: "Shared", ValueInCents: 100000, Account: "Shared"}, // Should be skipped
+				{Name: "Food", ValueInCents: 50000, Account: "Private"},
+				{Name: "Rent", ValueInCents: 100000, Account: "Private"},
+				{Name: "Shared", ValueInCents: 100000, Account: "Shared"},
 			},
 			Wallets: []domain.ImportWallet{
 				{Name: "Cash", IsDepot: false}, // Existing
@@ -71,8 +71,15 @@ func TestImportTransactions(t *testing.T) {
 	}
 
 	budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
-	if len(budgets) != 2 { // Food (existing), Rent (new)
-		t.Errorf("Expected 2 budgets, got %d", len(budgets))
+	if len(budgets) != 3 { // Food (existing), Rent (new), Shared (new)
+		t.Errorf("Expected 3 budgets, got %d", len(budgets))
+	}
+
+	groups, _ := repos.BudgetGroupRepository().FindBudgetGroupsByUser(userID)
+	if len(groups) != 1 {
+		t.Errorf("Expected 1 budget group, got %d", len(groups))
+	} else if groups[0].Name != "Shared" {
+		t.Errorf("Expected budget group name 'Shared', got '%s'", groups[0].Name)
 	}
 
 	wallets, _ := repos.WalletRepository().FindWalletsByUser(userID)
@@ -98,6 +105,7 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 	importSvc := NewImportService(
 		f.repos.UserRepository(),
 		f.repos.BudgetRepository(),
+		f.repos.BudgetGroupRepository(),
 		f.repos.WalletRepository(),
 		f.repos.DepotRepository(),
 		f.repos.TransactionRepository(),
@@ -201,6 +209,7 @@ func TestDeleteAllUserDataRemovesTrades(t *testing.T) {
 	importSvc := NewImportService(
 		f.repos.UserRepository(),
 		f.repos.BudgetRepository(),
+		f.repos.BudgetGroupRepository(),
 		f.repos.WalletRepository(),
 		f.repos.DepotRepository(),
 		f.repos.TransactionRepository(),

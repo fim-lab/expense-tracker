@@ -25,4 +25,6 @@ var (
 	ErrInsufficientShares          = errors.New("not enough shares available to sell")
 	ErrTradeDepotChange            = errors.New("a trade cannot be moved to another depot: delete it and create a new one")
 	ErrStockNotFound               = errors.New("stock not found")
+	ErrMissingBudgetGroup          = errors.New("budget group name is required")
+	ErrBudgetGroupNotFound         = errors.New("budget group not found or unauthorized")
 )
