@@ -1,17 +1,35 @@
 <script lang="ts">
 	import { formatCurrency } from '$lib/utils';
 
-	let { template, ondelete, onuse } = $props();
+	let { template, ondelete, onuse, editable = false, onamountchange = undefined } = $props();
 	const isExpense = $derived(template.type === 'EXPENSE');
+	let amountEuros = $state(template.amountInCents / 100);
+
+	function handleAmountInput() {
+		onamountchange?.(template.id, Math.round(amountEuros * 100));
+	}
 </script>
 
 <div class="tx-card" class:expense={isExpense}>
 	<div class="tx-info">
 		<p class="tx-title">
 			{template.description}
-			<span class="tx-amount"
-				>({isExpense ? '-' : '+'}{formatCurrency(template.amountInCents)})</span
-			>
+			{#if editable}
+				<span class="tx-amount-edit">
+					({isExpense ? '-' : '+'}
+					<input
+						class="amount-input"
+						type="number"
+						step="0.01"
+						bind:value={amountEuros}
+						oninput={handleAmountInput}
+					/>)
+				</span>
+			{:else}
+				<span class="tx-amount"
+					>({isExpense ? '-' : '+'}{formatCurrency(template.amountInCents)})</span
+				>
+			{/if}
 		</p>
 		<p class="tx-meta">
 			{template.budgetName}
@@ -83,6 +101,18 @@
 	.tx-amount {
 		font-weight: normal;
 		font-size: 0.9em;
+	}
+
+	.tx-amount-edit {
+		font-weight: normal;
+		font-size: 0.9em;
+	}
+
+	.amount-input {
+		display: inline-block;
+		width: 5.5rem;
+		margin: 0 0.15rem;
+		padding: 0.15rem 0.3rem;
 	}
 
 	.tx-meta {

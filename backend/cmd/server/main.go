@@ -114,7 +114,6 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 
 	// Routes
 	r.Get("/users/me", userHandler.GetUser)
-	r.Put("/users/me/salary", userHandler.UpdateSalary)
 
 	r.Get("/budgets", budgetHandler.GetBudgets)
 	r.Get("/budgets/{id}", budgetHandler.GetBudget)

@@ -58,7 +58,7 @@ func (r *inMemoryRepositories) nextID() int {
 }
 
 func (r *inMemoryRepositories) seed() {
-	// Username: demo | Password: demo | Salary: 100€
+	// Username: demo | Password: demo
 	demoUsername := "demo"
 	hash, _ := bcrypt.GenerateFromPassword([]byte(demoUsername), bcrypt.DefaultCost)
 
@@ -67,7 +67,6 @@ func (r *inMemoryRepositories) seed() {
 	userRepo.SaveUser(domain.User{
 		Username:     demoUsername,
 		PasswordHash: string(hash),
-		SalaryCents:  10000,
 	})
 	_, err := userRepo.GetUserByUsername(demoUsername)
 	if err != nil {

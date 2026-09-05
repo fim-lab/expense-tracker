@@ -117,20 +117,10 @@ func (s *importService) DeleteAllUserData(userID int) error {
 		return fmt.Errorf("failed to delete wallets: %w", err)
 	}
 
-	if err := s.userRepo.UpdateUserSalary(userID, 0); err != nil {
-		return fmt.Errorf("failed to reset salary: %w", err)
-	}
-
 	return nil
 }
 
 func (s *importService) ImportData(userID int, data domain.FullImportData) error {
-	if data.Settings.Gehalt > 0 {
-		if err := s.userRepo.UpdateUserSalary(userID, data.Settings.Gehalt); err != nil {
-			return fmt.Errorf("failed to update salary: %w", err)
-		}
-	}
-
 	existingWallets, err := s.walletRepo.FindWalletsByUser(userID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch existing wallets: %w", err)

@@ -22,7 +22,6 @@ func TestImportTransactions(t *testing.T) {
 
 	importData := domain.FullImportData{
 		Settings: domain.ImportSettings{
-			Gehalt: 300000,
 			Budgets: []domain.ImportBudget{
 				{Name: "Food", ValueInCents: 50000, Account: "Private"},
 				{Name: "Rent", ValueInCents: 100000, Account: "Private"},
@@ -92,11 +91,6 @@ func TestImportTransactions(t *testing.T) {
 		t.Errorf("Expected 1 depot, got %d", len(depots))
 	} else if depots[0].Name != "Lots" {
 		t.Errorf("Expected depot name 'Lots', got '%s'", depots[0].Name)
-	}
-
-	user, _ := repos.UserRepository().GetUserByID(userID)
-	if user.SalaryCents != 300000 {
-		t.Errorf("Expected salary 300000, got %d", user.SalaryCents)
 	}
 }
 

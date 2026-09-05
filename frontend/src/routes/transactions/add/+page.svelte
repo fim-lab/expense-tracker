@@ -38,9 +38,19 @@
 		expandedGroups[groupId] = !expandedGroups[groupId];
 	}
 
+	let draftAmounts = $state<Record<number, number>>({});
+
+	function handleAmountChange(templateId: number, amountInCents: number) {
+		draftAmounts[templateId] = amountInCents;
+	}
+
+	function amountForTemplate(t: TransactionTemplate) {
+		return draftAmounts[t.id] ?? t.amountInCents;
+	}
+
 	function netSumInCents(groupTemplates: TransactionTemplate[]) {
 		return groupTemplates.reduce(
-			(sum, t) => sum + (t.type === 'INCOME' ? t.amountInCents : -t.amountInCents),
+			(sum, t) => sum + (t.type === 'INCOME' ? amountForTemplate(t) : -amountForTemplate(t)),
 			0
 		);
 	}
@@ -81,7 +91,7 @@
 		newDate.setDate(template.day);
 		date = newDate.toISOString().split('T')[0];
 		description = template.description;
-		amount = template.amountInCents / 100;
+		amount = amountForTemplate(template) / 100;
 		walletId = template.walletId;
 		if (template.budgetId) {
 			budgetId = template.budgetId;
@@ -145,7 +155,7 @@
 			const payload = {
 				date: newDate.toISOString(),
 				description: template.description,
-				amountInCents: template.amountInCents,
+				amountInCents: amountForTemplate(template),
 				walletId: template.walletId,
 				budgetId: template.budgetId ?? null,
 				type: template.type,
@@ -307,7 +317,13 @@
 		{#if expandedGroups[entry.group.id]}
 			<div class="group-templates">
 				{#each entry.templates as template (template.id)}
-					<TransactionTemplateCard {template} ondelete={handleDelete} onuse={handleUse} />
+					<TransactionTemplateCard
+						{template}
+						ondelete={handleDelete}
+						onuse={handleUse}
+						editable
+						onamountchange={handleAmountChange}
+					/>
 				{/each}
 			</div>
 		{/if}

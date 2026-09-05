@@ -59,9 +59,6 @@ export interface Wallet {
 
 export interface User {
 	id: number;
-	salaryCents: number;
-	isEditing?: boolean;
-	newSalaryEuros?: number;
 }
 
 export interface Budget {
