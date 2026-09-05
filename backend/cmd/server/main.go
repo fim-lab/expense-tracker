@@ -49,7 +49,8 @@ func main() {
 	transactionService := services.NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	tradeService := services.NewTradeService(repos.TradeRepository(), depotService, transactionService, stockService)
 	portfolioService := services.NewPortfolioService(repos.TradeRepository(), depotService, stockService)
-	transactionTemplateService := services.NewTransactionTemplateService(repos.TransactionTemplateRepository(), repos.WalletRepository(), repos.BudgetRepository())
+	templateGroupService := services.NewTemplateGroupService(repos.TemplateGroupRepository())
+	transactionTemplateService := services.NewTransactionTemplateService(repos.TransactionTemplateRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TemplateGroupRepository())
 	importService := services.NewImportService(
 		repos.UserRepository(),
 		repos.BudgetRepository(),
@@ -59,6 +60,7 @@ func main() {
 		repos.TransactionRepository(),
 		repos.TradeRepository(),
 		repos.TransactionTemplateRepository(),
+		repos.TemplateGroupRepository(),
 		stockService,
 	)
 
@@ -68,7 +70,7 @@ func main() {
 
 	// Mount routers
 	router.Mount("/auth", authRouter(&userService, &sessionService))
-	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &budgetGroupService, &walletService, &depotService, &transactionService, &portfolioService, &tradeService, &userService, &transactionTemplateService, &importService, &stockService))
+	router.Mount("/api", apiRouter(env, &sessionService, &budgetService, &budgetGroupService, &walletService, &depotService, &transactionService, &portfolioService, &tradeService, &userService, &transactionTemplateService, &importService, &stockService, &templateGroupService))
 
 	log.Printf("Start Server on port %s in %s mode", DefaultPort, env)
 	if err := http.ListenAndServe(":"+DefaultPort, router); err != nil {
@@ -85,7 +87,7 @@ func authRouter(userService *ports.UserService, sessionService *ports.SessionSer
 	return r
 }
 
-func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, budgetGroupService *ports.BudgetGroupService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, portfolioService *ports.PortfolioService, tradeService *ports.TradeService, userService *ports.UserService, transactionTemplateService *ports.TransactionTemplateService, importService *ports.ImportService, stockService *ports.StockService) http.Handler {
+func apiRouter(env string, sessionService *ports.SessionService, budgetService *ports.BudgetService, budgetGroupService *ports.BudgetGroupService, walletService *ports.WalletService, depotService *ports.DepotService, transactionService *ports.TransactionService, portfolioService *ports.PortfolioService, tradeService *ports.TradeService, userService *ports.UserService, transactionTemplateService *ports.TransactionTemplateService, importService *ports.ImportService, stockService *ports.StockService, templateGroupService *ports.TemplateGroupService) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -108,10 +110,10 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	userHandler := httpadapter.NewUserHandler(userService)
 	transactionTemplateHandler := httpadapter.NewTransactionTemplateHandler(transactionTemplateService)
 	stockHandler := httpadapter.NewStockHandler(*stockService)
+	templateGroupHandler := httpadapter.NewTemplateGroupHandler(templateGroupService)
 
 	// Routes
 	r.Get("/users/me", userHandler.GetUser)
-	r.Put("/users/me/salary", userHandler.UpdateSalary)
 
 	r.Get("/budgets", budgetHandler.GetBudgets)
 	r.Get("/budgets/{id}", budgetHandler.GetBudget)
@@ -158,6 +160,11 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Post("/transaction-templates", transactionTemplateHandler.CreateTransactionTemplate)
 	r.Put("/transaction-templates/{id}", transactionTemplateHandler.UpdateTransactionTemplate)
 	r.Delete("/transaction-templates/{id}", transactionTemplateHandler.DeleteTransactionTemplate)
+
+	r.Get("/template-groups", templateGroupHandler.GetTemplateGroups)
+	r.Post("/template-groups", templateGroupHandler.CreateTemplateGroup)
+	r.Put("/template-groups/{id}", templateGroupHandler.UpdateTemplateGroup)
+	r.Delete("/template-groups/{id}", templateGroupHandler.DeleteTemplateGroup)
 
 	r.Get("/stocks", stockHandler.GetStocks)
 	r.Post("/stocks", stockHandler.CreateStock)

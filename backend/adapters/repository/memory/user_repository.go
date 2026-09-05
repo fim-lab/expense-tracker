@@ -53,16 +53,3 @@ func (r *UserRepository) GetUserByID(userID int) (domain.User, error) {
 	}
 	return domain.User{}, domain.ErrUserNotFound
 }
-
-func (r *UserRepository) UpdateUserSalary(userID int, salary int) error {
-	r.repo.mu.Lock()
-	defer r.repo.mu.Unlock()
-	for username, user := range r.repo.users {
-		if user.ID == userID {
-			user.SalaryCents = salary
-			r.repo.users[username] = user
-			return nil
-		}
-	}
-	return domain.ErrUserNotFound
-}

@@ -6,7 +6,7 @@
 	<aside class="container">
 		<nav>
 			<ul>
-				<li><a href="/settings/budgets">Salary & Budgets</a></li>
+				<li><a href="/settings/budgets">Budgets</a></li>
 				<li><a href="/settings/wallets">Wallets & Depots</a></li>
 				{#if data.showImport}
 					<li><a href="/settings/import">Import</a></li>

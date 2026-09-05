@@ -14,6 +14,7 @@ func TestTransactionTemplateService(t *testing.T) {
 		repos.TransactionTemplateRepository(),
 		repos.WalletRepository(),
 		repos.BudgetRepository(),
+		repos.TemplateGroupRepository(),
 	)
 
 	testUser := domain.User{Username: "test", PasswordHash: "hash"}
@@ -108,6 +109,50 @@ func TestTransactionTemplateService(t *testing.T) {
 		}
 		if err != nil && err.Error() != "budget validation failed: budget not found or unauthorized" {
 			t.Errorf("Expected 'budget validation failed', got %v", err)
+		}
+	})
+
+	t.Run("CreateTransactionTemplate - Invalid Group (other user)", func(t *testing.T) {
+		otherUser := domain.User{Username: "other", PasswordHash: "hash"}
+		repos.UserRepository().SaveUser(otherUser)
+		fetchedOtherUser, _ := repos.UserRepository().GetUserByUsername("other")
+
+		otherGroup := domain.TemplateGroup{UserID: fetchedOtherUser.ID, Name: "Other User's Group"}
+		otherGroupID, err := repos.TemplateGroupRepository().SaveTemplateGroup(otherGroup)
+		if err != nil {
+			t.Fatalf("could not seed other user's template group: %v", err)
+		}
+
+		template := domain.TransactionTemplate{
+			UserID:        user.ID,
+			Day:           1,
+			WalletID:      walletId,
+			GroupID:       &otherGroupID,
+			Description:   "Cross-user group",
+			AmountInCents: 100,
+			Type:          domain.Expense,
+		}
+		err = svc.CreateTransactionTemplate(user.ID, template)
+		if err != domain.ErrTemplateGroupNotFound {
+			t.Errorf("Expected ErrTemplateGroupNotFound, got %v", err)
+		}
+	})
+
+	t.Run("UpdateTransactionTemplate - Invalid Group (other user)", func(t *testing.T) {
+		otherUser, _ := repos.UserRepository().GetUserByUsername("other")
+		otherGroups, _ := repos.TemplateGroupRepository().FindTemplateGroupsByUser(otherUser.ID)
+		otherGroupID := otherGroups[0].ID
+
+		templatesToUpdate, err := repos.TransactionTemplateRepository().FindTransactionTemplatesByUser(user.ID)
+		if err != nil || len(templatesToUpdate) < 1 {
+			t.Fatal("Expected at least one Template.")
+		}
+		templateToUpdate := templatesToUpdate[0]
+		templateToUpdate.GroupID = &otherGroupID
+
+		err = svc.UpdateTransactionTemplate(user.ID, templateToUpdate)
+		if err != domain.ErrTemplateGroupNotFound {
+			t.Errorf("Expected ErrTemplateGroupNotFound, got %v", err)
 		}
 	})
 

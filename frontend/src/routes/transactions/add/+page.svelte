@@ -2,7 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import TransactionTemplateCard from '$lib/components/TransactionTemplateCard.svelte';
-	import type { TransactionTemplate } from '$lib/types';
+	import type { TemplateGroup, TransactionTemplate } from '$lib/types';
+	import { formatCurrency } from '$lib/utils';
 	let { data } = $props();
 
 	const urlParams = page.url.searchParams;
@@ -17,6 +18,201 @@
 	let errorMessage = $state('');
 
 	let templates: TransactionTemplate[] = $state(data.templates || []);
+	let templateGroups: TemplateGroup[] = $state(
+		(data.templateGroups || []).map((g: TemplateGroup) => ({ ...g, isEditing: false, newName: '' }))
+	);
+	let fireSummary = $state('');
+
+	function sortByPosition(list: TransactionTemplate[]) {
+		return [...list].sort((a, b) => a.position - b.position || a.id - b.id);
+	}
+
+	let groupedTemplates = $derived(
+		templateGroups.map((group) => ({
+			group,
+			templates: sortByPosition(templates.filter((t) => t.groupId === group.id))
+		}))
+	);
+
+	let ungroupedTemplates = $derived(sortByPosition(templates.filter((t) => !t.groupId)));
+
+	let expandedGroups = $state<Record<number, boolean>>({});
+
+	function toggleGroup(groupId: number) {
+		expandedGroups[groupId] = !expandedGroups[groupId];
+	}
+
+	let newGroupName = $state('');
+
+	async function createGroup() {
+		if (!newGroupName) {
+			alert('Enter a name.');
+			return;
+		}
+		const res = await fetch('/api/template-groups', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: newGroupName })
+		});
+
+		if (res.ok) {
+			const created = await res.json();
+			templateGroups = [...templateGroups, { ...created, isEditing: false, newName: '' }];
+			expandedGroups[created.id] = true;
+			newGroupName = '';
+		} else {
+			console.error('Failed to create template group');
+			alert('Failed to create template group');
+		}
+	}
+
+	function startEditingGroup(group: TemplateGroup) {
+		group.isEditing = true;
+		group.newName = group.name;
+	}
+
+	function cancelEditingGroup(group: TemplateGroup) {
+		group.isEditing = false;
+	}
+
+	async function updateGroup(group: TemplateGroup) {
+		if (!group.newName) {
+			alert('Enter a name.');
+			return;
+		}
+		const res = await fetch(`/api/template-groups/${group.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ ...group, name: group.newName })
+		});
+
+		if (res.ok) {
+			group.name = group.newName;
+			group.isEditing = false;
+		} else {
+			console.error('Failed to update template group');
+		}
+	}
+
+	async function deleteGroup(groupId: number) {
+		if (!confirm('Delete this template group? Templates in it will become ungrouped.')) return;
+		const res = await fetch(`/api/template-groups/${groupId}`, {
+			method: 'DELETE'
+		});
+
+		if (res.ok) {
+			templateGroups = templateGroups.filter((g) => g.id !== groupId);
+			templates = templates.map((t) => (t.groupId === groupId ? { ...t, groupId: null } : t));
+		} else {
+			console.error('Failed to delete template group');
+		}
+	}
+
+	let draggedTemplateId = $state<number | null>(null);
+
+	function handleDragStart(event: DragEvent, template: TransactionTemplate) {
+		draggedTemplateId = template.id;
+		event.dataTransfer?.setData('text/plain', String(template.id));
+		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+	}
+
+	function handleDragEnd() {
+		draggedTemplateId = null;
+	}
+
+	function handleCardDragOver(event: DragEvent) {
+		event.preventDefault();
+	}
+
+	function handleCardDrop(event: DragEvent, targetTemplate: TransactionTemplate) {
+		event.preventDefault();
+		event.stopPropagation();
+		moveTemplate(targetTemplate.groupId ?? null, targetTemplate.id);
+	}
+
+	function handleContainerDrop(event: DragEvent, groupId: number | null) {
+		event.preventDefault();
+		moveTemplate(groupId, null);
+	}
+
+	async function persistTemplateOrder(template: TransactionTemplate) {
+		const res = await fetch(`/api/transaction-templates/${template.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(template)
+		});
+		if (!res.ok) {
+			console.error('Failed to update transaction template order');
+		}
+	}
+
+	function moveTemplate(targetGroupId: number | null, beforeTemplateId: number | null) {
+		if (draggedTemplateId == null) return;
+		const draggedId = draggedTemplateId;
+		draggedTemplateId = null;
+		if (draggedId === beforeTemplateId) return;
+
+		const dragged = templates.find((t) => t.id === draggedId);
+		if (!dragged) return;
+
+		const sourceGroupId = dragged.groupId ?? null;
+
+		const destList = sortByPosition(
+			templates.filter((t) => (t.groupId ?? null) === targetGroupId && t.id !== draggedId)
+		);
+
+		let insertIndex = destList.length;
+		if (beforeTemplateId != null) {
+			const idx = destList.findIndex((t) => t.id === beforeTemplateId);
+			if (idx !== -1) insertIndex = idx;
+		}
+
+		destList.splice(insertIndex, 0, dragged);
+
+		const updates = new Map<number, { position: number; groupId: number | null }>();
+		destList.forEach((t, index) => {
+			updates.set(t.id, { position: index, groupId: targetGroupId });
+		});
+
+		if (sourceGroupId !== targetGroupId) {
+			const sourceList = sortByPosition(
+				templates.filter((t) => (t.groupId ?? null) === sourceGroupId && t.id !== draggedId)
+			);
+			sourceList.forEach((t, index) => {
+				updates.set(t.id, { position: index, groupId: sourceGroupId });
+			});
+		}
+
+		const changed: TransactionTemplate[] = [];
+		templates = templates.map((t) => {
+			const u = updates.get(t.id);
+			if (!u || (t.position === u.position && (t.groupId ?? null) === u.groupId)) return t;
+			const updated = { ...t, position: u.position, groupId: u.groupId };
+			changed.push(updated);
+			return updated;
+		});
+
+		for (const t of changed) {
+			persistTemplateOrder(t);
+		}
+	}
+
+	let draftAmounts = $state<Record<number, number>>({});
+
+	function handleAmountChange(templateId: number, amountInCents: number) {
+		draftAmounts[templateId] = amountInCents;
+	}
+
+	function amountForTemplate(t: TransactionTemplate) {
+		return draftAmounts[t.id] ?? t.amountInCents;
+	}
+
+	function netSumInCents(groupTemplates: TransactionTemplate[]) {
+		return groupTemplates.reduce(
+			(sum, t) => sum + (t.type === 'INCOME' ? amountForTemplate(t) : -amountForTemplate(t)),
+			0
+		);
+	}
 
 	$effect(() => {
 		if (isDebt) budgetId = 0;
@@ -54,7 +250,7 @@
 		newDate.setDate(template.day);
 		date = newDate.toISOString().split('T')[0];
 		description = template.description;
-		amount = template.amountInCents / 100;
+		amount = amountForTemplate(template) / 100;
 		walletId = template.walletId;
 		if (template.budgetId) {
 			budgetId = template.budgetId;
@@ -106,6 +302,38 @@
 			console.error('Backend Error:', errorText);
 			errorMessage = `Failed to save transaction: ${errorText}`;
 		}
+	}
+
+	async function handleFireGroup(groupTemplates: TransactionTemplate[]) {
+		fireSummary = '';
+		let succeeded = 0;
+		let failed = 0;
+		for (const template of groupTemplates) {
+			const newDate = new Date();
+			newDate.setDate(template.day);
+			const payload = {
+				date: newDate.toISOString(),
+				description: template.description,
+				amountInCents: amountForTemplate(template),
+				walletId: template.walletId,
+				budgetId: template.budgetId ?? null,
+				type: template.type,
+				isPending: false,
+				isDebt: false,
+				tags: template.tags ?? []
+			};
+			const res = await fetch('/api/transactions', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			if (res.ok) {
+				succeeded++;
+			} else {
+				failed++;
+			}
+		}
+		fireSummary = `Created ${succeeded} transaction(s)${failed ? `, ${failed} failed` : ''}.`;
 	}
 
 	async function saveAsTemplate(e: Event) {
@@ -171,7 +399,7 @@
 			Description
 			<span
 				class="tooltip-info"
-				title="Use '$date' in templates for current month(or last at the beginning of the month) in the form 'Februar 26'"
+				title="Use '$lastmonth' or '$nextmonth' in templates for the previous or next month, in the form 'Februar 26'"
 				>ⓘ</span
 			>
 			<input type="text" bind:value={description} placeholder="Grocery shopping..." required />
@@ -225,16 +453,113 @@
 	</form>
 </article>
 
-{#if templates.length > 0}
-	<article>
-		<h3>Templates</h3>
-		<div>
-			{#each templates as template (template.id)}
-				<TransactionTemplateCard {template} ondelete={handleDelete} onuse={handleUse} />
-			{/each}
-		</div>
-	</article>
+{#if fireSummary}
+	<p>{fireSummary}</p>
 {/if}
+
+<div class="new-group-row">
+	<input type="text" placeholder="New group name" bind:value={newGroupName} />
+	<button type="button" class="new-group-btn" onclick={createGroup}>Add group</button>
+</div>
+
+{#each groupedTemplates as entry (entry.group.id)}
+	<article
+		class="group-article"
+		ondragover={(e) => e.preventDefault()}
+		ondrop={(e) => handleContainerDrop(e, entry.group.id)}
+	>
+		<div class="group-header">
+			{#if entry.group.isEditing}
+				<input type="text" class="group-name-input" bind:value={entry.group.newName} />
+				<div class="group-actions">
+					<button type="button" onclick={() => updateGroup(entry.group)}>OK</button>
+					<button type="button" class="secondary" onclick={() => cancelEditingGroup(entry.group)}>
+						Cancel
+					</button>
+				</div>
+			{:else}
+				<button type="button" class="group-toggle" onclick={() => toggleGroup(entry.group.id)}>
+					<span class="chevron">{expandedGroups[entry.group.id] ? '▼' : '▶'}</span>
+					<span class="group-name">{entry.group.name}</span>
+					<span class="group-meta">
+						{entry.templates.length} template{entry.templates.length === 1 ? '' : 's'} · net {formatCurrency(
+							netSumInCents(entry.templates)
+						)}
+					</span>
+				</button>
+				<div class="group-actions">
+					<button type="button" class="secondary" onclick={() => startEditingGroup(entry.group)}>
+						Rename
+					</button>
+					<button type="button" class="secondary" onclick={() => deleteGroup(entry.group.id)}>
+						Delete
+					</button>
+					<button type="button" class="create-btn" onclick={() => handleFireGroup(entry.templates)}>
+						Create
+					</button>
+				</div>
+			{/if}
+		</div>
+		{#if expandedGroups[entry.group.id]}
+			<div
+				class="group-templates"
+				role="list"
+				ondragover={(e) => e.preventDefault()}
+				ondrop={(e) => handleContainerDrop(e, entry.group.id)}
+			>
+				{#each entry.templates as template (template.id)}
+					<TransactionTemplateCard
+						{template}
+						ondelete={handleDelete}
+						onuse={handleUse}
+						editable
+						onamountchange={handleAmountChange}
+						draggable={true}
+						dragging={draggedTemplateId === template.id}
+						ondragstart={handleDragStart}
+						ondragend={handleDragEnd}
+						ondragover={handleCardDragOver}
+						ondrop={handleCardDrop}
+					/>
+				{/each}
+				{#if entry.templates.length === 0}
+					<p class="empty-drop-hint">Drag templates here.</p>
+				{/if}
+			</div>
+		{/if}
+	</article>
+{/each}
+
+<article
+	class="group-article"
+	ondragover={(e) => e.preventDefault()}
+	ondrop={(e) => handleContainerDrop(e, null)}
+>
+	<h3>Ungrouped</h3>
+	<div
+		class="group-templates"
+		role="list"
+		ondragover={(e) => e.preventDefault()}
+		ondrop={(e) => handleContainerDrop(e, null)}
+	>
+		{#each ungroupedTemplates as template (template.id)}
+			<TransactionTemplateCard
+				{template}
+				ondelete={handleDelete}
+				onuse={handleUse}
+				draggable={true}
+				dragging={draggedTemplateId === template.id}
+				ondragstart={handleDragStart}
+				ondragend={handleDragEnd}
+				ondragover={handleCardDragOver}
+				ondrop={handleCardDrop}
+			/>
+		{/each}
+		{#if ungroupedTemplates.length === 0}
+			<p class="empty-drop-hint">No ungrouped templates.</p>
+		{/if}
+	</div>
+</article>
 
 <style>
 	.error-message {
@@ -248,5 +573,95 @@
 		font-weight: bold;
 		color: var(--pico-secondary); /* Using a secondary color for visibility */
 		margin-left: 0.5rem;
+	}
+
+	.group-article {
+		padding: 1rem;
+	}
+
+	.group-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.group-toggle {
+		flex: 1;
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		background: none;
+		border: none;
+		padding: 0;
+		margin: 0;
+		text-align: left;
+		cursor: pointer;
+		color: inherit;
+		font: inherit;
+	}
+
+	.chevron {
+		font-size: 0.75rem;
+	}
+
+	.group-name {
+		font-weight: bold;
+	}
+
+	.group-meta {
+		color: var(--pico-secondary);
+		font-size: 0.9rem;
+	}
+
+	.create-btn {
+		flex-shrink: 0;
+		width: auto;
+	}
+
+	.group-templates {
+		margin-top: 1rem;
+		min-height: 2rem;
+	}
+
+	.new-group-row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.new-group-row input {
+		margin: 0;
+	}
+
+	.new-group-btn {
+		flex-shrink: 0;
+		width: auto;
+		white-space: nowrap;
+	}
+
+	.group-name-input {
+		flex: 1;
+		margin: 0;
+	}
+
+	.group-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.group-actions button {
+		width: auto;
+	}
+
+	.empty-drop-hint {
+		color: var(--pico-muted-color);
+		font-size: 0.9rem;
+		text-align: center;
+		margin: 0;
+		padding: 0.5rem;
+		border: 1px dashed var(--pico-muted-border-color);
+		border-radius: var(--pico-border-radius);
 	}
 </style>

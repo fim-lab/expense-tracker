@@ -21,6 +21,7 @@ type inMemoryRepositories struct {
 	trades               map[int]domain.Trade
 	transactionTemplates map[int]domain.TransactionTemplate
 	stocks               map[int]domain.Stock
+	templateGroups       map[int]domain.TemplateGroup
 	lastID               int
 }
 
@@ -46,6 +47,7 @@ func NewInMemoryRepositories() *inMemoryRepositories {
 		trades:               make(map[int]domain.Trade),
 		transactionTemplates: make(map[int]domain.TransactionTemplate),
 		stocks:               make(map[int]domain.Stock),
+		templateGroups:       make(map[int]domain.TemplateGroup),
 		lastID:               0,
 	}
 }
@@ -56,7 +58,7 @@ func (r *inMemoryRepositories) nextID() int {
 }
 
 func (r *inMemoryRepositories) seed() {
-	// Username: demo | Password: demo | Salary: 100€
+	// Username: demo | Password: demo
 	demoUsername := "demo"
 	hash, _ := bcrypt.GenerateFromPassword([]byte(demoUsername), bcrypt.DefaultCost)
 
@@ -65,7 +67,6 @@ func (r *inMemoryRepositories) seed() {
 	userRepo.SaveUser(domain.User{
 		Username:     demoUsername,
 		PasswordHash: string(hash),
-		SalaryCents:  10000,
 	})
 	_, err := userRepo.GetUserByUsername(demoUsername)
 	if err != nil {
@@ -111,4 +112,8 @@ func (r *inMemoryRepositories) TransactionTemplateRepository() ports.Transaction
 
 func (r *inMemoryRepositories) StockRepository() ports.StockRepository {
 	return &StockRepository{repo: r}
+}
+
+func (r *inMemoryRepositories) TemplateGroupRepository() ports.TemplateGroupRepository {
+	return &TemplateGroupRepository{repo: r}
 }

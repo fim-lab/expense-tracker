@@ -1,7 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import type { TransactionTemplate } from '$lib/types';
-import { getLastMonthShortMonthYearString, getShortMonthYearString } from '$lib/utils';
+import {
+	getLastMonthShortMonthYearString,
+	getNextMonthShortMonthYearString,
+	getShortMonthYearString
+} from '$lib/utils';
 
 const DAY_OF_MONTH_UNTIL_LAST_MONTH_IS_USED = 10;
 
@@ -27,20 +31,27 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const wallets = (await authedApiFetch('/wallets')) || [];
 	const budgets = (await authedApiFetch('/budgets')) || [];
 	const templates = (await authedApiFetch('/transaction-templates')) || [];
-	let shortMonthYearString: string;
+	const templateGroups = (await authedApiFetch('/template-groups')) || [];
+	let lastMonthString: string;
+	let nextMonthString: string;
 	if (displayLastMonthString()) {
-		shortMonthYearString = getLastMonthShortMonthYearString(new Date());
+		lastMonthString = getLastMonthShortMonthYearString(new Date());
+		nextMonthString = getShortMonthYearString(new Date());
 	} else {
-		shortMonthYearString = getShortMonthYearString(new Date());
+		lastMonthString = getShortMonthYearString(new Date());
+		nextMonthString = getNextMonthShortMonthYearString(new Date());
 	}
 	templates.forEach((tt: TransactionTemplate) => {
-		tt.description = tt.description.replace('$date', shortMonthYearString);
+		tt.description = tt.description
+			.replace('$lastmonth', lastMonthString)
+			.replace('$nextmonth', nextMonthString);
 	});
 
 	return {
 		wallets,
 		budgets,
-		templates
+		templates,
+		templateGroups
 	};
 
 	function displayLastMonthString() {

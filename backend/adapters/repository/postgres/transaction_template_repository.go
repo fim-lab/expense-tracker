@@ -18,8 +18,8 @@ func NewTransactionTemplateRepository(db *sql.DB) *TransactionTemplateRepository
 
 func (r *TransactionTemplateRepository) SaveTransactionTemplate(tt domain.TransactionTemplate) error {
 	query := `
-		INSERT INTO transaction_templates (user_id, day, budget_id, wallet_id, description, amount_in_cents, type, tags)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO transaction_templates (user_id, day, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id
 	`
 	var id int
@@ -28,11 +28,13 @@ func (r *TransactionTemplateRepository) SaveTransactionTemplate(tt domain.Transa
 		tt.UserID,
 		tt.Day,
 		tt.BudgetID,
+		nullableInt(tt.GroupID),
 		tt.WalletID,
 		tt.Description,
 		tt.AmountInCents,
 		tt.Type,
 		pq.Array(tt.Tags),
+		tt.Position,
 	).Scan(&id)
 
 	if err != nil {
@@ -44,12 +46,13 @@ func (r *TransactionTemplateRepository) SaveTransactionTemplate(tt domain.Transa
 
 func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (domain.TransactionTemplate, error) {
 	query := `
-		SELECT id, user_id, day, budget_id, wallet_id, description, amount_in_cents, type, tags
+		SELECT id, user_id, day, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position
 		FROM transaction_templates
 		WHERE id = $1
 	`
 	var tt domain.TransactionTemplate
 	var budgetID sql.NullInt64
+	var groupID sql.NullInt64
 	var tags pq.StringArray
 
 	err := r.db.QueryRow(query, id).Scan(
@@ -57,11 +60,13 @@ func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (doma
 		&tt.UserID,
 		&tt.Day,
 		&budgetID,
+		&groupID,
 		&tt.WalletID,
 		&tt.Description,
 		&tt.AmountInCents,
 		&tt.Type,
 		&tags,
+		&tt.Position,
 	)
 
 	if err != nil {
@@ -75,6 +80,7 @@ func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (doma
 		bID := int(budgetID.Int64)
 		tt.BudgetID = &bID
 	}
+	tt.GroupID = intFromNullable(groupID)
 	tt.Tags = tags
 
 	return tt, nil
@@ -82,10 +88,10 @@ func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (doma
 
 func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID int) ([]domain.TransactionTemplate, error) {
 	query := `
-		SELECT id, user_id, day, budget_id, wallet_id, description, amount_in_cents, type, tags
+		SELECT id, user_id, day, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position
 		FROM transaction_templates
 		WHERE user_id = $1
-		ORDER BY id
+		ORDER BY position ASC, id ASC
 	`
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
@@ -97,6 +103,7 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 	for rows.Next() {
 		var tt domain.TransactionTemplate
 		var budgetID sql.NullInt64
+		var groupID sql.NullInt64
 		var tags pq.StringArray
 
 		if err := rows.Scan(
@@ -104,11 +111,13 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 			&tt.UserID,
 			&tt.Day,
 			&budgetID,
+			&groupID,
 			&tt.WalletID,
 			&tt.Description,
 			&tt.AmountInCents,
 			&tt.Type,
 			&tags,
+			&tt.Position,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning transaction template row: %w", err)
 		}
@@ -117,6 +126,7 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 			bID := int(budgetID.Int64)
 			tt.BudgetID = &bID
 		}
+		tt.GroupID = intFromNullable(groupID)
 		tt.Tags = []string(tags)
 
 		templates = append(templates, tt)
@@ -132,19 +142,21 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 func (r *TransactionTemplateRepository) UpdateTransactionTemplate(tt domain.TransactionTemplate) error {
 	query := `
 		UPDATE transaction_templates
-		SET day = $1, budget_id = $2, wallet_id = $3, description = $4, amount_in_cents = $5, type = $6, tags = $7
-		WHERE id = $8 AND user_id = $9
+		SET day = $1, budget_id = $2, group_id = $3, wallet_id = $4, description = $5, amount_in_cents = $6, type = $7, tags = $8, position = $9
+		WHERE id = $10 AND user_id = $11
 	`
 
 	res, err := r.db.Exec(
 		query,
 		tt.Day,
 		tt.BudgetID,
+		nullableInt(tt.GroupID),
 		tt.WalletID,
 		tt.Description,
 		tt.AmountInCents,
 		tt.Type,
 		pq.Array(tt.Tags),
+		tt.Position,
 		tt.ID,
 		tt.UserID,
 	)

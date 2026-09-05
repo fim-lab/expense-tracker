@@ -11,18 +11,37 @@ type transactionTemplateService struct {
 	transactionTemplateRepo ports.TransactionTemplateRepository
 	walletRepo              ports.WalletRepository
 	budgetRepo              ports.BudgetRepository
+	templateGroupRepo       ports.TemplateGroupRepository
 }
 
 func NewTransactionTemplateService(
 	transactionTemplateRepo ports.TransactionTemplateRepository,
 	walletRepo ports.WalletRepository,
 	budgetRepo ports.BudgetRepository,
+	templateGroupRepo ports.TemplateGroupRepository,
 ) ports.TransactionTemplateService {
 	return &transactionTemplateService{
 		transactionTemplateRepo: transactionTemplateRepo,
 		walletRepo:              walletRepo,
 		budgetRepo:              budgetRepo,
+		templateGroupRepo:       templateGroupRepo,
 	}
+}
+
+func (s *transactionTemplateService) validateGroupOwnership(userID int, groupID *int) error {
+	if groupID == nil {
+		return nil
+	}
+	groups, err := s.templateGroupRepo.FindTemplateGroupsByUser(userID)
+	if err != nil {
+		return err
+	}
+	for _, g := range groups {
+		if g.ID == *groupID {
+			return nil
+		}
+	}
+	return domain.ErrTemplateGroupNotFound
 }
 
 func (s *transactionTemplateService) CreateTransactionTemplate(userID int, tt domain.TransactionTemplate) error {
@@ -42,6 +61,10 @@ func (s *transactionTemplateService) CreateTransactionTemplate(userID int, tt do
 		if err != nil {
 			return fmt.Errorf("budget validation failed: %w", err)
 		}
+	}
+
+	if err := s.validateGroupOwnership(userID, tt.GroupID); err != nil {
+		return err
 	}
 
 	return s.transactionTemplateRepo.SaveTransactionTemplate(tt)
@@ -88,6 +111,10 @@ func (s *transactionTemplateService) UpdateTransactionTemplate(userID int, tt do
 		if err != nil {
 			return fmt.Errorf("budget validation failed: %w", err)
 		}
+	}
+
+	if err := s.validateGroupOwnership(userID, tt.GroupID); err != nil {
+		return err
 	}
 
 	return s.transactionTemplateRepo.UpdateTransactionTemplate(tt)
