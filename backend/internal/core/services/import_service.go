@@ -54,6 +54,7 @@ type importService struct {
 	transactionRepo         ports.TransactionRepository
 	tradeRepo               ports.TradeRepository
 	transactionTemplateRepo ports.TransactionTemplateRepository
+	templateGroupRepo       ports.TemplateGroupRepository
 	stockService            ports.StockService
 }
 
@@ -66,6 +67,7 @@ func NewImportService(
 	transactionRepo ports.TransactionRepository,
 	tradeRepo ports.TradeRepository,
 	transactionTemplateRepo ports.TransactionTemplateRepository,
+	templateGroupRepo ports.TemplateGroupRepository,
 	stockService ports.StockService,
 ) ports.ImportService {
 	return &importService{
@@ -77,6 +79,7 @@ func NewImportService(
 		transactionRepo:         transactionRepo,
 		tradeRepo:               tradeRepo,
 		transactionTemplateRepo: transactionTemplateRepo,
+		templateGroupRepo:       templateGroupRepo,
 		stockService:            stockService,
 	}
 }
@@ -88,6 +91,10 @@ func (s *importService) DeleteAllUserData(userID int) error {
 
 	if err := s.transactionTemplateRepo.DeleteAllByUser(userID); err != nil {
 		return fmt.Errorf("failed to delete templates: %w", err)
+	}
+
+	if err := s.templateGroupRepo.DeleteAllByUser(userID); err != nil {
+		return fmt.Errorf("failed to delete template groups: %w", err)
 	}
 
 	if err := s.tradeRepo.DeleteAllByUser(userID); err != nil {

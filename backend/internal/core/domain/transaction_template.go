@@ -7,6 +7,7 @@ type TransactionTemplate struct {
 	UserID        int             `json:"userId"`
 	Day           int             `json:"day"` // Day of the month (1-31)
 	BudgetID      *int            `json:"budgetId"`
+	GroupID       *int            `json:"groupId"`
 	WalletID      int             `json:"walletId"`
 	Description   string          `json:"description"`
 	AmountInCents int             `json:"amountInCents"`

@@ -12,7 +12,7 @@ func TestImportTransactions(t *testing.T) {
 	repos := memory.NewCleanRepositories()
 	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository())
-	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.BudgetGroupRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository(), stockSvc)
+	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.BudgetGroupRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository(), repos.TemplateGroupRepository(), stockSvc)
 
 	userID := 1
 	repos.UserRepository().SaveUser(domain.User{ID: userID, Username: "test"})
@@ -111,6 +111,7 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 		f.repos.TransactionRepository(),
 		f.repos.TradeRepository(),
 		f.repos.TransactionTemplateRepository(),
+		f.repos.TemplateGroupRepository(),
 		f.stockSvc,
 	)
 	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {
@@ -215,6 +216,7 @@ func TestDeleteAllUserDataRemovesTrades(t *testing.T) {
 		f.repos.TransactionRepository(),
 		f.repos.TradeRepository(),
 		f.repos.TransactionTemplateRepository(),
+		f.repos.TemplateGroupRepository(),
 		f.stockSvc,
 	)
 	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {

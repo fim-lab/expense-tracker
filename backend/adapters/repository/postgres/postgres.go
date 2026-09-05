@@ -20,6 +20,7 @@ type postgresRepositoryCollection struct {
 	tradeRepo               *TradeRepository
 	transactionTemplateRepo *TransactionTemplateRepository
 	stockRepo               *StockRepository
+	templateGroupRepo       *TemplateGroupRepository
 }
 
 func NewPostgresRepositoryCollection() (*sql.DB, ports.Repositories) {
@@ -35,6 +36,7 @@ func NewPostgresRepositoryCollection() (*sql.DB, ports.Repositories) {
 		tradeRepo:               NewTradeRepository(db),
 		transactionTemplateRepo: NewTransactionTemplateRepository(db),
 		stockRepo:               NewStockRepository(db),
+		templateGroupRepo:       NewTemplateGroupRepository(db),
 	}
 }
 
@@ -94,4 +96,8 @@ func (prc *postgresRepositoryCollection) TransactionTemplateRepository() ports.T
 
 func (prc *postgresRepositoryCollection) StockRepository() ports.StockRepository {
 	return prc.stockRepo
+}
+
+func (prc *postgresRepositoryCollection) TemplateGroupRepository() ports.TemplateGroupRepository {
+	return prc.templateGroupRepo
 }

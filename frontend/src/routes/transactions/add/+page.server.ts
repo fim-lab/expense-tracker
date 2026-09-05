@@ -27,6 +27,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const wallets = (await authedApiFetch('/wallets')) || [];
 	const budgets = (await authedApiFetch('/budgets')) || [];
 	const templates = (await authedApiFetch('/transaction-templates')) || [];
+	const templateGroups = (await authedApiFetch('/template-groups')) || [];
 	let shortMonthYearString: string;
 	if (displayLastMonthString()) {
 		shortMonthYearString = getLastMonthShortMonthYearString(new Date());
@@ -40,7 +41,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	return {
 		wallets,
 		budgets,
-		templates
+		templates,
+		templateGroups
 	};
 
 	function displayLastMonthString() {

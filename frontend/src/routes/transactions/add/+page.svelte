@@ -2,7 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import TransactionTemplateCard from '$lib/components/TransactionTemplateCard.svelte';
-	import type { TransactionTemplate } from '$lib/types';
+	import type { TemplateGroup, TransactionTemplate } from '$lib/types';
+	import { formatCurrency } from '$lib/utils';
 	let { data } = $props();
 
 	const urlParams = page.url.searchParams;
@@ -17,6 +18,32 @@
 	let errorMessage = $state('');
 
 	let templates: TransactionTemplate[] = $state(data.templates || []);
+	let templateGroups: TemplateGroup[] = $state(data.templateGroups || []);
+	let fireSummary = $state('');
+
+	let groupedTemplates = $derived(
+		templateGroups
+			.map((group) => ({
+				group,
+				templates: templates.filter((t) => t.groupId === group.id)
+			}))
+			.filter((entry) => entry.templates.length > 0)
+	);
+
+	let ungroupedTemplates = $derived(templates.filter((t) => !t.groupId));
+
+	let expandedGroups = $state<Record<number, boolean>>({});
+
+	function toggleGroup(groupId: number) {
+		expandedGroups[groupId] = !expandedGroups[groupId];
+	}
+
+	function netSumInCents(groupTemplates: TransactionTemplate[]) {
+		return groupTemplates.reduce(
+			(sum, t) => sum + (t.type === 'INCOME' ? t.amountInCents : -t.amountInCents),
+			0
+		);
+	}
 
 	$effect(() => {
 		if (isDebt) budgetId = 0;
@@ -106,6 +133,38 @@
 			console.error('Backend Error:', errorText);
 			errorMessage = `Failed to save transaction: ${errorText}`;
 		}
+	}
+
+	async function handleFireGroup(groupTemplates: TransactionTemplate[]) {
+		fireSummary = '';
+		let succeeded = 0;
+		let failed = 0;
+		for (const template of groupTemplates) {
+			const newDate = new Date();
+			newDate.setDate(template.day);
+			const payload = {
+				date: newDate.toISOString(),
+				description: template.description,
+				amountInCents: template.amountInCents,
+				walletId: template.walletId,
+				budgetId: template.budgetId ?? null,
+				type: template.type,
+				isPending: false,
+				isDebt: false,
+				tags: template.tags ?? []
+			};
+			const res = await fetch('/api/transactions', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			if (res.ok) {
+				succeeded++;
+			} else {
+				failed++;
+			}
+		}
+		fireSummary = `Created ${succeeded} transaction(s)${failed ? `, ${failed} failed` : ''}.`;
 	}
 
 	async function saveAsTemplate(e: Event) {
@@ -225,11 +284,41 @@
 	</form>
 </article>
 
-{#if templates.length > 0}
+{#if fireSummary}
+	<p>{fireSummary}</p>
+{/if}
+
+{#each groupedTemplates as entry (entry.group.id)}
+	<article class="group-article">
+		<div class="group-header">
+			<button type="button" class="group-toggle" onclick={() => toggleGroup(entry.group.id)}>
+				<span class="chevron">{expandedGroups[entry.group.id] ? '▼' : '▶'}</span>
+				<span class="group-name">{entry.group.name}</span>
+				<span class="group-meta">
+					{entry.templates.length} template{entry.templates.length === 1 ? '' : 's'} · net {formatCurrency(
+						netSumInCents(entry.templates)
+					)}
+				</span>
+			</button>
+			<button type="button" class="create-btn" onclick={() => handleFireGroup(entry.templates)}>
+				Create
+			</button>
+		</div>
+		{#if expandedGroups[entry.group.id]}
+			<div class="group-templates">
+				{#each entry.templates as template (template.id)}
+					<TransactionTemplateCard {template} ondelete={handleDelete} onuse={handleUse} />
+				{/each}
+			</div>
+		{/if}
+	</article>
+{/each}
+
+{#if ungroupedTemplates.length > 0}
 	<article>
 		<h3>Templates</h3>
 		<div>
-			{#each templates as template (template.id)}
+			{#each ungroupedTemplates as template (template.id)}
 				<TransactionTemplateCard {template} ondelete={handleDelete} onuse={handleUse} />
 			{/each}
 		</div>
@@ -248,5 +337,53 @@
 		font-weight: bold;
 		color: var(--pico-secondary); /* Using a secondary color for visibility */
 		margin-left: 0.5rem;
+	}
+
+	.group-article {
+		padding: 1rem;
+	}
+
+	.group-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.group-toggle {
+		flex: 1;
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+		background: none;
+		border: none;
+		padding: 0;
+		margin: 0;
+		text-align: left;
+		cursor: pointer;
+		color: inherit;
+		font: inherit;
+	}
+
+	.chevron {
+		font-size: 0.75rem;
+	}
+
+	.group-name {
+		font-weight: bold;
+	}
+
+	.group-meta {
+		color: var(--pico-secondary);
+		font-size: 0.9rem;
+	}
+
+	.create-btn {
+		flex-shrink: 0;
+		width: auto;
+		margin: 0 0 0 auto;
+	}
+
+	.group-templates {
+		margin-top: 1rem;
 	}
 </style>

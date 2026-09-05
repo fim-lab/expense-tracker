@@ -105,6 +105,7 @@ export interface TransactionTemplate {
 	userId: number;
 	day: number; // Day of the month (1-31)
 	budgetId: number | null;
+	groupId?: number | null;
 	walletId: number;
 	description: string;
 	amountInCents: number;
@@ -112,6 +113,15 @@ export interface TransactionTemplate {
 	tags?: string[];
 	budgetName?: string;
 	walletName?: string;
+	newGroupId?: number;
+}
+
+export interface TemplateGroup {
+	id: number;
+	userId: number;
+	name: string;
+	isEditing?: boolean;
+	newName?: string;
 }
 
 export type TradeType = 'BUY' | 'SELL';

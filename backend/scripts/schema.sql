@@ -25,7 +25,14 @@ CREATE TABLE IF NOT EXISTS budgets (
     name TEXT NOT NULL,
     limit_cents BIGINT NOT NULL,
     balance_cents BIGINT NOT NULL DEFAULT 0,
-    group_id INT REFERENCES budget_groups(id) ON DELETE SET NULL;
+    group_id INT REFERENCES budget_groups(id) ON DELETE SET NULL,
+    UNIQUE(user_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS template_groups (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
     UNIQUE(user_id, name)
 );
 
@@ -88,6 +95,7 @@ CREATE TABLE IF NOT EXISTS transaction_templates (
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     day INT NOT NULL,
     budget_id INT REFERENCES budgets(id) ON DELETE SET NULL,
+    group_id INT REFERENCES template_groups(id) ON DELETE SET NULL,
     wallet_id INT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
     description TEXT NOT NULL,
     amount_in_cents BIGINT NOT NULL,
@@ -107,3 +115,5 @@ CREATE INDEX IF NOT EXISTS idx_depots_user_id ON depots(user_id);
 CREATE INDEX IF NOT EXISTS idx_trades_depot_id ON trades(depot_id);
 CREATE INDEX IF NOT EXISTS idx_trades_stock_id ON trades(stock_id);
 CREATE INDEX IF NOT EXISTS idx_transaction_templates_user_id ON transaction_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_template_groups_user_id ON template_groups(user_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_templates_group_id ON transaction_templates(group_id);

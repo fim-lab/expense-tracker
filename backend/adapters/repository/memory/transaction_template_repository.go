@@ -54,6 +54,7 @@ func (r *TransactionTemplateRepository) UpdateTransactionTemplate(tt domain.Tran
 	}
 	existingTemplate.Day = tt.Day
 	existingTemplate.BudgetID = tt.BudgetID
+	existingTemplate.GroupID = tt.GroupID
 	existingTemplate.WalletID = tt.WalletID
 	existingTemplate.Description = tt.Description
 	existingTemplate.AmountInCents = tt.AmountInCents
