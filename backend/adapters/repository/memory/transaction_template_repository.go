@@ -40,6 +40,9 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 		}
 	}
 	sort.Slice(res, func(i, j int) bool {
+		if res[i].Position != res[j].Position {
+			return res[i].Position < res[j].Position
+		}
 		return res[i].ID < res[j].ID
 	})
 	return res, nil
@@ -60,6 +63,7 @@ func (r *TransactionTemplateRepository) UpdateTransactionTemplate(tt domain.Tran
 	existingTemplate.AmountInCents = tt.AmountInCents
 	existingTemplate.Type = tt.Type
 	existingTemplate.Tags = tt.Tags
+	existingTemplate.Position = tt.Position
 	r.repo.transactionTemplates[tt.ID] = existingTemplate
 	return nil
 }

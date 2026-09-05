@@ -8,7 +8,6 @@
 			<ul>
 				<li><a href="/settings/budgets">Budgets</a></li>
 				<li><a href="/settings/wallets">Wallets & Depots</a></li>
-				<li><a href="/settings/templates">Templates</a></li>
 				{#if data.showImport}
 					<li><a href="/settings/import">Import</a></li>
 				{/if}

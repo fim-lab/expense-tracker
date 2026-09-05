@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS transaction_templates (
     amount_in_cents BIGINT NOT NULL,
     type TEXT NOT NULL,
     tags TEXT[],
+    position INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

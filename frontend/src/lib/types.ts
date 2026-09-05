@@ -108,6 +108,7 @@ export interface TransactionTemplate {
 	amountInCents: number;
 	type: TransactionType;
 	tags?: string[];
+	position: number;
 	budgetName?: string;
 	walletName?: string;
 	newGroupId?: number;

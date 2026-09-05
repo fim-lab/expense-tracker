@@ -13,6 +13,7 @@ type TransactionTemplate struct {
 	AmountInCents int             `json:"amountInCents"`
 	Type          TransactionType `json:"type"`
 	Tags          []string        `json:"tags,omitempty"`
+	Position      int             `json:"position"`
 }
 
 func (tt *TransactionTemplate) Validate() error {

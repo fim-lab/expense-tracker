@@ -18,24 +18,183 @@
 	let errorMessage = $state('');
 
 	let templates: TransactionTemplate[] = $state(data.templates || []);
-	let templateGroups: TemplateGroup[] = $state(data.templateGroups || []);
+	let templateGroups: TemplateGroup[] = $state(
+		(data.templateGroups || []).map((g: TemplateGroup) => ({ ...g, isEditing: false, newName: '' }))
+	);
 	let fireSummary = $state('');
 
+	function sortByPosition(list: TransactionTemplate[]) {
+		return [...list].sort((a, b) => a.position - b.position || a.id - b.id);
+	}
+
 	let groupedTemplates = $derived(
-		templateGroups
-			.map((group) => ({
-				group,
-				templates: templates.filter((t) => t.groupId === group.id)
-			}))
-			.filter((entry) => entry.templates.length > 0)
+		templateGroups.map((group) => ({
+			group,
+			templates: sortByPosition(templates.filter((t) => t.groupId === group.id))
+		}))
 	);
 
-	let ungroupedTemplates = $derived(templates.filter((t) => !t.groupId));
+	let ungroupedTemplates = $derived(sortByPosition(templates.filter((t) => !t.groupId)));
 
 	let expandedGroups = $state<Record<number, boolean>>({});
 
 	function toggleGroup(groupId: number) {
 		expandedGroups[groupId] = !expandedGroups[groupId];
+	}
+
+	let newGroupName = $state('');
+
+	async function createGroup() {
+		if (!newGroupName) {
+			alert('Enter a name.');
+			return;
+		}
+		const res = await fetch('/api/template-groups', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: newGroupName })
+		});
+
+		if (res.ok) {
+			const created = await res.json();
+			templateGroups = [...templateGroups, { ...created, isEditing: false, newName: '' }];
+			expandedGroups[created.id] = true;
+			newGroupName = '';
+		} else {
+			console.error('Failed to create template group');
+			alert('Failed to create template group');
+		}
+	}
+
+	function startEditingGroup(group: TemplateGroup) {
+		group.isEditing = true;
+		group.newName = group.name;
+	}
+
+	function cancelEditingGroup(group: TemplateGroup) {
+		group.isEditing = false;
+	}
+
+	async function updateGroup(group: TemplateGroup) {
+		if (!group.newName) {
+			alert('Enter a name.');
+			return;
+		}
+		const res = await fetch(`/api/template-groups/${group.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ ...group, name: group.newName })
+		});
+
+		if (res.ok) {
+			group.name = group.newName;
+			group.isEditing = false;
+		} else {
+			console.error('Failed to update template group');
+		}
+	}
+
+	async function deleteGroup(groupId: number) {
+		if (!confirm('Delete this template group? Templates in it will become ungrouped.')) return;
+		const res = await fetch(`/api/template-groups/${groupId}`, {
+			method: 'DELETE'
+		});
+
+		if (res.ok) {
+			templateGroups = templateGroups.filter((g) => g.id !== groupId);
+			templates = templates.map((t) => (t.groupId === groupId ? { ...t, groupId: null } : t));
+		} else {
+			console.error('Failed to delete template group');
+		}
+	}
+
+	let draggedTemplateId = $state<number | null>(null);
+
+	function handleDragStart(event: DragEvent, template: TransactionTemplate) {
+		draggedTemplateId = template.id;
+		event.dataTransfer?.setData('text/plain', String(template.id));
+		if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+	}
+
+	function handleDragEnd() {
+		draggedTemplateId = null;
+	}
+
+	function handleCardDragOver(event: DragEvent) {
+		event.preventDefault();
+	}
+
+	function handleCardDrop(event: DragEvent, targetTemplate: TransactionTemplate) {
+		event.preventDefault();
+		event.stopPropagation();
+		moveTemplate(targetTemplate.groupId ?? null, targetTemplate.id);
+	}
+
+	function handleContainerDrop(event: DragEvent, groupId: number | null) {
+		event.preventDefault();
+		moveTemplate(groupId, null);
+	}
+
+	async function persistTemplateOrder(template: TransactionTemplate) {
+		const res = await fetch(`/api/transaction-templates/${template.id}`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(template)
+		});
+		if (!res.ok) {
+			console.error('Failed to update transaction template order');
+		}
+	}
+
+	function moveTemplate(targetGroupId: number | null, beforeTemplateId: number | null) {
+		if (draggedTemplateId == null) return;
+		const draggedId = draggedTemplateId;
+		draggedTemplateId = null;
+		if (draggedId === beforeTemplateId) return;
+
+		const dragged = templates.find((t) => t.id === draggedId);
+		if (!dragged) return;
+
+		const sourceGroupId = dragged.groupId ?? null;
+
+		const destList = sortByPosition(
+			templates.filter((t) => (t.groupId ?? null) === targetGroupId && t.id !== draggedId)
+		);
+
+		let insertIndex = destList.length;
+		if (beforeTemplateId != null) {
+			const idx = destList.findIndex((t) => t.id === beforeTemplateId);
+			if (idx !== -1) insertIndex = idx;
+		}
+
+		destList.splice(insertIndex, 0, dragged);
+
+		const updates = new Map<number, { position: number; groupId: number | null }>();
+		destList.forEach((t, index) => {
+			updates.set(t.id, { position: index, groupId: targetGroupId });
+		});
+
+		if (sourceGroupId !== targetGroupId) {
+			const sourceList = sortByPosition(
+				templates.filter((t) => (t.groupId ?? null) === sourceGroupId && t.id !== draggedId)
+			);
+			sourceList.forEach((t, index) => {
+				updates.set(t.id, { position: index, groupId: sourceGroupId });
+			});
+		}
+
+		const changed: TransactionTemplate[] = [];
+		templates = templates.map((t) => {
+			const u = updates.get(t.id);
+			if (!u || (t.position === u.position && (t.groupId ?? null) === u.groupId)) return t;
+			const updated = { ...t, position: u.position, groupId: u.groupId };
+			changed.push(updated);
+			return updated;
+		});
+
+		for (const t of changed) {
+			persistTemplateOrder(t);
+		}
 	}
 
 	let draftAmounts = $state<Record<number, number>>({});
@@ -298,24 +457,60 @@
 	<p>{fireSummary}</p>
 {/if}
 
+<div class="new-group-row">
+	<input type="text" placeholder="New group name" bind:value={newGroupName} />
+	<button type="button" class="new-group-btn" onclick={createGroup}>Add group</button>
+</div>
+
 {#each groupedTemplates as entry (entry.group.id)}
-	<article class="group-article">
+	<article
+		class="group-article"
+		ondragover={(e) => e.preventDefault()}
+		ondrop={(e) => handleContainerDrop(e, entry.group.id)}
+	>
 		<div class="group-header">
-			<button type="button" class="group-toggle" onclick={() => toggleGroup(entry.group.id)}>
-				<span class="chevron">{expandedGroups[entry.group.id] ? '▼' : '▶'}</span>
-				<span class="group-name">{entry.group.name}</span>
-				<span class="group-meta">
-					{entry.templates.length} template{entry.templates.length === 1 ? '' : 's'} · net {formatCurrency(
-						netSumInCents(entry.templates)
-					)}
-				</span>
-			</button>
-			<button type="button" class="create-btn" onclick={() => handleFireGroup(entry.templates)}>
-				Create
-			</button>
+			{#if entry.group.isEditing}
+				<input type="text" class="group-name-input" bind:value={entry.group.newName} />
+				<div class="group-actions">
+					<button type="button" onclick={() => updateGroup(entry.group)}>OK</button>
+					<button type="button" class="secondary" onclick={() => cancelEditingGroup(entry.group)}>
+						Cancel
+					</button>
+				</div>
+			{:else}
+				<button type="button" class="group-toggle" onclick={() => toggleGroup(entry.group.id)}>
+					<span class="chevron">{expandedGroups[entry.group.id] ? '▼' : '▶'}</span>
+					<span class="group-name">{entry.group.name}</span>
+					<span class="group-meta">
+						{entry.templates.length} template{entry.templates.length === 1 ? '' : 's'} · net {formatCurrency(
+							netSumInCents(entry.templates)
+						)}
+					</span>
+				</button>
+				<div class="group-actions">
+					<button
+						type="button"
+						class="secondary"
+						onclick={() => startEditingGroup(entry.group)}
+					>
+						Rename
+					</button>
+					<button type="button" class="secondary" onclick={() => deleteGroup(entry.group.id)}>
+						Delete
+					</button>
+					<button type="button" class="create-btn" onclick={() => handleFireGroup(entry.templates)}>
+						Create
+					</button>
+				</div>
+			{/if}
 		</div>
 		{#if expandedGroups[entry.group.id]}
-			<div class="group-templates">
+			<div
+				class="group-templates"
+				role="list"
+				ondragover={(e) => e.preventDefault()}
+				ondrop={(e) => handleContainerDrop(e, entry.group.id)}
+			>
 				{#each entry.templates as template (template.id)}
 					<TransactionTemplateCard
 						{template}
@@ -323,23 +518,52 @@
 						onuse={handleUse}
 						editable
 						onamountchange={handleAmountChange}
+						draggable={true}
+						dragging={draggedTemplateId === template.id}
+						ondragstart={handleDragStart}
+						ondragend={handleDragEnd}
+						ondragover={handleCardDragOver}
+						ondrop={handleCardDrop}
 					/>
 				{/each}
+				{#if entry.templates.length === 0}
+					<p class="empty-drop-hint">Drag templates here.</p>
+				{/if}
 			</div>
 		{/if}
 	</article>
 {/each}
 
-{#if ungroupedTemplates.length > 0}
-	<article>
-		<h3>Templates</h3>
-		<div>
-			{#each ungroupedTemplates as template (template.id)}
-				<TransactionTemplateCard {template} ondelete={handleDelete} onuse={handleUse} />
-			{/each}
-		</div>
-	</article>
-{/if}
+<article
+	class="group-article"
+	ondragover={(e) => e.preventDefault()}
+	ondrop={(e) => handleContainerDrop(e, null)}
+>
+	<h3>Ungrouped</h3>
+	<div
+		class="group-templates"
+		role="list"
+		ondragover={(e) => e.preventDefault()}
+		ondrop={(e) => handleContainerDrop(e, null)}
+	>
+		{#each ungroupedTemplates as template (template.id)}
+			<TransactionTemplateCard
+				{template}
+				ondelete={handleDelete}
+				onuse={handleUse}
+				draggable={true}
+				dragging={draggedTemplateId === template.id}
+				ondragstart={handleDragStart}
+				ondragend={handleDragEnd}
+				ondragover={handleCardDragOver}
+				ondrop={handleCardDrop}
+			/>
+		{/each}
+		{#if ungroupedTemplates.length === 0}
+			<p class="empty-drop-hint">No ungrouped templates.</p>
+		{/if}
+	</div>
+</article>
 
 <style>
 	.error-message {
@@ -396,10 +620,52 @@
 	.create-btn {
 		flex-shrink: 0;
 		width: auto;
-		margin: 0 0 0 auto;
 	}
 
 	.group-templates {
 		margin-top: 1rem;
+		min-height: 2rem;
+	}
+
+	.new-group-row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+
+	.new-group-row input {
+		margin: 0;
+	}
+
+	.new-group-btn {
+		flex-shrink: 0;
+		width: auto;
+		white-space: nowrap;
+	}
+
+	.group-name-input {
+		flex: 1;
+		margin: 0;
+	}
+
+	.group-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.group-actions button {
+		width: auto;
+	}
+
+	.empty-drop-hint {
+		color: var(--pico-muted-color);
+		font-size: 0.9rem;
+		text-align: center;
+		margin: 0;
+		padding: 0.5rem;
+		border: 1px dashed var(--pico-muted-border-color);
+		border-radius: var(--pico-border-radius);
 	}
 </style>
