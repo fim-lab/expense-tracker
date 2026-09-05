@@ -399,7 +399,7 @@
 			Description
 			<span
 				class="tooltip-info"
-				title="Use '$date' in templates for current month(or last at the beginning of the month) in the form 'Februar 26'"
+				title="Use '$lastmonth' or '$nextmonth' in templates for the previous or next month, in the form 'Februar 26'"
 				>ⓘ</span
 			>
 			<input type="text" bind:value={description} placeholder="Grocery shopping..." required />
@@ -488,11 +488,7 @@
 					</span>
 				</button>
 				<div class="group-actions">
-					<button
-						type="button"
-						class="secondary"
-						onclick={() => startEditingGroup(entry.group)}
-					>
+					<button type="button" class="secondary" onclick={() => startEditingGroup(entry.group)}>
 						Rename
 					</button>
 					<button type="button" class="secondary" onclick={() => deleteGroup(entry.group.id)}>

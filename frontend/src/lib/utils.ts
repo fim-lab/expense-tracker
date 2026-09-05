@@ -42,6 +42,16 @@ export function getLastMonthShortMonthYearString(date: Date): string {
 	return getShortMonthYearString(date);
 }
 
+export function getNextMonthShortMonthYearString(date: Date): string {
+	if (date.getMonth() == 11) {
+		date.setMonth(0);
+		date.setFullYear(date.getFullYear() + 1);
+		return getShortMonthYearString(date);
+	}
+	date.setMonth(date.getMonth() + 1);
+	return getShortMonthYearString(date);
+}
+
 export async function searchTransactions(
 	criteria: TransactionSearchCriteria
 ): Promise<PaginatedTransactions> {
