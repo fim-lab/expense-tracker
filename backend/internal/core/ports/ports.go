@@ -1,6 +1,10 @@
 package ports
 
-import "github.com/fim-lab/expense-tracker/internal/core/domain"
+import (
+	"time"
+
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
+)
 
 // --- Driving Ports ---
 type TransactionService interface {
@@ -171,6 +175,7 @@ type TransactionRepository interface {
 	CreateTransfer(from, to domain.Transaction) error
 	CountTransactionsByBudgetID(budgetID int) (int, error)
 	CountTransactionsByWalletID(walletID int) (int, error)
+	HasTransactionForBudgetSince(budgetID int, since time.Time) (bool, error)
 }
 
 type TradeRepository interface {

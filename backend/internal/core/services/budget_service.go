@@ -2,10 +2,13 @@ package services
 
 import (
 	"strings"
+	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
+
+const dormantBudgetThreshold = 60 * 24 * time.Hour
 
 type budgetService struct {
 	budgetRepo      ports.BudgetRepository
@@ -62,6 +65,8 @@ func (s *budgetService) GetBudgets(userID int) ([]domain.Budget, error) {
 		return nil, err
 	}
 
+	since := time.Now().Add(-dormantBudgetThreshold)
+
 	for i := range budgets {
 		budgets[i].CanDelete = true
 		if budgets[i].BalanceCents != 0 {
@@ -74,6 +79,12 @@ func (s *budgetService) GetBudgets(userID int) ([]domain.Budget, error) {
 			if count > 0 {
 				budgets[i].CanDelete = false
 			}
+
+			hasRecentTransaction, err := s.transactionRepo.HasTransactionForBudgetSince(budgets[i].ID, since)
+			if err != nil {
+				return nil, err
+			}
+			budgets[i].IsDormant = !hasRecentTransaction
 		}
 	}
 

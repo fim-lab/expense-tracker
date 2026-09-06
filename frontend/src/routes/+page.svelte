@@ -24,9 +24,10 @@
 		return id ? Number(id) : undefined;
 	});
 	const visibleBudgets = $derived(
-		activeGroupId
+		(activeGroupId
 			? (page.data?.budgets ?? []).filter((b: Budget) => b.groupId === activeGroupId)
 			: (page.data?.budgets ?? [])
+		).filter((b: Budget) => !b.isDormant)
 	);
 	const hasBudgets = $derived(visibleBudgets.length > 0);
 

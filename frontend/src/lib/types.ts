@@ -69,6 +69,7 @@ export interface Budget {
 	balanceCents: number;
 	canDelete: boolean;
 	groupId?: number | null;
+	isDormant: boolean;
 	isEditing?: boolean;
 	newName?: string;
 	newLimitEuros?: number;

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -539,4 +540,14 @@ func (r *TransactionRepository) CountTransactionsByWalletID(walletID int) (int, 
 		return 0, fmt.Errorf("failed to count transactions for wallet ID %d: %w", walletID, err)
 	}
 	return count, nil
+}
+
+func (r *TransactionRepository) HasTransactionForBudgetSince(budgetID int, since time.Time) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM transactions WHERE budget_id = $1 AND date >= $2)`
+	err := r.db.QueryRow(query, budgetID, since).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check recent transactions for budget ID %d: %w", budgetID, err)
+	}
+	return exists, nil
 }

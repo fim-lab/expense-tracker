@@ -3,6 +3,7 @@ package memory
 import (
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -495,4 +496,15 @@ func (r *TransactionRepository) CountTransactionsByWalletID(walletID int) (int, 
 		}
 	}
 	return count, nil
+}
+
+func (r *TransactionRepository) HasTransactionForBudgetSince(budgetID int, since time.Time) (bool, error) {
+	r.repo.mu.RLock()
+	defer r.repo.mu.RUnlock()
+	for _, t := range r.repo.transactions {
+		if t.BudgetID != nil && *t.BudgetID == budgetID && !t.Date.Before(since) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
