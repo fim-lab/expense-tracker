@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
 	import DebtCard from '$lib/components/DebtCard.svelte';
@@ -80,6 +80,11 @@
 		url.searchParams.set('page', p.toString());
 		return url.toString();
 	};
+
+	$effect(() => {
+		if (pageNr > 1) preloadData(pageUrl(pageNr - 1));
+		if (pageNr < totalPages) preloadData(pageUrl(pageNr + 1));
+	});
 
 	function handleKeydown(e: KeyboardEvent) {
 		const target = e.target as HTMLElement;
