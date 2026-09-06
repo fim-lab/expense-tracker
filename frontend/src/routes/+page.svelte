@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
 	import DebtCard from '$lib/components/DebtCard.svelte';
@@ -74,7 +74,27 @@
 	function walletName(walletId: number) {
 		return page.data.wallets?.find((w: Wallet) => w.id === walletId)?.name ?? '';
 	}
+
+	const pageUrl = (p: number) => {
+		const url = new URL(page.url);
+		url.searchParams.set('page', p.toString());
+		return url.toString();
+	};
+
+	function handleKeydown(e: KeyboardEvent) {
+		const target = e.target as HTMLElement;
+		const tag = target?.tagName;
+		if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+
+		if (e.key === 'ArrowLeft' && pageNr > 1) {
+			goto(pageUrl(pageNr - 1));
+		} else if (e.key === 'ArrowRight' && pageNr < totalPages) {
+			goto(pageUrl(pageNr + 1));
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="grid">
 	<aside>
