@@ -114,6 +114,28 @@ func (s *budgetService) UpdateBudget(userID int, budget domain.Budget) error {
 	return s.budgetRepo.UpdateBudget(budget)
 }
 
+func (s *budgetService) CreateBudgetTransfer(userID, fromBudgetID, toBudgetID, amount int) error {
+	if fromBudgetID == toBudgetID {
+		return domain.ErrSameBudgetTransfer
+	}
+
+	if amount <= 0 {
+		return domain.ErrInvalidAmount
+	}
+
+	fromBudget, err := s.budgetRepo.GetBudgetByID(fromBudgetID)
+	if err != nil || fromBudget.UserID != userID {
+		return domain.ErrBudgetNotFound
+	}
+
+	toBudget, err := s.budgetRepo.GetBudgetByID(toBudgetID)
+	if err != nil || toBudget.UserID != userID {
+		return domain.ErrBudgetNotFound
+	}
+
+	return s.budgetRepo.CreateBudgetTransfer(fromBudgetID, toBudgetID, amount)
+}
+
 func (s *budgetService) DeleteBudget(userID int, id int) error {
 	existing, err := s.budgetRepo.GetBudgetByID(id)
 	if err != nil {

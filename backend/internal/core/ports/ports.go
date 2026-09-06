@@ -21,6 +21,7 @@ type BudgetService interface {
 	GetBudgets(userID int) ([]domain.Budget, error)
 	GetTotalOfBudgets(userID int) (int, error)
 	DeleteBudget(userID int, id int) error
+	CreateBudgetTransfer(userID, fromBudgetID, toBudgetID, amount int) error
 }
 
 type BudgetGroupService interface {
@@ -119,6 +120,7 @@ type BudgetRepository interface {
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
 	DeleteBudget(id int) error
 	DeleteAllByUser(userID int) error
+	CreateBudgetTransfer(fromBudgetID, toBudgetID, amount int) error
 }
 
 type BudgetGroupRepository interface {

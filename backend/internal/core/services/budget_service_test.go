@@ -189,6 +189,73 @@ func TestGetBudgetsCanDelete(t *testing.T) {
 	}
 }
 
+func TestCreateBudgetTransfer(t *testing.T) {
+	userID := 1
+
+	t.Run("Successful transfer moves balance between budgets", func(t *testing.T) {
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+		svc.CreateBudget(userID, domain.Budget{Name: "From", LimitCents: 10000, BalanceCents: 500})
+		svc.CreateBudget(userID, domain.Budget{Name: "To", LimitCents: 10000, BalanceCents: 100})
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+		fromBudget, toBudget := budgets[0], budgets[1]
+
+		err := svc.CreateBudgetTransfer(userID, fromBudget.ID, toBudget.ID, 300)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		updated, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+		for _, b := range updated {
+			if b.ID == fromBudget.ID && b.BalanceCents != 200 {
+				t.Errorf("expected from-budget balance 200, got %v", b.BalanceCents)
+			}
+			if b.ID == toBudget.ID && b.BalanceCents != 400 {
+				t.Errorf("expected to-budget balance 400, got %v", b.BalanceCents)
+			}
+		}
+	})
+
+	t.Run("Same budget transfer is rejected", func(t *testing.T) {
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+		svc.CreateBudget(userID, domain.Budget{Name: "Only", LimitCents: 10000, BalanceCents: 500})
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+
+		err := svc.CreateBudgetTransfer(userID, budgets[0].ID, budgets[0].ID, 100)
+		if err != domain.ErrSameBudgetTransfer {
+			t.Errorf("expected ErrSameBudgetTransfer, got %v", err)
+		}
+	})
+
+	t.Run("Non-positive amount is rejected", func(t *testing.T) {
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+		svc.CreateBudget(userID, domain.Budget{Name: "From", LimitCents: 10000, BalanceCents: 500})
+		svc.CreateBudget(userID, domain.Budget{Name: "To", LimitCents: 10000, BalanceCents: 100})
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+
+		err := svc.CreateBudgetTransfer(userID, budgets[0].ID, budgets[1].ID, 0)
+		if err != domain.ErrInvalidAmount {
+			t.Errorf("expected ErrInvalidAmount, got %v", err)
+		}
+	})
+
+	t.Run("Transfer involving another user's budget is unauthorized", func(t *testing.T) {
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+		svc.CreateBudget(userID, domain.Budget{Name: "Mine", LimitCents: 10000, BalanceCents: 500})
+		svc.CreateBudget(999, domain.Budget{Name: "Theirs", LimitCents: 10000, BalanceCents: 100})
+		mine, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+		theirs, _ := repos.BudgetRepository().FindBudgetsByUser(999)
+
+		err := svc.CreateBudgetTransfer(userID, mine[0].ID, theirs[0].ID, 100)
+		if err != domain.ErrBudgetNotFound {
+			t.Errorf("expected ErrBudgetNotFound, got %v", err)
+		}
+	})
+}
+
 func TestDeleteBudget(t *testing.T) {
 	userID := 1
 

@@ -9,10 +9,12 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		.join('; ');
 
 	const walletsRes = await fetch(`${API_URL}/wallets`, { headers: { Cookie: cookieHeader } });
+	const budgetsRes = await fetch(`${API_URL}/budgets`, { headers: { Cookie: cookieHeader } });
 
-	if (walletsRes.status === 401) throw error(401, 'Unauthorized');
+	if (walletsRes.status === 401 || budgetsRes.status === 401) throw error(401, 'Unauthorized');
 
 	return {
-		wallets: walletsRes.ok ? await walletsRes.json() : []
+		wallets: walletsRes.ok ? await walletsRes.json() : [],
+		budgets: budgetsRes.ok ? await budgetsRes.json() : []
 	};
 };

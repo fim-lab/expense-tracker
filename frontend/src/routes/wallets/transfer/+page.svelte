@@ -1,20 +1,33 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { Wallet } from '$lib/types.js';
+	import type { Budget, Wallet } from '$lib/types.js';
 
 	let { data } = $props();
 	const wallets: Wallet[] = data.wallets || [];
+	const budgets: Budget[] = data.budgets || [];
 
 	let fromWalletId = $state(0);
 	let toWalletId = $state(0);
 	let amount = $state(0);
 	let errorMessage = $state('');
 
+	let fromBudgetId = $state(0);
+	let toBudgetId = $state(0);
+	let budgetAmount = $state(0);
+	let budgetErrorMessage = $state('');
+
 	const availableToWallets = $derived(() => {
 		if (fromWalletId === 0) {
 			return [];
 		}
 		return wallets.filter((wallet) => wallet.id !== fromWalletId);
+	});
+
+	const availableToBudgets = $derived(() => {
+		if (fromBudgetId === 0) {
+			return [];
+		}
+		return budgets.filter((budget) => budget.id !== fromBudgetId);
 	});
 
 	function handleFocus(event: FocusEvent) {
@@ -65,6 +78,41 @@
 			errorMessage = `Failed to transfer money: ${errorText}`;
 		}
 	}
+
+	async function handleBudgetSubmit(e: Event) {
+		e.preventDefault();
+		budgetErrorMessage = '';
+
+		if (fromBudgetId === 0 || toBudgetId === 0) {
+			budgetErrorMessage = 'Please select both a "from" and "to" budget.';
+			return;
+		}
+
+		if (budgetAmount <= 0) {
+			budgetErrorMessage = 'Amount must be greater than zero.';
+			return;
+		}
+
+		const payload = {
+			fromBudgetId: Number(fromBudgetId),
+			toBudgetId: Number(toBudgetId),
+			amount: Math.round(budgetAmount * 100)
+		};
+
+		const res = await fetch('/api/budgets/transfer', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		});
+
+		if (res.ok) {
+			goto('/');
+		} else {
+			const errorText = await res.text();
+			console.error('Backend Error:', errorText);
+			budgetErrorMessage = `Failed to transfer money: ${errorText}`;
+		}
+	}
 </script>
 
 <article>
@@ -108,6 +156,54 @@
 
 			{#if errorMessage}
 				<p class="error-message">{errorMessage}</p>
+			{/if}
+
+			<button type="submit">Transfer Money</button>
+		</form>
+	{/if}
+</article>
+
+<article>
+	<h3>Transfer Money Between Budgets</h3>
+	{#if !budgets || budgets.length < 2}
+		<p>You need to have at least two budgets.</p>
+	{:else}
+		<form onsubmit={handleBudgetSubmit}>
+			<div class="grid">
+				<label>
+					From Budget
+					<select bind:value={fromBudgetId} required>
+						<option value={0} disabled>Select Budget</option>
+						{#each budgets as budget}
+							<option value={budget.id}>{budget.name} ({budget.balanceCents / 100}€)</option>
+						{/each}
+					</select>
+				</label>
+				<label>
+					To Budget
+					<select bind:value={toBudgetId} required>
+						<option value={0} disabled>Select Budget</option>
+						{#each availableToBudgets() as budget}
+							<option value={budget.id}>{budget.name} ({budget.balanceCents / 100}€)</option>
+						{/each}
+					</select>
+				</label>
+			</div>
+
+			<label>
+				Amount (EUR)
+				<input
+					type="number"
+					onfocus={handleFocus}
+					onblur={handleBlur}
+					step="0.01"
+					bind:value={budgetAmount}
+					required
+				/>
+			</label>
+
+			{#if budgetErrorMessage}
+				<p class="error-message">{budgetErrorMessage}</p>
 			{/if}
 
 			<button type="submit">Transfer Money</button>
