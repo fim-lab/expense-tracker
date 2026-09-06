@@ -186,16 +186,24 @@ func (r *TransactionRepository) FindTransactionsByUser(userID int, limit int, of
 	for rows.Next() {
 		var t domain.TransactionDTO
 		var nullBudgetName sql.NullString
+		var nullWalletName sql.NullString
+		var isPending *bool
 		var isDebt *bool
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &isDebt, &nullBudgetName, &t.WalletName)
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &isPending, &isDebt, &nullBudgetName, &nullWalletName)
 		if err != nil {
 			return nil, err
 		}
+		t.IsPending = isPending != nil && *isPending
 		t.IsDebt = isDebt != nil && *isDebt
 		if nullBudgetName.Valid {
 			t.BudgetName = nullBudgetName.String
 		} else {
 			t.BudgetName = ""
+		}
+		if nullWalletName.Valid {
+			t.WalletName = nullWalletName.String
+		} else {
+			t.WalletName = ""
 		}
 		txs = append(txs, t)
 	}
@@ -269,16 +277,24 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 	for rows.Next() {
 		var t domain.TransactionDTO
 		var nullBudgetName sql.NullString
+		var nullWalletName sql.NullString
+		var isPending *bool
 		var isDebt *bool
-		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &t.IsPending, &isDebt, &nullBudgetName, &t.WalletName)
+		err := rows.Scan(&t.ID, &t.Date, &t.Description, &t.AmountInCents, &t.Type, &isPending, &isDebt, &nullBudgetName, &nullWalletName)
 		if err != nil {
 			return nil, err
 		}
+		t.IsPending = isPending != nil && *isPending
 		t.IsDebt = isDebt != nil && *isDebt
 		if nullBudgetName.Valid {
 			t.BudgetName = nullBudgetName.String
 		} else {
 			t.BudgetName = ""
+		}
+		if nullWalletName.Valid {
+			t.WalletName = nullWalletName.String
+		} else {
+			t.WalletName = ""
 		}
 		txs = append(txs, t)
 	}

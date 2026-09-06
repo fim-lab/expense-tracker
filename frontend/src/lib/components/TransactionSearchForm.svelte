@@ -13,15 +13,15 @@
 	const until = $derived(
 		page.url.searchParams.get('until') ?? ''
 	);
-	const budgetId = $derived(() => {
-		const id = page.url.searchParams.get('budgetId');
+	const budgetId = $derived.by(() => {
+		const id = page.url.searchParams.get('budget_id');
 		return id ? Number(id) : 'all';
 	});
-	const walletId = $derived(() => {
-		const id = page.url.searchParams.get('walletId');
+	const walletId = $derived.by(() => {
+		const id = page.url.searchParams.get('wallet_id');
 		return id ? Number(id) : 'all';
 	});
-	const type = $derived(() => {
+	const type = $derived.by(() => {
 		const typeParam = page.url.searchParams.get('type');
 		return (typeParam === 'INCOME' || typeParam === 'EXPENSE') ? typeParam : 'all';
 	});
