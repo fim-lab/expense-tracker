@@ -27,4 +27,6 @@ var (
 	ErrStockNotFound               = errors.New("stock not found")
 	ErrMissingBudgetGroup          = errors.New("budget group name is required")
 	ErrBudgetGroupNotFound         = errors.New("budget group not found or unauthorized")
+	ErrMissingTemplateGroup        = errors.New("template group name is required")
+	ErrTemplateGroupNotFound       = errors.New("template group not found or unauthorized")
 )

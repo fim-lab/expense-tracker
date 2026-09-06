@@ -25,11 +25,11 @@ export const load: PageServerLoad = async ({ fetch, url, cookies }) => {
 	const budgets = (await authedApiFetch('/budgets')) || [];
 	const budgetGroups = (await authedApiFetch('/budget-groups')) || [];
 	const transactions = (await authedApiFetch(`/transactions/search?${url.searchParams}`)) ?? {
-		data: [],
+		transactions: [],
 		total: 0,
 		sumInCents: 0,
-		page: 0,
-		pageSize: 0
+		page: 1,
+		pageSize: 10
 	};
 	const debtSummary = (await authedApiFetch('/transactions/search?debt=true&pageSize=1')) ?? {
 		total: 0,

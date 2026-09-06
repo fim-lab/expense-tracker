@@ -12,7 +12,7 @@ func TestImportTransactions(t *testing.T) {
 	repos := memory.NewCleanRepositories()
 	svc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository())
-	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.BudgetGroupRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository(), stockSvc)
+	importSvc := NewImportService(repos.UserRepository(), repos.BudgetRepository(), repos.BudgetGroupRepository(), repos.WalletRepository(), repos.DepotRepository(), repos.TransactionRepository(), repos.TradeRepository(), repos.TransactionTemplateRepository(), repos.TemplateGroupRepository(), stockSvc)
 
 	userID := 1
 	repos.UserRepository().SaveUser(domain.User{ID: userID, Username: "test"})
@@ -22,7 +22,6 @@ func TestImportTransactions(t *testing.T) {
 
 	importData := domain.FullImportData{
 		Settings: domain.ImportSettings{
-			Gehalt: 300000,
 			Budgets: []domain.ImportBudget{
 				{Name: "Food", ValueInCents: 50000, Account: "Private"},
 				{Name: "Rent", ValueInCents: 100000, Account: "Private"},
@@ -93,11 +92,6 @@ func TestImportTransactions(t *testing.T) {
 	} else if depots[0].Name != "Lots" {
 		t.Errorf("Expected depot name 'Lots', got '%s'", depots[0].Name)
 	}
-
-	user, _ := repos.UserRepository().GetUserByID(userID)
-	if user.SalaryCents != 300000 {
-		t.Errorf("Expected salary 300000, got %d", user.SalaryCents)
-	}
 }
 
 func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
@@ -111,6 +105,7 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 		f.repos.TransactionRepository(),
 		f.repos.TradeRepository(),
 		f.repos.TransactionTemplateRepository(),
+		f.repos.TemplateGroupRepository(),
 		f.stockSvc,
 	)
 	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {
@@ -215,6 +210,7 @@ func TestDeleteAllUserDataRemovesTrades(t *testing.T) {
 		f.repos.TransactionRepository(),
 		f.repos.TradeRepository(),
 		f.repos.TransactionTemplateRepository(),
+		f.repos.TemplateGroupRepository(),
 		f.stockSvc,
 	)
 	if err := f.repos.UserRepository().SaveUser(domain.User{ID: f.userID, Username: "test"}); err != nil {

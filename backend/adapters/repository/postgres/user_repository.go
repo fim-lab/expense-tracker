@@ -15,8 +15,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) GetUserByUsername(username string) (domain.User, error) {
 	var u domain.User
-	query := `SELECT id, username, password_hash, salary_cents FROM users WHERE username = $1`
-	err := r.db.QueryRow(query, username).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.SalaryCents)
+	query := `SELECT id, username, password_hash FROM users WHERE username = $1`
+	err := r.db.QueryRow(query, username).Scan(&u.ID, &u.Username, &u.PasswordHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.User{}, domain.ErrUserNotFound
@@ -27,16 +27,16 @@ func (r *UserRepository) GetUserByUsername(username string) (domain.User, error)
 }
 
 func (r *UserRepository) SaveUser(u domain.User) error {
-	query := `INSERT INTO users (username, password_hash, salary_cents) 
-	          VALUES ($1, $2, $3)`
-	_, err := r.db.Exec(query, u.Username, u.PasswordHash, u.SalaryCents)
+	query := `INSERT INTO users (username, password_hash)
+	          VALUES ($1, $2)`
+	_, err := r.db.Exec(query, u.Username, u.PasswordHash)
 	return err
 }
 
 func (r *UserRepository) GetUserByID(userID int) (domain.User, error) {
 	var u domain.User
-	query := `SELECT id, username, password_hash, salary_cents FROM users WHERE id = $1`
-	err := r.db.QueryRow(query, userID).Scan(&u.ID, &u.Username, &u.PasswordHash, &u.SalaryCents)
+	query := `SELECT id, username, password_hash FROM users WHERE id = $1`
+	err := r.db.QueryRow(query, userID).Scan(&u.ID, &u.Username, &u.PasswordHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.User{}, domain.ErrUserNotFound
@@ -44,10 +44,4 @@ func (r *UserRepository) GetUserByID(userID int) (domain.User, error) {
 		return domain.User{}, err
 	}
 	return u, nil
-}
-
-func (r *UserRepository) UpdateUserSalary(userID int, salary int) error {
-	query := `UPDATE users SET salary_cents = $1 WHERE id = $2`
-	_, err := r.db.Exec(query, salary, userID)
-	return err
 }

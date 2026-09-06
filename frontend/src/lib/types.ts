@@ -59,9 +59,6 @@ export interface Wallet {
 
 export interface User {
 	id: number;
-	salaryCents: number;
-	isEditing?: boolean;
-	newSalaryEuros?: number;
 }
 
 export interface Budget {
@@ -105,13 +102,24 @@ export interface TransactionTemplate {
 	userId: number;
 	day: number; // Day of the month (1-31)
 	budgetId: number | null;
+	groupId?: number | null;
 	walletId: number;
 	description: string;
 	amountInCents: number;
 	type: TransactionType;
 	tags?: string[];
+	position: number;
 	budgetName?: string;
 	walletName?: string;
+	newGroupId?: number;
+}
+
+export interface TemplateGroup {
+	id: number;
+	userId: number;
+	name: string;
+	isEditing?: boolean;
+	newName?: string;
 }
 
 export type TradeType = 'BUY' | 'SELL';

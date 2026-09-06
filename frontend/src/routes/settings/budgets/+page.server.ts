@@ -1,5 +1,4 @@
 import type { PageServerLoad } from './$types';
-import type { User } from '$lib/types';
 
 export const load: PageServerLoad = async ({ fetch }) => {
     const budgetRes = await fetch('/api/budgets');
@@ -14,11 +13,5 @@ export const load: PageServerLoad = async ({ fetch }) => {
         budgetGroups = await budgetGroupRes.json();
     }
 
-    const userRes = await fetch('/api/users/me');
-    let user: User | null = null;
-    if (userRes.ok) {
-        user = await userRes.json();
-    }
-
-    return { budgets, budgetGroups, user };
+    return { budgets, budgetGroups };
 };

@@ -30,6 +30,13 @@ type BudgetGroupService interface {
 	DeleteBudgetGroup(userID int, id int) error
 }
 
+type TemplateGroupService interface {
+	CreateTemplateGroup(userID int, g domain.TemplateGroup) (domain.TemplateGroup, error)
+	GetTemplateGroups(userID int) ([]domain.TemplateGroup, error)
+	UpdateTemplateGroup(userID int, g domain.TemplateGroup) error
+	DeleteTemplateGroup(userID int, id int) error
+}
+
 type WalletService interface {
 	CreateWallet(userID int, w domain.Wallet) error
 	GetWallet(userID int, id int) (domain.Wallet, error)
@@ -42,7 +49,6 @@ type WalletService interface {
 type UserService interface {
 	Authenticate(username, password string) (domain.User, error)
 	GetUserByID(userID int) (domain.User, error)
-	UpdateSalary(userID int, salary int) error
 }
 
 type SessionService interface {
@@ -98,7 +104,6 @@ type UserRepository interface {
 	GetUserByUsername(username string) (domain.User, error)
 	GetUserByID(userID int) (domain.User, error)
 	SaveUser(u domain.User) error
-	UpdateUserSalary(userID int, salary int) error
 }
 
 type SessionRepository interface {
@@ -121,6 +126,14 @@ type BudgetGroupRepository interface {
 	FindBudgetGroupsByUser(userID int) ([]domain.BudgetGroup, error)
 	UpdateBudgetGroup(g domain.BudgetGroup) error
 	DeleteBudgetGroup(id int) error
+	DeleteAllByUser(userID int) error
+}
+
+type TemplateGroupRepository interface {
+	SaveTemplateGroup(g domain.TemplateGroup) (int, error)
+	FindTemplateGroupsByUser(userID int) ([]domain.TemplateGroup, error)
+	UpdateTemplateGroup(g domain.TemplateGroup) error
+	DeleteTemplateGroup(id int) error
 	DeleteAllByUser(userID int) error
 }
 
@@ -199,4 +212,5 @@ type Repositories interface {
 	TradeRepository() TradeRepository
 	TransactionTemplateRepository() TransactionTemplateRepository
 	StockRepository() StockRepository
+	TemplateGroupRepository() TemplateGroupRepository
 }

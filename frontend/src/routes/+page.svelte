@@ -11,8 +11,8 @@
 	import { formatCurrency, updateParams } from '$lib/utils';
 	import type { Budget, BudgetGroup, Depot, Wallet } from '$lib/types';
 
-	const pageNr = page.data.page;
-	const pageSize = page.data.pageSize;
+	const pageNr = $derived(page.data.page);
+	const pageSize = $derived(page.data.pageSize);
 	const totalPages = $derived(Math.ceil(page.data.total / pageSize));
 	const hasWallets = $derived(page.data?.wallets?.length > 0);
 	const hasDepots = $derived(page.data?.depots?.length > 0);
