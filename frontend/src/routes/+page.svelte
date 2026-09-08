@@ -81,9 +81,17 @@
 		return url.toString();
 	};
 
+	const preloadedUrls = new Set<string>();
+
+	function preloadOnce(url: string) {
+		if (preloadedUrls.has(url)) return;
+		preloadedUrls.add(url);
+		preloadData(url);
+	}
+
 	$effect(() => {
-		if (pageNr > 1) preloadData(pageUrl(pageNr - 1));
-		if (pageNr < totalPages) preloadData(pageUrl(pageNr + 1));
+		if (pageNr > 1) preloadOnce(pageUrl(pageNr - 1));
+		if (pageNr < totalPages) preloadOnce(pageUrl(pageNr + 1));
 	});
 
 	function handleKeydown(e: KeyboardEvent) {
