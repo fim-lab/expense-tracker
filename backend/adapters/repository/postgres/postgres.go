@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type postgresRepositoryCollection struct {
@@ -46,7 +47,7 @@ func setupPostgresDB() *sql.DB {
 		log.Fatal("DATABASE_URL environment variable is not set for production mode")
 	}
 
-	db, err := sql.Open("postgres", dbUrl)
+	db, err := sql.Open("pgx", dbUrl)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 	"github.com/fim-lab/expense-tracker/internal/core/services"
 	"github.com/go-chi/chi/v5"
-	_ "github.com/lib/pq"
 )
 
 const (
