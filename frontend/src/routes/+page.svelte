@@ -89,7 +89,8 @@
 	function handleKeydown(e: KeyboardEvent) {
 		const target = e.target as HTMLElement;
 		const tag = target?.tagName;
-		if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+		if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target?.isContentEditable)
+			return;
 
 		if (e.key === 'ArrowLeft' && pageNr > 1) {
 			goto(pageUrl(pageNr - 1));
@@ -103,10 +104,6 @@
 
 <div class="grid">
 	<aside>
-		<article>
-			<header><strong>Search</strong></header>
-			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
-		</article>
 		{#if hasBudgets || hasWallets || hasDepots || hasDebts}
 			<article>
 				{#if hasWallets || hasDepots || hasDebts}
@@ -140,6 +137,12 @@
 		{/if}
 	</aside>
 
+	<aside>
+		<article>
+			<header><strong>Search</strong></header>
+			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
+		</article>
+	</aside>
 	<article>
 		<header><strong>Recent Transactions</strong></header>
 
