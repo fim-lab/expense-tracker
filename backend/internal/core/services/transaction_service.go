@@ -88,7 +88,7 @@ func (s *transactionService) Search(userID int, criteria domain.TransactionSearc
 		criteria.Page = 1
 	}
 	if criteria.PageSize <= 0 {
-		criteria.PageSize = 10
+		criteria.PageSize = 8
 	} else if criteria.PageSize > 100 {
 		criteria.PageSize = 100
 	}
