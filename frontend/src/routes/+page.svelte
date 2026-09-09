@@ -113,30 +113,28 @@
 <div class="grid">
 	<aside>
 		{#if hasBudgets || hasWallets || hasDepots || hasDebts}
-			<article>
-				{#if hasWallets || hasDepots || hasDebts}
+			{#if hasWallets || hasDepots || hasDebts}
+				<article>
 					<p class="total">
 						Total wealth <strong>{formatCurrency(totalWealth)}</strong>
 					</p>
-				{/if}
+				</article>
+			{/if}
+			<article>
 				{#if hasWallets}
-					<header><strong>Wallets</strong></header>
 					{#each page.data.wallets as wallet}
 						<WalletCard {wallet} />
 					{/each}
 				{/if}
 				{#if hasDebts}
-					<header><strong>Debt</strong></header>
 					<DebtCard amountInCents={page.data.debtSumInCents} />
 				{/if}
 				{#if hasDepots}
-					<header><strong>Depots</strong></header>
 					{#each page.data.depots as depot (depot.id)}
 						<DepotCard {depot} subtitle={walletName(depot.walletId)} />
 					{/each}
 				{/if}
 				{#if hasBudgets}
-					<header><strong>Budgets</strong></header>
 					{#each visibleBudgets as budget}
 						<BudgetCard {budget} />
 					{/each}
@@ -147,12 +145,16 @@
 
 	<aside>
 		<article>
-			<header><strong>Search</strong></header>
 			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
 		</article>
 	</aside>
 	<article>
-		<header><strong>Recent Transactions</strong></header>
+		{#if page.data.transactions?.length > 0}
+			<header>
+				<p class="total">
+					Sum <strong>{formatCurrency(page.data.sumInCents)}</strong>
+				</p>
+			</header>{/if}
 
 		{#if budgetGroups.length > 0}
 			<div class="group-tabs">
@@ -179,9 +181,6 @@
 
 		<div class="transaction-list">
 			{#if page.data.transactions?.length > 0}
-				<p class="total">
-					Sum <strong>{formatCurrency(page.data.sumInCents)}</strong>
-				</p>
 				{#each page.data.transactions as tx (tx.id)}
 					<TransactionCard transaction={tx} ondelete={deleteTransaction} />
 				{/each}
