@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"database/sql"
+	"fmt"
+
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
 
@@ -62,6 +64,30 @@ func (r *BudgetRepository) FindBudgetsByUser(userID int) ([]domain.Budget, error
 		res = append(res, b)
 	}
 	return res, nil
+}
+
+func (r *BudgetRepository) CreateBudgetTransfer(fromID, toID, amount int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("could not start transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`UPDATE budgets SET balance_cents = balance_cents - $1 WHERE id = $2`, amount, fromID)
+	if err != nil {
+		return fmt.Errorf("failed to update from-budget balance: %w", err)
+	}
+
+	_, err = tx.Exec(`UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`, amount, toID)
+	if err != nil {
+		return fmt.Errorf("failed to update to-budget balance: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
 
 func (r *BudgetRepository) DeleteBudget(id int) error {

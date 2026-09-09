@@ -72,7 +72,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem;
+		padding: 6px 12px;
 		margin-bottom: 0.75rem;
 		background: var(--pico-card-background-color);
 		border-radius: 8px;

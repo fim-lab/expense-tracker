@@ -132,6 +132,36 @@ func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *BudgetHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("userID").(int)
+	var req struct {
+		FromBudgetID int `json:"fromBudgetId"`
+		ToBudgetID   int `json:"toBudgetId"`
+		Amount       int `json:"amount"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err := h.service.CreateBudgetTransfer(userID, req.FromBudgetID, req.ToBudgetID, req.Amount)
+	if err != nil {
+		if err == domain.ErrSameBudgetTransfer || err == domain.ErrInvalidAmount {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err == domain.ErrBudgetNotFound {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Error creating transfer", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *BudgetHandler) UpdateBudget(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {

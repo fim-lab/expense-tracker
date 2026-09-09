@@ -63,6 +63,27 @@ func (r *BudgetRepository) DeleteAllByUser(userID int) error {
 	return nil
 }
 
+func (r *BudgetRepository) CreateBudgetTransfer(fromID, toID, amount int) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+
+	fromBudget, ok := r.repo.budgets[fromID]
+	if !ok {
+		return domain.ErrBudgetNotFound
+	}
+	toBudget, ok := r.repo.budgets[toID]
+	if !ok {
+		return domain.ErrBudgetNotFound
+	}
+
+	fromBudget.BalanceCents -= amount
+	toBudget.BalanceCents += amount
+	r.repo.budgets[fromID] = fromBudget
+	r.repo.budgets[toID] = toBudget
+
+	return nil
+}
+
 func (r *BudgetRepository) UpdateBudget(b domain.Budget) error {
 	r.repo.mu.Lock()
 	defer r.repo.mu.Unlock()

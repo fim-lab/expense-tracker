@@ -142,7 +142,23 @@
 			body: JSON.stringify(template)
 		});
 		if (!res.ok) {
-			console.error('Failed to update transaction template order');
+			throw new Error(`Failed to update template ${template.id}`);
+		}
+	}
+
+	async function persistReorder(
+		changed: TransactionTemplate[],
+		previousTemplates: TransactionTemplate[]
+	) {
+		for (const t of changed) {
+			try {
+				await persistTemplateOrder(t);
+			} catch (err) {
+				console.error(err);
+				templates = previousTemplates;
+				alert('Failed to save the new order, reverted.');
+				return;
+			}
 		}
 	}
 
@@ -183,6 +199,7 @@
 			});
 		}
 
+		const previousTemplates = templates;
 		const changed: TransactionTemplate[] = [];
 		templates = templates.map((t) => {
 			const u = updates.get(t.id);
@@ -192,9 +209,7 @@
 			return updated;
 		});
 
-		for (const t of changed) {
-			persistTemplateOrder(t);
-		}
+		persistReorder(changed, previousTemplates);
 	}
 
 	let draftAmounts = $state<Record<number, number>>({});

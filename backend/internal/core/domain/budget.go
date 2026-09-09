@@ -8,4 +8,5 @@ type Budget struct {
 	BalanceCents int    `json:"balanceCents"`
 	CanDelete    bool   `json:"canDelete"`
 	GroupID      *int   `json:"groupId"`
+	IsDormant    bool   `json:"isDormant"`
 }

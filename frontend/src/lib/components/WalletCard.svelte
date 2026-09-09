@@ -1,17 +1,25 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { formatCurrency } from '$lib/utils';
 
 	let { wallet } = $props();
+
+	const href = $derived.by(() => {
+		const params = new URLSearchParams(page.url.searchParams);
+		params.set('wallet_id', String(wallet.id));
+		params.set('page', '1');
+		return `/?${params}`;
+	});
 </script>
 
-<div class="card">
+<a {href} class="card" data-sveltekit-noscroll>
 	<div class="card-info">
 		<p class="card-title">
 			{wallet.name}
 			<span class="card-amount">{formatCurrency(wallet.balanceCents)}</span>
 		</p>
 	</div>
-</div>
+</a>
 
 <style>
 	.card {
@@ -24,6 +32,19 @@
 		border-radius: var(--pico-border-radius);
 		box-shadow: var(--pico-card-box-shadow);
 		border-left: 4px solid var(--pico-primary-inverse);
+		color: inherit;
+		text-decoration: none;
+
+		p {
+			color: inherit;
+		}
+	}
+
+	.card:hover,
+	.card:focus,
+	.card:active {
+		color: inherit;
+		text-decoration: none;
 	}
 
 	.card-info {

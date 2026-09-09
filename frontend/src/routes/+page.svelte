@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
 	import DebtCard from '$lib/components/DebtCard.svelte';
@@ -24,9 +24,10 @@
 		return id ? Number(id) : undefined;
 	});
 	const visibleBudgets = $derived(
-		activeGroupId
+		(activeGroupId
 			? (page.data?.budgets ?? []).filter((b: Budget) => b.groupId === activeGroupId)
 			: (page.data?.budgets ?? [])
+		).filter((b: Budget) => !b.isDormant)
 	);
 	const hasBudgets = $derived(visibleBudgets.length > 0);
 
@@ -73,39 +74,67 @@
 	function walletName(walletId: number) {
 		return page.data.wallets?.find((w: Wallet) => w.id === walletId)?.name ?? '';
 	}
+
+	const pageUrl = (p: number) => {
+		const url = new URL(page.url);
+		url.searchParams.set('page', p.toString());
+		return url.toString();
+	};
+
+	const preloadedUrls = new Set<string>();
+
+	function preloadOnce(url: string) {
+		if (preloadedUrls.has(url)) return;
+		preloadedUrls.add(url);
+		preloadData(url);
+	}
+
+	$effect(() => {
+		if (pageNr > 1) preloadOnce(pageUrl(pageNr - 1));
+		if (pageNr < totalPages) preloadOnce(pageUrl(pageNr + 1));
+	});
+
+	function handleKeydown(e: KeyboardEvent) {
+		const target = e.target as HTMLElement;
+		const tag = target?.tagName;
+		if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target?.isContentEditable)
+			return;
+
+		if (e.key === 'ArrowLeft' && pageNr > 1) {
+			goto(pageUrl(pageNr - 1), { noScroll: true });
+		} else if (e.key === 'ArrowRight' && pageNr < totalPages) {
+			goto(pageUrl(pageNr + 1), { noScroll: true });
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="grid">
 	<aside>
-		<article>
-			<header><strong>Search</strong></header>
-			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
-		</article>
 		{#if hasBudgets || hasWallets || hasDepots || hasDebts}
-			<article>
-				{#if hasWallets || hasDepots || hasDebts}
+			{#if hasWallets || hasDepots || hasDebts}
+				<article>
 					<p class="total">
 						Total wealth <strong>{formatCurrency(totalWealth)}</strong>
 					</p>
-				{/if}
+				</article>
+			{/if}
+			<article>
 				{#if hasWallets}
-					<header><strong>Wallets</strong></header>
 					{#each page.data.wallets as wallet}
 						<WalletCard {wallet} />
 					{/each}
 				{/if}
-				{#if hasDebts}
-					<header><strong>Debt</strong></header>
-					<DebtCard amountInCents={page.data.debtSumInCents} />
-				{/if}
 				{#if hasDepots}
-					<header><strong>Depots</strong></header>
 					{#each page.data.depots as depot (depot.id)}
-						<DepotCard {depot} subtitle={walletName(depot.walletId)} />
+						<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
 					{/each}
 				{/if}
+				{#if hasDebts}
+					<DebtCard amountInCents={page.data.debtSumInCents} />
+				{/if}
 				{#if hasBudgets}
-					<header><strong>Budgets</strong></header>
 					{#each visibleBudgets as budget}
 						<BudgetCard {budget} />
 					{/each}
@@ -114,8 +143,18 @@
 		{/if}
 	</aside>
 
+	<aside>
+		<article>
+			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
+		</article>
+	</aside>
 	<article>
-		<header><strong>Recent Transactions</strong></header>
+		{#if page.data.transactions?.length > 0}
+			<header>
+				<p class="total">
+					Sum <strong>{formatCurrency(page.data.sumInCents)}</strong>
+				</p>
+			</header>{/if}
 
 		{#if budgetGroups.length > 0}
 			<div class="group-tabs">
@@ -142,9 +181,6 @@
 
 		<div class="transaction-list">
 			{#if page.data.transactions?.length > 0}
-				<p class="total">
-					Sum <strong>{formatCurrency(page.data.sumInCents)}</strong>
-				</p>
 				{#each page.data.transactions as tx (tx.id)}
 					<TransactionCard transaction={tx} ondelete={deleteTransaction} />
 				{/each}

@@ -18,7 +18,7 @@ export function updateParams(updates: Partial<TransactionSearchCriteria>, resetP
 		params.set('page', '1');
 	}
 
-	goto(`?${params.toString()}`, { keepFocus: true, replaceState: true });
+	goto(`?${params.toString()}`, { keepFocus: true, replaceState: true, noScroll: true });
 }
 
 export const formatCurrency = (cents: number) => {

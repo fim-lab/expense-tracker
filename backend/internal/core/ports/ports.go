@@ -1,6 +1,10 @@
 package ports
 
-import "github.com/fim-lab/expense-tracker/internal/core/domain"
+import (
+	"time"
+
+	"github.com/fim-lab/expense-tracker/internal/core/domain"
+)
 
 // --- Driving Ports ---
 type TransactionService interface {
@@ -21,6 +25,7 @@ type BudgetService interface {
 	GetBudgets(userID int) ([]domain.Budget, error)
 	GetTotalOfBudgets(userID int) (int, error)
 	DeleteBudget(userID int, id int) error
+	CreateBudgetTransfer(userID, fromBudgetID, toBudgetID, amount int) error
 }
 
 type BudgetGroupService interface {
@@ -119,6 +124,7 @@ type BudgetRepository interface {
 	FindBudgetsByUser(userID int) ([]domain.Budget, error)
 	DeleteBudget(id int) error
 	DeleteAllByUser(userID int) error
+	CreateBudgetTransfer(fromBudgetID, toBudgetID, amount int) error
 }
 
 type BudgetGroupRepository interface {
@@ -169,6 +175,7 @@ type TransactionRepository interface {
 	CreateTransfer(from, to domain.Transaction) error
 	CountTransactionsByBudgetID(budgetID int) (int, error)
 	CountTransactionsByWalletID(walletID int) (int, error)
+	HasTransactionForBudgetSince(budgetID int, since time.Time) (bool, error)
 }
 
 type TradeRepository interface {
