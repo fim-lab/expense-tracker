@@ -1,17 +1,25 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { formatCurrency } from '$lib/utils';
 
 	let { amountInCents } = $props();
+
+	const href = $derived.by(() => {
+		const params = new URLSearchParams(page.url.searchParams);
+		params.set('debt', 'true');
+		params.set('page', '1');
+		return `/?${params}`;
+	});
 </script>
 
-<div class="card">
+<a {href} class="card">
 	<div class="card-info">
 		<p class="card-title">
 			Debt
 			<span class="card-amount">{formatCurrency(amountInCents)}</span>
 		</p>
 	</div>
-</div>
+</a>
 
 <style>
 	.card {
@@ -24,6 +32,12 @@
 		border-radius: var(--pico-border-radius);
 		box-shadow: var(--pico-card-box-shadow);
 		border-left: 4px solid var(--pico-del-color);
+		color: inherit;
+		text-decoration: none;
+
+		p {
+			color: inherit;
+		}
 	}
 
 	.card-info {
