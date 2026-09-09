@@ -20,7 +20,7 @@
 	});
 </script>
 
-<a {href} class="card">
+<a {href} class="card" data-sveltekit-noscroll>
 	<div class="card-info">
 		<p class="card-title">
 			{budget.name}

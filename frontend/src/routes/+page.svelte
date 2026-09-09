@@ -101,9 +101,9 @@
 			return;
 
 		if (e.key === 'ArrowLeft' && pageNr > 1) {
-			goto(pageUrl(pageNr - 1));
+			goto(pageUrl(pageNr - 1), { noScroll: true });
 		} else if (e.key === 'ArrowRight' && pageNr < totalPages) {
-			goto(pageUrl(pageNr + 1));
+			goto(pageUrl(pageNr + 1), { noScroll: true });
 		}
 	}
 </script>

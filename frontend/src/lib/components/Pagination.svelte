@@ -40,7 +40,7 @@
 	<ul>
 		{#if pageNr > 1}
 			<li>
-				<a href={pageUrl(pageNr - 1)} class="secondary"> ← Prev </a>
+				<a href={pageUrl(pageNr - 1)} class="secondary" data-sveltekit-noscroll> ← Prev </a>
 			</li>
 		{:else}
 			<li>
@@ -53,11 +53,11 @@
 				{#if p === '…'}
 					<span aria-hidden="true">…</span>
 				{:else if p === pageNr}
-					<a href={pageUrl(p)} aria-current="page" style="font-weight: 600;">
+					<a href={pageUrl(p)} aria-current="page" style="font-weight: 600;" data-sveltekit-noscroll>
 						{p}
 					</a>
 				{:else}
-					<a href={pageUrl(p)}>
+					<a href={pageUrl(p)} data-sveltekit-noscroll>
 						{p}
 					</a>
 				{/if}
@@ -66,7 +66,7 @@
 
 		{#if pageNr < props.totalPages}
 			<li>
-				<a href={pageUrl(pageNr + 1)} class="secondary"> Next → </a>
+				<a href={pageUrl(pageNr + 1)} class="secondary" data-sveltekit-noscroll> Next → </a>
 			</li>
 		{:else}
 			<li>
