@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { TransactionTemplate } from '$lib/types';
+import type { Budget, TransactionTemplate, Wallet } from '$lib/types';
 import {
 	getLastMonthShortMonthYearString,
 	getNextMonthShortMonthYearString,
@@ -45,6 +45,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		tt.description = tt.description
 			.replace('$lastmonth', lastMonthString)
 			.replace('$nextmonth', nextMonthString);
+		tt.budgetName = budgets.find((b: Budget) => b.id === tt.budgetId)?.name;
+		tt.walletName = wallets.find((w: Wallet) => w.id === tt.walletId)?.name;
 	});
 
 	return {
