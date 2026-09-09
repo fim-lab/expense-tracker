@@ -126,13 +126,13 @@
 						<WalletCard {wallet} />
 					{/each}
 				{/if}
-				{#if hasDebts}
-					<DebtCard amountInCents={page.data.debtSumInCents} />
-				{/if}
 				{#if hasDepots}
 					{#each page.data.depots as depot (depot.id)}
 						<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
 					{/each}
+				{/if}
+				{#if hasDebts}
+					<DebtCard amountInCents={page.data.debtSumInCents} />
 				{/if}
 				{#if hasBudgets}
 					{#each visibleBudgets as budget}
