@@ -131,7 +131,7 @@
 				{/if}
 				{#if hasDepots}
 					{#each page.data.depots as depot (depot.id)}
-						<DepotCard {depot} subtitle={walletName(depot.walletId)} />
+						<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
 					{/each}
 				{/if}
 				{#if hasBudgets}

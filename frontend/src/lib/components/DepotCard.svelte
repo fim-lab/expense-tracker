@@ -4,14 +4,10 @@
 	let { depot, href = '', subtitle = '' } = $props();
 </script>
 
-<div class="card">
+{#snippet content()}
 	<div class="card-info">
 		<p class="card-title">
-			{#if href}
-				<a {href}>{depot.name}</a>
-			{:else}
-				{depot.name}
-			{/if}
+			{depot.name}
 			<span class="card-amount"
 				>{formatCurrency(depot.currentValueInCents ?? depot.investedInCents ?? 0)}</span
 			>
@@ -20,7 +16,17 @@
 			<small class="card-subtitle">{subtitle}</small>
 		{/if}
 	</div>
-</div>
+{/snippet}
+
+{#if href}
+	<a {href} class="card">
+		{@render content()}
+	</a>
+{:else}
+	<div class="card">
+		{@render content()}
+	</div>
+{/if}
 
 <style>
 	.card {
@@ -33,6 +39,19 @@
 		border-radius: var(--pico-border-radius);
 		box-shadow: var(--pico-card-box-shadow);
 		border-left: 4px solid var(--pico-primary-inverse);
+		color: inherit;
+		text-decoration: none;
+
+		p {
+			color: inherit;
+		}
+	}
+
+	.card:hover,
+	.card:focus,
+	.card:active {
+		color: inherit;
+		text-decoration: none;
 	}
 
 	.card-info {
