@@ -122,12 +122,10 @@
 		background-color: var(--pico-color-red-600);
 	}
 
-	@media (prefers-color-scheme: dark) {
-		.progress-fill.overflow {
-			background-color: var(--pico-color-green-350);
-		}
-		.progress-fill.lower-limit {
-			background-color: var(--pico-color-red-350);
-		}
+	:global(html[data-theme='dark']) .progress-fill.overflow {
+		background-color: var(--pico-color-green-350);
+	}
+	:global(html[data-theme='dark']) .progress-fill.lower-limit {
+		background-color: var(--pico-color-red-350);
 	}
 </style>
