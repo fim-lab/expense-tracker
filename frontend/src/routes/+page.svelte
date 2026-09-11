@@ -94,6 +94,9 @@
 		if (pageNr < totalPages) preloadOnce(pageUrl(pageNr + 1));
 	});
 
+	let widgetsOpen = $state(false);
+	let filtersOpen = $state(false);
+
 	function handleKeydown(e: KeyboardEvent) {
 		const target = e.target as HTMLElement;
 		const tag = target?.tagName;
@@ -113,40 +116,60 @@
 <div class="grid">
 	<aside>
 		{#if hasBudgets || hasWallets || hasDepots || hasDebts}
-			{#if hasWallets || hasDepots || hasDebts}
+			<button
+				type="button"
+				class="mobile-toggle"
+				aria-expanded={widgetsOpen}
+				onclick={() => (widgetsOpen = !widgetsOpen)}
+			>
+				<span class="caret">{widgetsOpen ? '▾' : '▸'}</span> Overview
+			</button>
+			<div class="collapsible" class:collapsed={!widgetsOpen}>
+				{#if hasWallets || hasDepots || hasDebts}
+					<article>
+						<p class="total">
+							Total wealth <strong>{formatCurrency(totalWealth)}</strong>
+						</p>
+					</article>
+				{/if}
 				<article>
-					<p class="total">
-						Total wealth <strong>{formatCurrency(totalWealth)}</strong>
-					</p>
+					{#if hasWallets}
+						{#each page.data.wallets as wallet}
+							<WalletCard {wallet} />
+						{/each}
+					{/if}
+					{#if hasDepots}
+						{#each page.data.depots as depot (depot.id)}
+							<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
+						{/each}
+					{/if}
+					{#if hasDebts}
+						<DebtCard amountInCents={page.data.debtSumInCents} />
+					{/if}
+					{#if hasBudgets}
+						{#each visibleBudgets as budget}
+							<BudgetCard {budget} />
+						{/each}
+					{/if}
 				</article>
-			{/if}
-			<article>
-				{#if hasWallets}
-					{#each page.data.wallets as wallet}
-						<WalletCard {wallet} />
-					{/each}
-				{/if}
-				{#if hasDepots}
-					{#each page.data.depots as depot (depot.id)}
-						<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
-					{/each}
-				{/if}
-				{#if hasDebts}
-					<DebtCard amountInCents={page.data.debtSumInCents} />
-				{/if}
-				{#if hasBudgets}
-					{#each visibleBudgets as budget}
-						<BudgetCard {budget} />
-					{/each}
-				{/if}
-			</article>
+			</div>
 		{/if}
 	</aside>
 
 	<aside>
-		<article>
-			<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
-		</article>
+		<button
+			type="button"
+			class="mobile-toggle"
+			aria-expanded={filtersOpen}
+			onclick={() => (filtersOpen = !filtersOpen)}
+		>
+			<span class="caret">{filtersOpen ? '▾' : '▸'}</span> Filters
+		</button>
+		<div class="collapsible" class:collapsed={!filtersOpen}>
+			<article>
+				<TransactionSearchForm budgets={page.data.budgets} wallets={page.data.wallets} />
+			</article>
+		</div>
 	</aside>
 	<article>
 		{#if page.data.transactions?.length > 0}
@@ -221,5 +244,32 @@
 	.group-tabs button.active {
 		background-color: var(--pico-primary);
 		color: var(--pico-primary-inverse);
+	}
+
+	.mobile-toggle {
+		display: none;
+	}
+
+	@media (max-width: 768px) {
+		.mobile-toggle {
+			display: flex;
+			align-items: center;
+			gap: 0.25rem;
+			width: auto;
+			margin: 0 0 0.5rem;
+			padding: 0;
+			background: none;
+			border: none;
+			color: inherit;
+			font-weight: 600;
+		}
+
+		.caret {
+			color: var(--pico-muted-color);
+		}
+
+		.collapsible.collapsed {
+			display: none;
+		}
 	}
 </style>
