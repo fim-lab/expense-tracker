@@ -2,6 +2,7 @@
 	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
+	import BudgetGroupCard from '$lib/components/BudgetGroupCard.svelte';
 	import DebtCard from '$lib/components/DebtCard.svelte';
 	import DepotCard from '$lib/components/DepotCard.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
@@ -30,6 +31,35 @@
 		).filter((b: Budget) => !b.isDormant)
 	);
 	const hasBudgets = $derived(visibleBudgets.length > 0);
+
+	type BudgetListItem =
+		| { kind: 'budget'; budget: Budget }
+		| { kind: 'group'; group: BudgetGroup; budgets: Budget[] };
+
+	const budgetListItems = $derived.by(() => {
+		const items: BudgetListItem[] = [];
+		const groupItemByGroupId: Record<
+			number,
+			{ kind: 'group'; group: BudgetGroup; budgets: Budget[] }
+		> = {};
+		for (const budget of visibleBudgets) {
+			const group = budget.groupId
+				? budgetGroups.find((g: BudgetGroup) => g.id === budget.groupId)
+				: undefined;
+			if (!group) {
+				items.push({ kind: 'budget', budget });
+				continue;
+			}
+			let entry = groupItemByGroupId[group.id];
+			if (!entry) {
+				entry = { kind: 'group', group, budgets: [] };
+				groupItemByGroupId[group.id] = entry;
+				items.push(entry);
+			}
+			entry.budgets.push(budget);
+		}
+		return items;
+	});
 
 	function selectGroup(groupId: number | undefined) {
 		updateParams({ budget_group_id: groupId });
@@ -147,8 +177,12 @@
 						<DebtCard amountInCents={page.data.debtSumInCents} />
 					{/if}
 					{#if hasBudgets}
-						{#each visibleBudgets as budget}
-							<BudgetCard {budget} />
+						{#each budgetListItems as item (item.kind === 'group' ? `group-${item.group.id}` : `budget-${item.budget.id}`)}
+							{#if item.kind === 'group'}
+								<BudgetGroupCard group={item.group} budgets={item.budgets} />
+							{:else}
+								<BudgetCard budget={item.budget} />
+							{/if}
 						{/each}
 					{/if}
 				</article>
