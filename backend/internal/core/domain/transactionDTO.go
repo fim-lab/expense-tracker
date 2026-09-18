@@ -19,7 +19,6 @@ type TransactionSearchCriteria struct {
 	FromDate      *time.Time
 	UntilDate     *time.Time
 	BudgetID      *int
-	BudgetGroupID *int
 	WalletID      *int
 	Type          *TransactionType
 	IsDebt        *bool

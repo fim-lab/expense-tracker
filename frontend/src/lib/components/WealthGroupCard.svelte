@@ -58,10 +58,10 @@
 		width: 100%;
 		padding: 1rem;
 		margin-bottom: 0.75rem;
-		background: var(--pico-card-background-color);
+		background: color-mix(in srgb, var(--pico-primary) 8%, var(--pico-card-background-color));
+		border: 1px solid color-mix(in srgb, var(--pico-primary) 30%, transparent);
 		border-radius: var(--pico-border-radius);
 		box-shadow: var(--pico-card-box-shadow);
-		border-left: 4px solid var(--pico-primary);
 		color: inherit;
 		text-align: left;
 		cursor: pointer;
@@ -72,8 +72,6 @@
 	}
 
 	.wealth-card {
-		border: none;
-		border-left: 4px solid var(--pico-primary);
 		font: inherit;
 	}
 
@@ -90,8 +88,8 @@
 	}
 
 	.card-amount {
-		font-weight: normal;
-		font-size: 0.9em;
+		font-weight: 700;
+		font-size: 1.1em;
 		font-family: ui-monospace, SFMono-Regular, monospace;
 	}
 

@@ -5,7 +5,6 @@ export interface TransactionSearchCriteria {
 	from?: string;
 	until?: string;
 	budget_id?: number;
-	budget_group_id?: number;
 	wallet_id?: number;
 	type?: TransactionType;
 	debt?: boolean;
