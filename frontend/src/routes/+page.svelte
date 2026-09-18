@@ -2,13 +2,12 @@
 	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
-	import DebtCard from '$lib/components/DebtCard.svelte';
-	import DepotCard from '$lib/components/DepotCard.svelte';
-	import Pagination from '$lib/components/Pagination.svelte';
+	import BudgetGroupCard from '$lib/components/BudgetGroupCard.svelte';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import TransactionSearchForm from '$lib/components/TransactionSearchForm.svelte';
-	import WalletCard from '$lib/components/WalletCard.svelte';
-	import { formatCurrency, updateParams } from '$lib/utils';
+	import Pagination from '$lib/components/Pagination.svelte';
+	import WealthGroupCard from '$lib/components/WealthGroupCard.svelte';
+	import { formatCurrency } from '$lib/utils';
 	import type { Budget, BudgetGroup, Depot, Wallet } from '$lib/types';
 
 	const pageNr = $derived(page.data.page);
@@ -19,21 +18,38 @@
 	const hasDebts = $derived((page.data?.debtTotal ?? 0) > 0);
 
 	const budgetGroups: BudgetGroup[] = $derived(page.data?.budgetGroups ?? []);
-	const activeGroupId = $derived.by(() => {
-		const id = page.url.searchParams.get('budget_group_id');
-		return id ? Number(id) : undefined;
-	});
-	const visibleBudgets = $derived(
-		(activeGroupId
-			? (page.data?.budgets ?? []).filter((b: Budget) => b.groupId === activeGroupId)
-			: (page.data?.budgets ?? [])
-		).filter((b: Budget) => !b.isDormant)
-	);
+	const visibleBudgets = $derived((page.data?.budgets ?? []).filter((b: Budget) => !b.isDormant));
 	const hasBudgets = $derived(visibleBudgets.length > 0);
 
-	function selectGroup(groupId: number | undefined) {
-		updateParams({ budget_group_id: groupId });
-	}
+	type BudgetListItem =
+		| { kind: 'budget'; budget: Budget }
+		| { kind: 'group'; group: BudgetGroup; budgets: Budget[] };
+
+	const budgetListItems = $derived.by(() => {
+		const items: BudgetListItem[] = [];
+		const groupItemByGroupId: Record<
+			number,
+			{ kind: 'group'; group: BudgetGroup; budgets: Budget[] }
+		> = {};
+		for (const budget of visibleBudgets) {
+			const group = budget.groupId
+				? budgetGroups.find((g: BudgetGroup) => g.id === budget.groupId)
+				: undefined;
+			if (!group) {
+				items.push({ kind: 'budget', budget });
+				continue;
+			}
+			let entry = groupItemByGroupId[group.id];
+			if (!entry) {
+				entry = { kind: 'group', group, budgets: [] };
+				groupItemByGroupId[group.id] = entry;
+				items.push(entry);
+			}
+			entry.budgets.push(budget);
+		}
+		return items;
+	});
+
 	const totalWealth = $derived(
 		(page.data?.wallets ?? []).reduce((sum: number, w: Wallet) => sum + w.balanceCents, 0) +
 			(page.data?.depots ?? []).reduce(
@@ -125,30 +141,24 @@
 				<span class="caret">{widgetsOpen ? '▾' : '▸'}</span> Overview
 			</button>
 			<div class="collapsible" class:collapsed={!widgetsOpen}>
-				{#if hasWallets || hasDepots || hasDebts}
-					<article>
-						<p class="total">
-							Total wealth <strong>{formatCurrency(totalWealth)}</strong>
-						</p>
-					</article>
-				{/if}
 				<article>
-					{#if hasWallets}
-						{#each page.data.wallets as wallet}
-							<WalletCard {wallet} />
-						{/each}
-					{/if}
-					{#if hasDepots}
-						{#each page.data.depots as depot (depot.id)}
-							<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
-						{/each}
-					{/if}
-					{#if hasDebts}
-						<DebtCard amountInCents={page.data.debtSumInCents} />
+					{#if hasWallets || hasDepots || hasDebts}
+						<WealthGroupCard
+							totalWealthCents={totalWealth}
+							wallets={page.data.wallets}
+							depots={page.data.depots}
+							{hasDebts}
+							debtSumInCents={page.data.debtSumInCents}
+							{walletName}
+						/>
 					{/if}
 					{#if hasBudgets}
-						{#each visibleBudgets as budget}
-							<BudgetCard {budget} />
+						{#each budgetListItems as item (item.kind === 'group' ? `group-${item.group.id}` : `budget-${item.budget.id}`)}
+							{#if item.kind === 'group'}
+								<BudgetGroupCard group={item.group} budgets={item.budgets} />
+							{:else}
+								<BudgetCard budget={item.budget} />
+							{/if}
 						{/each}
 					{/if}
 				</article>
@@ -179,29 +189,6 @@
 				</p>
 			</header>{/if}
 
-		{#if budgetGroups.length > 0}
-			<div class="group-tabs">
-				<button
-					type="button"
-					class="secondary outline"
-					class:active={activeGroupId === undefined}
-					onclick={() => selectGroup(undefined)}
-				>
-					All
-				</button>
-				{#each budgetGroups as group (group.id)}
-					<button
-						type="button"
-						class="secondary outline"
-						class:active={activeGroupId === group.id}
-						onclick={() => selectGroup(group.id)}
-					>
-						{group.name}
-					</button>
-				{/each}
-			</div>
-		{/if}
-
 		<div class="transaction-list">
 			{#if page.data.transactions?.length > 0}
 				{#each page.data.transactions as tx (tx.id)}
@@ -223,27 +210,9 @@
 <style>
 	.total {
 		display: flex;
+		margin-bottom: 0;
 		justify-content: space-between;
 		color: var(--pico-muted-color);
-	}
-
-	.group-tabs {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin-bottom: 1rem;
-	}
-
-	.group-tabs button {
-		width: auto;
-		margin: 0;
-		padding: 0.25rem 0.75rem;
-		font-size: 0.85rem;
-	}
-
-	.group-tabs button.active {
-		background-color: var(--pico-primary);
-		color: var(--pico-primary-inverse);
 	}
 
 	.mobile-toggle {
@@ -262,6 +231,7 @@
 			border: none;
 			color: inherit;
 			font-weight: 600;
+			cursor: pointer;
 		}
 
 		.caret {

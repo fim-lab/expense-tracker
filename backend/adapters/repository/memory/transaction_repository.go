@@ -154,16 +154,6 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 			}
 		}
 
-		if criteria.BudgetGroupID != nil {
-			if t.BudgetID == nil {
-				continue
-			}
-			budget, ok := r.repo.budgets[*t.BudgetID]
-			if !ok || budget.GroupID == nil || *budget.GroupID != *criteria.BudgetGroupID {
-				continue
-			}
-		}
-
 		if criteria.WalletID != nil && t.WalletID != *criteria.WalletID {
 			continue
 		}
@@ -259,16 +249,6 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 			}
 		}
 
-		if criteria.BudgetGroupID != nil {
-			if t.BudgetID == nil {
-				continue
-			}
-			budget, ok := r.repo.budgets[*t.BudgetID]
-			if !ok || budget.GroupID == nil || *budget.GroupID != *criteria.BudgetGroupID {
-				continue
-			}
-		}
-
 		if criteria.WalletID != nil && t.WalletID != *criteria.WalletID {
 			continue
 		}
@@ -319,16 +299,6 @@ func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criter
 				continue
 			}
 			if *t.BudgetID != *criteria.BudgetID {
-				continue
-			}
-		}
-
-		if criteria.BudgetGroupID != nil {
-			if t.BudgetID == nil {
-				continue
-			}
-			budget, ok := r.repo.budgets[*t.BudgetID]
-			if !ok || budget.GroupID == nil || *budget.GroupID != *criteria.BudgetGroupID {
 				continue
 			}
 		}

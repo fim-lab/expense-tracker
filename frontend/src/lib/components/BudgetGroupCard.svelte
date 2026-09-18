@@ -1,26 +1,29 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import BudgetCard from '$lib/components/BudgetCard.svelte';
 	import { computeBudgetProgress } from '$lib/budgetProgress';
 	import { formatCurrency } from '$lib/utils';
+	import type { Budget, BudgetGroup } from '$lib/types';
 
-	let { budget } = $props();
+	let { group, budgets }: { group: BudgetGroup; budgets: Budget[] } = $props();
 
-	const progress = $derived(computeBudgetProgress(budget.balanceCents, budget.limitCents));
+	let expanded = $state(false);
 
-	const href = $derived.by(() => {
-		const params = new URLSearchParams(page.url.searchParams);
-		params.set('budget_id', String(budget.id));
-		params.set('page', '1');
-		return `/?${params}`;
-	});
+	const totalBalanceCents = $derived(budgets.reduce((sum, b) => sum + b.balanceCents, 0));
+	const totalLimitCents = $derived(budgets.reduce((sum, b) => sum + b.limitCents, 0));
+	const progress = $derived(computeBudgetProgress(totalBalanceCents, totalLimitCents));
 </script>
 
-<a {href} class="card" data-sveltekit-noscroll>
+<button
+	type="button"
+	class="card group-card"
+	aria-expanded={expanded}
+	onclick={() => (expanded = !expanded)}
+>
 	<div class="card-info">
 		<p class="card-title">
-			{budget.name}
+			<span><span class="caret">{expanded ? '▾' : '▸'}</span> {group.name}</span>
 			<span class="card-amount"
-				>{formatCurrency(budget.balanceCents)} / {formatCurrency(budget.limitCents)}</span
+				>{formatCurrency(totalBalanceCents)} / {formatCurrency(totalLimitCents)}</span
 			>
 		</p>
 		<div
@@ -44,13 +47,21 @@
 			{/if}
 		</div>
 	</div>
-</a>
+</button>
+{#if expanded}
+	<div class="group-members">
+		{#each budgets as budget (budget.id)}
+			<BudgetCard {budget} />
+		{/each}
+	</div>
+{/if}
 
 <style>
 	.card {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		width: 100%;
 		padding: 1rem;
 		margin-bottom: 0.75rem;
 		background: var(--pico-card-background-color);
@@ -58,18 +69,22 @@
 		box-shadow: var(--pico-card-box-shadow);
 		border-left: 4px solid var(--pico-primary);
 		color: inherit;
-		text-decoration: none;
+		text-align: left;
+		cursor: pointer;
 
 		p {
 			color: inherit;
 		}
 	}
 
-	.card:hover,
-	.card:focus,
-	.card:active {
-		color: inherit;
-		text-decoration: none;
+	.group-card {
+		border: none;
+		border-left: 4px solid var(--pico-primary);
+		font: inherit;
+	}
+
+	.caret {
+		color: var(--pico-muted-color);
 	}
 
 	.card-info {
@@ -120,5 +135,11 @@
 	}
 	:global(html[data-theme='dark']) .progress-fill.lower-limit {
 		background-color: var(--pico-color-red-350);
+	}
+
+	.group-members {
+		margin-left: 1rem;
+		padding-left: 0.75rem;
+		border-left: 2px solid var(--pico-muted-border-color);
 	}
 </style>
