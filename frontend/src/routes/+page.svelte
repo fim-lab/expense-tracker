@@ -3,12 +3,10 @@
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
 	import BudgetGroupCard from '$lib/components/BudgetGroupCard.svelte';
-	import DebtCard from '$lib/components/DebtCard.svelte';
-	import DepotCard from '$lib/components/DepotCard.svelte';
-	import Pagination from '$lib/components/Pagination.svelte';
 	import TransactionCard from '$lib/components/TransactionCard.svelte';
 	import TransactionSearchForm from '$lib/components/TransactionSearchForm.svelte';
-	import WalletCard from '$lib/components/WalletCard.svelte';
+	import Pagination from '$lib/components/Pagination.svelte';
+	import WealthGroupCard from '$lib/components/WealthGroupCard.svelte';
 	import { formatCurrency, updateParams } from '$lib/utils';
 	import type { Budget, BudgetGroup, Depot, Wallet } from '$lib/types';
 
@@ -155,26 +153,16 @@
 				<span class="caret">{widgetsOpen ? '▾' : '▸'}</span> Overview
 			</button>
 			<div class="collapsible" class:collapsed={!widgetsOpen}>
-				{#if hasWallets || hasDepots || hasDebts}
-					<article>
-						<p class="total">
-							Total wealth <strong>{formatCurrency(totalWealth)}</strong>
-						</p>
-					</article>
-				{/if}
 				<article>
-					{#if hasWallets}
-						{#each page.data.wallets as wallet}
-							<WalletCard {wallet} />
-						{/each}
-					{/if}
-					{#if hasDepots}
-						{#each page.data.depots as depot (depot.id)}
-							<DepotCard {depot} href="/depots/{depot.id}" subtitle={walletName(depot.walletId)} />
-						{/each}
-					{/if}
-					{#if hasDebts}
-						<DebtCard amountInCents={page.data.debtSumInCents} />
+					{#if hasWallets || hasDepots || hasDebts}
+						<WealthGroupCard
+							totalWealthCents={totalWealth}
+							wallets={page.data.wallets}
+							depots={page.data.depots}
+							{hasDebts}
+							debtSumInCents={page.data.debtSumInCents}
+							{walletName}
+						/>
 					{/if}
 					{#if hasBudgets}
 						{#each budgetListItems as item (item.kind === 'group' ? `group-${item.group.id}` : `budget-${item.budget.id}`)}
@@ -296,6 +284,7 @@
 			border: none;
 			color: inherit;
 			font-weight: 600;
+			cursor: pointer;
 		}
 
 		.caret {
