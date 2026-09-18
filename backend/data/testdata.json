@@ -5,8 +5,8 @@
     "budgets": [
       { "name": "Wohnen", "valueInCents": 85000, "account": "Private" },
       { "name": "Essen", "valueInCents": 20000, "account": "Private" },
-      { "name": "Abos", "valueInCents": 2500, "account": "Private" },
-      { "name": "Mobilität", "valueInCents": 15000, "account": "Private" },
+      { "name": "Abos", "valueInCents": 2500, "account": "Fixkosten" },
+      { "name": "Mobilität", "valueInCents": 15000, "account": "Fixkosten" },
       { "name": "Freizeit", "valueInCents": 50000, "account": "Private" }
     ],
     "wallets": [
@@ -292,6 +292,35 @@
       "description": "Kiosk",
       "amountInCents": -1250,
       "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "debt-mar-julia",
+      "date": "2026-03-18T14:00:00.000Z",
+      "budget": "Übertrag",
+      "wallet": "Girokonto",
+      "description": "Konzertkarten für Julia ausgelegt",
+      "amountInCents": -5000,
+      "type": "expense",
+      "isPending": false,
+      "isDebt": true
+    },
+    {
+      "id": "trade-mar-buy",
+      "date": "2026-03-12T10:00:00.000Z",
+      "wallet": "Girokonto",
+      "description": "Buy 10 Stk. A1JX52",
+      "amountInCents": -95000,
+      "type": "expense",
+      "isPending": false
+    },
+    {
+      "id": "trade-mar-sell",
+      "date": "2026-03-25T10:00:00.000Z",
+      "wallet": "Girokonto",
+      "description": "Sell 4 Stk. A1JX52",
+      "amountInCents": 42000,
+      "type": "income",
       "isPending": false
     }
   ]
