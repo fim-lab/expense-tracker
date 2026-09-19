@@ -319,3 +319,59 @@ func TestDeleteBudget(t *testing.T) {
 		}
 	})
 }
+
+func TestSetBudgetVisibility(t *testing.T) {
+	userID := 1
+
+	t.Run("Owner can hide and show a budget", func(t *testing.T) {
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+		budget := domain.Budget{UserID: userID, Name: "Test Budget", LimitCents: 10000}
+		svc.CreateBudget(userID, budget)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+		testBudget := budgets[0]
+
+		if !testBudget.Visible {
+			t.Fatalf("Expected new budget to default to visible")
+		}
+
+		err := svc.SetBudgetVisibility(userID, testBudget.ID, false)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+
+		fetched, err := svc.GetBudget(userID, testBudget.ID)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		if fetched.Visible {
+			t.Errorf("Expected budget to be hidden, still visible")
+		}
+
+		err = svc.SetBudgetVisibility(userID, testBudget.ID, true)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		fetched, err = svc.GetBudget(userID, testBudget.ID)
+		if err != nil {
+			t.Fatalf("Expected no error, got %v", err)
+		}
+		if !fetched.Visible {
+			t.Errorf("Expected budget to be visible again")
+		}
+	})
+
+	t.Run("Non-owner cannot change visibility", func(t *testing.T) {
+		repos := memory.NewCleanRepositories()
+		svc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+		budget := domain.Budget{UserID: userID, Name: "Test Budget", LimitCents: 10000}
+		svc.CreateBudget(userID, budget)
+		budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+		testBudget := budgets[0]
+
+		err := svc.SetBudgetVisibility(999, testBudget.ID, false)
+		if err != domain.ErrUnauthorized {
+			t.Errorf("Expected ErrUnauthorized, got %v", err)
+		}
+	})
+}

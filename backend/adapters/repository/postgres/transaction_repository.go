@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -39,8 +38,8 @@ func (r *TransactionRepository) SaveTransaction(t domain.Transaction) (int, erro
 
 	if t.BudgetID != nil {
 		queryBudget := `
-			UPDATE budgets 
-			SET balance_cents = balance_cents + $1 
+			UPDATE budgets
+			SET balance_cents = balance_cents + $1, visible = true
 			WHERE id = $2 AND user_id = $3
 		`
 		_, err = tx.Exec(queryBudget, adjustment, t.BudgetID, t.UserID)
@@ -120,7 +119,7 @@ func (r *TransactionRepository) UpdateTransaction(t domain.Transaction) error {
 		newAdjustment = -t.AmountInCents
 	}
 
-	queryApplyBudget := `UPDATE budgets SET balance_cents = balance_cents + $1 WHERE id = $2`
+	queryApplyBudget := `UPDATE budgets SET balance_cents = balance_cents + $1, visible = true WHERE id = $2`
 	_, err = tx.Exec(queryApplyBudget, newAdjustment, t.BudgetID)
 	if err != nil {
 		return fmt.Errorf("failed to apply new budget balance: %w", err)
@@ -525,14 +524,4 @@ func (r *TransactionRepository) CountTransactionsByWalletID(walletID int) (int, 
 		return 0, fmt.Errorf("failed to count transactions for wallet ID %d: %w", walletID, err)
 	}
 	return count, nil
-}
-
-func (r *TransactionRepository) HasTransactionForBudgetSince(budgetID int, since time.Time) (bool, error) {
-	var exists bool
-	query := `SELECT EXISTS(SELECT 1 FROM transactions WHERE budget_id = $1 AND date >= $2)`
-	err := r.db.QueryRow(query, budgetID, since).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("failed to check recent transactions for budget ID %d: %w", budgetID, err)
-	}
-	return exists, nil
 }

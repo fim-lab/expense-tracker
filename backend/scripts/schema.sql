@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS budgets (
     limit_cents BIGINT NOT NULL,
     balance_cents BIGINT NOT NULL DEFAULT 0,
     group_id INT REFERENCES budget_groups(id) ON DELETE SET NULL,
+    visible BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE(user_id, name)
 );
 

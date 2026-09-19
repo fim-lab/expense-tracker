@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import type { TransactionType } from '$lib/types';
+	import type { Budget, TransactionType } from '$lib/types';
 	import { updateParams, debounce } from '$lib/utils';
 
 	let { budgets = [], wallets = [] } = $props();
+	const visibleBudgets = $derived(budgets.filter((b: Budget) => b.visible));
 	const searchTerm = $derived(
 		page.url.searchParams.get('q') ?? ''
 	);
@@ -93,7 +94,7 @@
 			Budget
 			<select id="budget" name="budget" onchange={(e) => updateParams({ budget_id: e.currentTarget.value === 'all' ? undefined : Number(e.currentTarget.value)})} value={budgetId}>
 				<option value={'all'}>All</option>
-				{#each budgets as budget}
+				{#each visibleBudgets as budget}
 					<option value={budget.id}>{budget.name}</option>
 				{/each}
 			</select>

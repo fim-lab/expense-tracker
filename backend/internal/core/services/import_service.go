@@ -210,6 +210,7 @@ func (s *importService) ImportData(userID int, data domain.FullImportData) error
 				UserID:     userID,
 				Name:       importBudget.Name,
 				LimitCents: importBudget.ValueInCents,
+				Visible:    true,
 			}
 			account := strings.TrimSpace(importBudget.Account)
 			if account != "" && !strings.EqualFold(account, "private") {

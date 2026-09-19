@@ -143,6 +143,21 @@
 			}
 		}
 	}
+
+	async function toggleVisibility(budget: Budget) {
+		const newVisible = !budget.visible;
+		const res = await fetch(`/api/budgets/${budget.id}/visibility`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ visible: newVisible })
+		});
+
+		if (res.ok) {
+			budget.visible = newVisible;
+		} else {
+			console.error('Failed to update budget visibility');
+		}
+	}
 </script>
 
 <h1>Budgets</h1>
@@ -161,7 +176,7 @@
 		</thead>
 		<tbody>
 			{#each budgets as budget (budget.id)}
-				<tr>
+				<tr class:hidden-budget={!budget.visible}>
 					<td>
 						{#if budget.isEditing}
 							<input type="text" bind:value={budget.newName} />
@@ -194,6 +209,9 @@
 							<button class="secondary" onclick={() => cancelEditing(budget)}>Cancel</button>
 						{:else}
 							<button onclick={() => startEditing(budget)}>Edit</button>
+							<button class="secondary" onclick={() => toggleVisibility(budget)}>
+								{budget.visible ? 'Hide' : 'Show'}
+							</button>
 							<span
 								title={!budget.canDelete
 									? 'Only budgets with a balance of 0 and no transactions can be deleted.'
@@ -280,5 +298,8 @@
 	}
 	input {
 		margin-bottom: 0;
+	}
+	.hidden-budget {
+		opacity: 0.5;
 	}
 </style>

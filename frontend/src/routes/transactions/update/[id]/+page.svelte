@@ -1,12 +1,15 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types';
+	import type { Budget } from '$lib/types';
 
 	export let data: PageData;
 	export let form: ActionData;
 
 	const { transaction } = data;
 	const wallets = data.wallets || [];
-	const budgets = data.budgets || [];
+	const budgets = (data.budgets || []).filter(
+		(b: Budget) => b.visible || b.id === transaction.budgetId
+	);
 
 	const formattedDate = transaction.date ? new Date(transaction.date).toISOString().split('T')[0] : '';
 </script>
