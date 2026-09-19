@@ -120,6 +120,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Put("/budgets/{id}", budgetHandler.UpdateBudget)
 	r.Delete("/budgets/{id}", budgetHandler.DeleteBudget)
 	r.Post("/budgets/transfer", budgetHandler.Transfer)
+	r.Patch("/budgets/{id}/visibility", budgetHandler.SetBudgetVisibility)
 
 	r.Get("/budget-groups", budgetGroupHandler.GetBudgetGroups)
 	r.Post("/budget-groups", budgetGroupHandler.CreateBudgetGroup)

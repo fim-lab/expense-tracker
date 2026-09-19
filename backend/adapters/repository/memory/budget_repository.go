@@ -97,3 +97,15 @@ func (r *BudgetRepository) UpdateBudget(b domain.Budget) error {
 	r.repo.budgets[b.ID] = existingBudget
 	return nil
 }
+
+func (r *BudgetRepository) SetBudgetVisibility(id int, visible bool) error {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+	existingBudget, ok := r.repo.budgets[id]
+	if !ok {
+		return domain.ErrBudgetNotFound
+	}
+	existingBudget.Visible = visible
+	r.repo.budgets[id] = existingBudget
+	return nil
+}

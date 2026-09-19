@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { Wallet, Depot, Budget, Stock } from '$lib/types';
-	import { formatCurrency } from '$lib/utils';
+	import SaveIcon from '$lib/components/icons/SaveIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	let { data } = $props();
 
 	let wallets = $state<Wallet[]>(
 		// svelte-ignore state_referenced_locally
-		(data.wallets || []).map((w: Wallet) => ({ ...w, isEditing: false, newName: '' }))
+		(data.wallets || []).map((w: Wallet) => ({ ...w, newName: w.name }))
 	);
 
 	let budgets = $state<Budget[]>(
@@ -18,23 +19,13 @@
 		// svelte-ignore state_referenced_locally
 		data.depots?.map((d: Depot) => ({
 			...d,
-			isEditing: false,
-			newName: '',
+			newName: d.name,
 			newWalletId: d.walletId,
 			newBudgetId: d.budgetId
 		}))
 	);
 
 	// Wallets logic
-	function startEditingWallet(wallet: Wallet) {
-		wallet.isEditing = true;
-		wallet.newName = wallet.name;
-	}
-
-	function cancelEditingWallet(wallet: Wallet) {
-		wallet.isEditing = false;
-	}
-
 	async function updateWallet(wallet: Wallet) {
 		if (!wallet.newName) {
 			alert('Enter a name.');
@@ -48,7 +39,6 @@
 
 		if (res.ok) {
 			wallet.name = wallet.newName;
-			wallet.isEditing = false;
 		} else {
 			console.error('Failed to update wallet');
 		}
@@ -69,17 +59,6 @@
 	}
 
 	// Depots logic
-	function startEditingDepot(depot: Depot) {
-		depot.isEditing = true;
-		depot.newName = depot.name;
-		depot.newWalletId = depot.walletId;
-		depot.newBudgetId = depot.budgetId;
-	}
-
-	function cancelEditingDepot(depot: Depot) {
-		depot.isEditing = false;
-	}
-
 	async function updateDepot(depot: Depot) {
 		if (!depot.newName) {
 			alert('Enter a name.');
@@ -100,7 +79,6 @@
 			depot.name = depot.newName;
 			depot.walletId = depot.newWalletId!;
 			depot.budgetId = depot.newBudgetId!;
-			depot.isEditing = false;
 		} else {
 			console.error('Failed to update depot');
 			alert('Failed to update depot');
@@ -124,19 +102,10 @@
 		}
 	}
 
-	function getWalletName(walletId: number) {
-		return wallets.find((w) => w.id === walletId)?.name || 'Unknown Wallet';
-	}
-
-	function getBudgetName(budgetId: number) {
-		return budgets.find((b) => b.id === budgetId)?.name || 'Unknown Budget';
-	}
-
 	let stocks = $state<Stock[]>(
 		// svelte-ignore state_referenced_locally
 		(data.stocks || []).map((s: Stock) => ({
 			...s,
-			isEditing: false,
 			newWkn: s.wkn,
 			newTicker: s.ticker,
 			newPriceEuros: s.priceInCents / 100
@@ -146,17 +115,6 @@
 	let newStockWkn = $state('');
 	let newStockTicker = $state('');
 	let newStockPriceEuros = $state<number | undefined>(undefined);
-
-	function startEditingStock(stock: Stock) {
-		stock.isEditing = true;
-		stock.newWkn = stock.wkn;
-		stock.newTicker = stock.ticker;
-		stock.newPriceEuros = stock.priceInCents / 100;
-	}
-
-	function cancelEditingStock(stock: Stock) {
-		stock.isEditing = false;
-	}
 
 	function formatLastFetched(lastFetched: string | null) {
 		if (!lastFetched) return 'never';
@@ -187,7 +145,6 @@
 			stock.ticker = updated.ticker;
 			stock.priceInCents = updated.priceInCents;
 			stock.lastFetched = updated.lastFetched;
-			stock.isEditing = false;
 		} else {
 			console.error('Failed to update stock');
 			alert('Failed to update stock');
@@ -231,7 +188,6 @@
 				...stocks,
 				{
 					...created,
-					isEditing: false,
 					newWkn: created.wkn,
 					newTicker: created.ticker,
 					newPriceEuros: created.priceInCents / 100
@@ -263,31 +219,34 @@
 				{#each wallets as wallet (wallet.id)}
 					<tr>
 						<td>
-							{#if wallet.isEditing}
-								<input type="text" bind:value={wallet.newName} />
-							{:else}
-								{wallet.name}
-							{/if}
+							<input type="text" bind:value={wallet.newName} />
 						</td>
 						<td>
-							{#if wallet.isEditing}
-								<button onclick={() => updateWallet(wallet)}>OK</button>
-								<button class="secondary" onclick={() => cancelEditingWallet(wallet)}>Cancel</button
+							<button
+								type="button"
+								class="icon-button save-button"
+								onclick={() => updateWallet(wallet)}
+								aria-label="Save wallet"
+								title="Save wallet"
+							>
+								<SaveIcon />
+							</button>
+							<span
+								title={!wallet.canDelete
+									? 'Only budgets with a balance of 0 and no transactions can be deleted.'
+									: ''}
+							>
+								<button
+									type="button"
+									class="icon-button delete-button"
+									onclick={() => deleteWallet(wallet.id)}
+									disabled={!wallet.canDelete}
+									aria-label="Delete wallet"
+									title="Delete wallet"
 								>
-							{:else}
-								<button onclick={() => startEditingWallet(wallet)}>Edit</button>
-								<span
-									title={!wallet.canDelete
-										? 'Only budgets with a balance of 0 and no transactions can be deleted.'
-										: ''}
-								>
-									<button
-										class="secondary"
-										onclick={() => deleteWallet(wallet.id)}
-										disabled={!wallet.canDelete}>Delete</button
-									>
-								</span>
-							{/if}
+									<DeleteIcon />
+								</button>
+							</span>
 						</td>
 					</tr>
 				{/each}
@@ -317,42 +276,41 @@
 				{#each depots as depot (depot.id)}
 					<tr>
 						<td>
-							{#if depot.isEditing}
-								<input type="text" bind:value={depot.newName} />
-							{:else}
-								<a href="/depots/{depot.id}">{depot.name}</a>
-							{/if}
+							<input type="text" bind:value={depot.newName} />
 						</td>
 						<td>
-							{#if depot.isEditing}
-								<select bind:value={depot.newWalletId}>
-									{#each wallets as wallet}
-										<option value={wallet.id}>{wallet.name}</option>
-									{/each}
-								</select>
-							{:else}
-								{getWalletName(depot.walletId)}
-							{/if}
+							<select bind:value={depot.newWalletId}>
+								{#each wallets as wallet}
+									<option value={wallet.id}>{wallet.name}</option>
+								{/each}
+							</select>
 						</td>
 						<td>
-							{#if depot.isEditing}
-								<select bind:value={depot.newBudgetId}>
-									{#each budgets as budget}
-										<option value={budget.id}>{budget.name}</option>
-									{/each}
-								</select>
-							{:else}
-								{getBudgetName(depot.budgetId)}
-							{/if}
+							<select bind:value={depot.newBudgetId}>
+								{#each budgets as budget}
+									<option value={budget.id}>{budget.name}</option>
+								{/each}
+							</select>
 						</td>
 						<td>
-							{#if depot.isEditing}
-								<button onclick={() => updateDepot(depot)}>OK</button>
-								<button class="secondary" onclick={() => cancelEditingDepot(depot)}>Cancel</button>
-							{:else}
-								<button onclick={() => startEditingDepot(depot)}>Edit</button>
-								<button class="secondary" onclick={() => deleteDepot(depot.id)}>Delete</button>
-							{/if}
+							<button
+								type="button"
+								class="icon-button save-button"
+								onclick={() => updateDepot(depot)}
+								aria-label="Save depot"
+								title="Save depot"
+							>
+								<SaveIcon />
+							</button>
+							<button
+								type="button"
+								class="icon-button delete-button"
+								onclick={() => deleteDepot(depot.id)}
+								aria-label="Delete depot"
+								title="Delete depot"
+							>
+								<DeleteIcon />
+							</button>
 						</td>
 					</tr>
 				{/each}
@@ -383,35 +341,34 @@
 				{#each stocks as stock (stock.id)}
 					<tr>
 						<td>
-							{#if stock.isEditing}
-								<input type="text" bind:value={stock.newWkn} />
-							{:else}
-								{stock.wkn}
-							{/if}
+							<input type="text" bind:value={stock.newWkn} />
 						</td>
 						<td>
-							{#if stock.isEditing}
-								<input type="text" bind:value={stock.newTicker} />
-							{:else}
-								{stock.ticker || '-'}
-							{/if}
+							<input type="text" bind:value={stock.newTicker} />
 						</td>
 						<td>
-							{#if stock.isEditing}
-								<input type="number" step="0.01" bind:value={stock.newPriceEuros} />
-							{:else}
-								{formatCurrency(stock.priceInCents)}
-							{/if}
+							<input type="number" step="0.01" bind:value={stock.newPriceEuros} />
 						</td>
 						<td>{formatLastFetched(stock.lastFetched)}</td>
 						<td>
-							{#if stock.isEditing}
-								<button onclick={() => updateStock(stock)}>OK</button>
-								<button class="secondary" onclick={() => cancelEditingStock(stock)}>Cancel</button>
-							{:else}
-								<button onclick={() => startEditingStock(stock)}>Edit</button>
-								<button class="secondary" onclick={() => deleteStock(stock.id)}>Delete</button>
-							{/if}
+							<button
+								type="button"
+								class="icon-button save-button"
+								onclick={() => updateStock(stock)}
+								aria-label="Save stock"
+								title="Save stock"
+							>
+								<SaveIcon />
+							</button>
+							<button
+								type="button"
+								class="icon-button delete-button"
+								onclick={() => deleteStock(stock.id)}
+								aria-label="Delete stock"
+								title="Delete stock"
+							>
+								<DeleteIcon />
+							</button>
 						</td>
 					</tr>
 				{/each}
@@ -455,5 +412,29 @@
 	}
 	section {
 		margin-bottom: 2rem;
+	}
+	.icon-button {
+		width: auto;
+		background: none;
+		border: none;
+		padding: 0.25rem;
+		margin: 0 0.25rem;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		vertical-align: middle;
+	}
+	.save-button {
+		color: var(--pico-color-green-500);
+	}
+	.delete-button {
+		color: var(--pico-del-color);
+	}
+	.delete-button:disabled {
+		color: var(--pico-muted-color);
+		cursor: not-allowed;
+	}
+	:global(html[data-theme='dark']) .save-button {
+		color: var(--pico-color-green-350);
 	}
 </style>

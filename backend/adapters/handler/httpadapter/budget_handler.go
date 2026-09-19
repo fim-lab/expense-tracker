@@ -132,6 +132,51 @@ func (h *BudgetHandler) DeleteBudget(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *BudgetHandler) SetBudgetVisibility(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	budgetID := chi.URLParam(r, "id")
+	if budgetID == "" {
+		http.Error(w, "Missing budget ID", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(budgetID)
+	if err != nil {
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Visible bool `json:"visible"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.SetBudgetVisibility(userID, id, req.Visible)
+	if err != nil {
+		log.Printf("Error setting visibility for budget %d for user %d: %v", id, userID, err)
+		switch err {
+		case domain.ErrBudgetNotFound, domain.ErrMissingBudget:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case domain.ErrUnauthorized:
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		default:
+			http.Error(w, "Could not update budget visibility", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *BudgetHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(int)
 	var req struct {
