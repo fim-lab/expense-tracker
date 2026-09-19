@@ -3,6 +3,8 @@
 	import type { Budget, BudgetGroup } from '$lib/types';
 	import EyeIcon from '$lib/components/icons/EyeIcon.svelte';
 	import EyeOffIcon from '$lib/components/icons/EyeOffIcon.svelte';
+	import SaveIcon from '$lib/components/icons/SaveIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	let { data } = $props();
 
@@ -16,22 +18,13 @@
 	);
 
 	let budgetGroups = $state<BudgetGroup[]>(
-		(data.budgetGroups || []).map((g: BudgetGroup) => ({ ...g, isEditing: false, newName: '' }))
+		(data.budgetGroups || []).map((g: BudgetGroup) => ({ ...g, newName: g.name }))
 	);
 
 	let newGroupName = $state('');
 
 	function groupName(groupId: number | null | undefined) {
 		return budgetGroups.find((g) => g.id === groupId)?.name || 'Ungrouped';
-	}
-
-	function startEditingGroup(group: BudgetGroup) {
-		group.isEditing = true;
-		group.newName = group.name;
-	}
-
-	function cancelEditingGroup(group: BudgetGroup) {
-		group.isEditing = false;
 	}
 
 	async function updateGroup(group: BudgetGroup) {
@@ -47,7 +40,6 @@
 
 		if (res.ok) {
 			group.name = group.newName;
-			group.isEditing = false;
 		} else {
 			console.error('Failed to update budget group');
 		}
@@ -85,7 +77,7 @@
 
 		if (res.ok) {
 			const created = await res.json();
-			budgetGroups = [...budgetGroups, { ...created, isEditing: false, newName: '' }];
+			budgetGroups = [...budgetGroups, { ...created, newName: created.name }];
 			newGroupName = '';
 		} else {
 			console.error('Failed to create budget group');
@@ -181,7 +173,15 @@
 						</select>
 					</td>
 					<td>
-						<button onclick={() => updateBudget(budget)}>Save</button>
+						<button
+							type="button"
+							class="icon-button save-button"
+							onclick={() => updateBudget(budget)}
+							aria-label="Save budget"
+							title="Save budget"
+						>
+							<SaveIcon />
+						</button>
 						<button
 							type="button"
 							class="icon-button visibility-toggle"
@@ -202,10 +202,15 @@
 								: ''}
 						>
 							<button
-								class="secondary"
+								type="button"
+								class="icon-button delete-button"
 								onclick={() => deleteBudget(budget.id)}
-								disabled={!budget.canDelete}>Delete</button
+								disabled={!budget.canDelete}
+								aria-label="Delete budget"
+								title="Delete budget"
 							>
+								<DeleteIcon />
+							</button>
 						</span>
 					</td>
 				</tr>
@@ -232,20 +237,27 @@
 			{#each budgetGroups as group (group.id)}
 				<tr>
 					<td>
-						{#if group.isEditing}
-							<input type="text" bind:value={group.newName} />
-						{:else}
-							{group.name}
-						{/if}
+						<input type="text" bind:value={group.newName} />
 					</td>
 					<td>
-						{#if group.isEditing}
-							<button onclick={() => updateGroup(group)}>OK</button>
-							<button class="secondary" onclick={() => cancelEditingGroup(group)}>Cancel</button>
-						{:else}
-							<button onclick={() => startEditingGroup(group)}>Edit</button>
-							<button class="secondary" onclick={() => deleteGroup(group.id)}>Delete</button>
-						{/if}
+						<button
+							type="button"
+							class="icon-button save-button"
+							onclick={() => updateGroup(group)}
+							aria-label="Save budget group"
+							title="Save budget group"
+						>
+							<SaveIcon />
+						</button>
+						<button
+							type="button"
+							class="icon-button delete-button"
+							onclick={() => deleteGroup(group.id)}
+							aria-label="Delete budget group"
+							title="Delete budget group"
+						>
+							<DeleteIcon />
+						</button>
 					</td>
 				</tr>
 			{/each}
@@ -300,6 +312,22 @@
 		color: var(--pico-muted-color);
 	}
 	.visibility-toggle.active {
+		color: #000;
+	}
+	:global(html[data-theme='dark']) .visibility-toggle.active {
 		color: var(--pico-color);
+	}
+	.save-button {
+		color: var(--pico-color-green-500);
+	}
+	.delete-button {
+		color: var(--pico-del-color);
+	}
+	.delete-button:disabled {
+		color: var(--pico-muted-color);
+		cursor: not-allowed;
+	}
+	:global(html[data-theme='dark']) .save-button {
+		color: var(--pico-color-green-350);
 	}
 </style>
