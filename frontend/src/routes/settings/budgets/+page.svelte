@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { formatCurrency } from '$lib/utils';
 	import type { Budget, BudgetGroup } from '$lib/types';
+	import EyeIcon from '$lib/components/icons/EyeIcon.svelte';
+	import EyeOffIcon from '$lib/components/icons/EyeOffIcon.svelte';
 
 	let { data } = $props();
 
 	let budgets = $state<Budget[]>(
 		(data.budgets || []).map((b: Budget) => ({
 			...b,
-			isEditing: false,
-			newName: '',
+			newName: b.name,
 			newLimitEuros: b.limitCents / 100,
 			newGroupId: b.groupId ?? undefined
 		}))
@@ -92,17 +93,6 @@
 		}
 	}
 
-	function startEditing(budget: Budget) {
-		budget.isEditing = true;
-		budget.newName = budget.name;
-		budget.newLimitEuros = budget.limitCents / 100;
-		budget.newGroupId = budget.groupId ?? undefined;
-	}
-
-	function cancelEditing(budget: Budget) {
-		budget.isEditing = false;
-	}
-
 	async function updateBudget(budget: Budget) {
 		if (!budget.newName || !budget.newLimitEuros) {
 			alert('Enter name or limit.');
@@ -124,7 +114,6 @@
 			budget.name = budget.newName;
 			budget.limitCents = newLimitCents;
 			budget.groupId = budget.newGroupId ?? null;
-			budget.isEditing = false;
 		} else {
 			console.error('Failed to update budget');
 		}
@@ -178,52 +167,46 @@
 			{#each budgets as budget (budget.id)}
 				<tr class:hidden-budget={!budget.visible}>
 					<td>
-						{#if budget.isEditing}
-							<input type="text" bind:value={budget.newName} />
-						{:else}
-							{budget.name}
-						{/if}
+						<input type="text" bind:value={budget.newName} />
 					</td>
 					<td>
-						{#if budget.isEditing}
-							<input type="number" step="0.01" bind:value={budget.newLimitEuros} />
-						{:else}
-							{formatCurrency(budget.limitCents)}
-						{/if}
+						<input type="number" step="0.01" bind:value={budget.newLimitEuros} />
 					</td>
 					<td>
-						{#if budget.isEditing}
-							<select bind:value={budget.newGroupId}>
-								<option value={undefined}>Ungrouped</option>
-								{#each budgetGroups as group (group.id)}
-									<option value={group.id}>{group.name}</option>
-								{/each}
-							</select>
-						{:else}
-							{groupName(budget.groupId)}
-						{/if}
+						<select bind:value={budget.newGroupId}>
+							<option value={undefined}>Ungrouped</option>
+							{#each budgetGroups as group (group.id)}
+								<option value={group.id}>{group.name}</option>
+							{/each}
+						</select>
 					</td>
 					<td>
-						{#if budget.isEditing}
-							<button onclick={() => updateBudget(budget)}>OK</button>
-							<button class="secondary" onclick={() => cancelEditing(budget)}>Cancel</button>
-						{:else}
-							<button onclick={() => startEditing(budget)}>Edit</button>
-							<button class="secondary" onclick={() => toggleVisibility(budget)}>
-								{budget.visible ? 'Hide' : 'Show'}
-							</button>
-							<span
-								title={!budget.canDelete
-									? 'Only budgets with a balance of 0 and no transactions can be deleted.'
-									: ''}
+						<button onclick={() => updateBudget(budget)}>Save</button>
+						<button
+							type="button"
+							class="icon-button visibility-toggle"
+							class:active={budget.visible}
+							onclick={() => toggleVisibility(budget)}
+							aria-label={budget.visible ? 'Hide budget' : 'Show budget'}
+							title={budget.visible ? 'Hide budget' : 'Show budget'}
+						>
+							{#if budget.visible}
+								<EyeIcon />
+							{:else}
+								<EyeOffIcon />
+							{/if}
+						</button>
+						<span
+							title={!budget.canDelete
+								? 'Only budgets with a balance of 0 and no transactions can be deleted.'
+								: ''}
+						>
+							<button
+								class="secondary"
+								onclick={() => deleteBudget(budget.id)}
+								disabled={!budget.canDelete}>Delete</button
 							>
-								<button
-									class="secondary"
-									onclick={() => deleteBudget(budget.id)}
-									disabled={!budget.canDelete}>Delete</button
-								>
-							</span>
-						{/if}
+						</span>
 					</td>
 				</tr>
 			{/each}
@@ -301,5 +284,22 @@
 	}
 	.hidden-budget {
 		opacity: 0.5;
+	}
+	.icon-button {
+		width: auto;
+		background: none;
+		border: none;
+		padding: 0.25rem;
+		margin: 0 0.25rem;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		vertical-align: middle;
+	}
+	.visibility-toggle {
+		color: var(--pico-muted-color);
+	}
+	.visibility-toggle.active {
+		color: var(--pico-color);
 	}
 </style>
