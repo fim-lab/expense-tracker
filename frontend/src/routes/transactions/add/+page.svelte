@@ -424,6 +424,15 @@
 				/>
 			</label>
 			<label>
+				Budget
+				<select bind:value={budgetId} disabled={isDebt} required={!isDebt}>
+					<option value={0} disabled>Select Budget Category</option>
+					{#each visibleBudgets as budget}
+						<option value={budget.id}>{budget.name}</option>
+					{/each}
+				</select>
+			</label>
+			<label>
 				Wallet
 				<select bind:value={walletId} required>
 					<option value={0} disabled>Select Wallet</option>
@@ -434,27 +443,32 @@
 			</label>
 		</div>
 
-		<label>
-			<input type="checkbox" bind:checked={isDebt} />
-			Debt
-		</label>
+		<div class="toggle-row">
+			<label class="checkbox-label">
+				<input type="checkbox" bind:checked={isDebt} />
+				Debt
+			</label>
 
-		<label>
-			<input
-				type="checkbox"
-				bind:checked={isShared}
-				onchange={() => {
-					if (isShared) shareAmount = -amount;
-				}}
-			/>
-			Shared
-		</label>
+			<label class="checkbox-label">
+				<input
+					type="checkbox"
+					bind:checked={isShared}
+					onchange={() => {
+						if (isShared) shareAmount = -amount;
+					}}
+				/>
+				Shared
+			</label>
 
-		{#if isShared}
-			<label>
-				Share (EUR)
-				<div class="signed-amount-input">
-					<input type="number" step="0.01" bind:value={shareAmount} />
+			{#if isShared}
+				<div class="signed-amount-input inline-share">
+					<input
+						type="number"
+						step="0.01"
+						bind:value={shareAmount}
+						aria-label="Share (EUR)"
+						placeholder="Share (EUR)"
+					/>
 					<button
 						type="button"
 						class="sign-toggle"
@@ -464,18 +478,8 @@
 						±
 					</button>
 				</div>
-			</label>
-		{/if}
-
-		<label>
-			Budget
-			<select bind:value={budgetId} disabled={isDebt} required={!isDebt}>
-				<option value={0} disabled>Select Budget Category</option>
-				{#each visibleBudgets as budget}
-					<option value={budget.id}>{budget.name}</option>
-				{/each}
-			</select>
-		</label>
+			{/if}
+		</div>
 
 		{#if errorMessage}
 			<p class="error-message">{errorMessage}</p>
@@ -617,6 +621,23 @@
 		margin-bottom: 0;
 	}
 
+	.toggle-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 1.5rem;
+		margin-bottom: var(--pico-spacing);
+	}
+
+	.checkbox-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: auto;
+		margin-bottom: 0;
+		white-space: nowrap;
+	}
+
 	.signed-amount-input {
 		display: flex;
 		gap: 0.5rem;
@@ -625,6 +646,11 @@
 
 	.signed-amount-input input {
 		margin: 0;
+	}
+
+	.signed-amount-input.inline-share {
+		flex: 1 1 200px;
+		max-width: 260px;
 	}
 
 	.sign-toggle {
