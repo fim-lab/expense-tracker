@@ -2,8 +2,11 @@ package services
 
 import (
 	"testing"
+	"time"
 
+	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
+	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
 func TestPortfolioService_RealizedGainAndPositionAfterPartialSell(t *testing.T) {
@@ -155,4 +158,276 @@ func TestPortfolioService_TradesReportWhetherTheyCanBeDeleted(t *testing.T) {
 	if err := f.tradeSvc.DeleteTrade(f.userID, untouchedBuyID); err != nil {
 		t.Errorf("expected deleting the untouched buy to succeed, got %v", err)
 	}
+}
+
+type stalePriceFetcher struct {
+	prices map[string]int
+	errs   map[string]error
+	calls  map[string]int
+}
+
+func newStalePriceFetcher() *stalePriceFetcher {
+	return &stalePriceFetcher{prices: map[string]int{}, errs: map[string]error{}, calls: map[string]int{}}
+}
+
+func (f *stalePriceFetcher) FetchPrice(ticker string) (int, error) {
+	f.calls[ticker]++
+	if err, ok := f.errs[ticker]; ok {
+		return 0, err
+	}
+	return f.prices[ticker], nil
+}
+
+type staleFixture struct {
+	repos        ports.Repositories
+	portfolioSvc ports.PortfolioService
+	tradeSvc     ports.TradeService
+	fetcher      *stalePriceFetcher
+}
+
+func newStaleFixture(t *testing.T) staleFixture {
+	t.Helper()
+
+	repos := memory.NewCleanRepositories()
+	fetcher := newStalePriceFetcher()
+	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository(), fetcher)
+	depotSvc := NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TradeRepository(), stockSvc)
+	txSvc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
+
+	return staleFixture{
+		repos:        repos,
+		portfolioSvc: NewPortfolioService(repos.TradeRepository(), depotSvc, stockSvc),
+		tradeSvc:     NewTradeService(repos.TradeRepository(), depotSvc, txSvc, stockSvc),
+		fetcher:      fetcher,
+	}
+}
+
+func (f staleFixture) seedUser(t *testing.T, userID, walletID, budgetID, depotID int) {
+	t.Helper()
+	if err := f.repos.WalletRepository().SaveWallet(domain.Wallet{ID: walletID, UserID: userID, Name: "Wallet"}); err != nil {
+		t.Fatalf("could not seed the wallet: %v", err)
+	}
+	if err := f.repos.BudgetRepository().SaveBudget(domain.Budget{ID: budgetID, UserID: userID, Name: "Investments", LimitCents: 1000000}); err != nil {
+		t.Fatalf("could not seed the budget: %v", err)
+	}
+	if err := f.repos.DepotRepository().SaveDepot(domain.Depot{ID: depotID, UserID: userID, Name: "Depot", WalletID: walletID, BudgetID: budgetID}); err != nil {
+		t.Fatalf("could not seed the depot: %v", err)
+	}
+}
+
+func (f staleFixture) seedStock(t *testing.T, stock domain.Stock) domain.Stock {
+	t.Helper()
+	id, err := f.repos.StockRepository().SaveStock(stock)
+	if err != nil {
+		t.Fatalf("could not seed the stock: %v", err)
+	}
+	stock.ID = id
+	return stock
+}
+
+func (f staleFixture) buyIntoDepot(t *testing.T, userID, depotID int, wkn string, day int) {
+	t.Helper()
+	trade := domain.Trade{
+		DepotID:      depotID,
+		WKN:          wkn,
+		Type:         domain.TradeTypeBuy,
+		Quantity:     1,
+		TotalInCents: 1000,
+		Timestamp:    tradeDay(day),
+	}
+	if _, err := f.tradeSvc.CreateTrade(userID, trade); err != nil {
+		t.Fatalf("buying %s into depot %d failed: %v", wkn, depotID, err)
+	}
+}
+
+func (f staleFixture) sellFromDepot(t *testing.T, userID, depotID int, wkn string, day int) {
+	t.Helper()
+	trade := domain.Trade{
+		DepotID:      depotID,
+		WKN:          wkn,
+		Type:         domain.TradeTypeSell,
+		Quantity:     1,
+		TotalInCents: 1000,
+		Timestamp:    tradeDay(day),
+	}
+	if _, err := f.tradeSvc.CreateTrade(userID, trade); err != nil {
+		t.Fatalf("selling %s from depot %d failed: %v", wkn, depotID, err)
+	}
+}
+
+func (f staleFixture) mustGetStock(t *testing.T, id int) domain.Stock {
+	t.Helper()
+	stock, err := f.repos.StockRepository().GetStockByID(id)
+	if err != nil {
+		t.Fatalf("could not read stock %d: %v", id, err)
+	}
+	return stock
+}
+
+func TestPortfolioService_RefreshStaleStockPrices(t *testing.T) {
+	t.Run("stale stock within threshold is refreshed", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+		stock := f.seedStock(t, domain.Stock{WKN: "A1", Ticker: "AAA", PriceInCents: 1000, LastFetched: time.Now().Add(-48 * time.Hour)})
+		f.buyIntoDepot(t, 1, 1, "A1", 1)
+		f.fetcher.prices["AAA"] = 1050 // +5%, within the 10% auto-save threshold
+
+		if err := f.portfolioSvc.RefreshStaleStockPrices(1); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		updated := f.mustGetStock(t, stock.ID)
+		if updated.PriceInCents != 1050 {
+			t.Errorf("expected the price to be refreshed to 1050, got %d", updated.PriceInCents)
+		}
+		if time.Since(updated.LastFetched) > time.Minute {
+			t.Errorf("expected LastFetched to be bumped to now, got %v", updated.LastFetched)
+		}
+		if f.fetcher.calls["AAA"] != 1 {
+			t.Errorf("expected the fetcher to be called once, got %d calls", f.fetcher.calls["AAA"])
+		}
+	})
+
+	t.Run("fresh stock is left untouched", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+		lastFetched := time.Now().Add(-1 * time.Hour)
+		stock := f.seedStock(t, domain.Stock{WKN: "A1", Ticker: "AAA", PriceInCents: 1000, LastFetched: lastFetched})
+		f.buyIntoDepot(t, 1, 1, "A1", 1)
+		f.fetcher.prices["AAA"] = 2000
+
+		if err := f.portfolioSvc.RefreshStaleStockPrices(1); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		updated := f.mustGetStock(t, stock.ID)
+		if updated.PriceInCents != 1000 || !updated.LastFetched.Equal(lastFetched) {
+			t.Errorf("expected the fresh stock to be untouched, got %+v", updated)
+		}
+		if f.fetcher.calls["AAA"] != 0 {
+			t.Errorf("expected the fetcher not to be called, got %d calls", f.fetcher.calls["AAA"])
+		}
+	})
+
+	t.Run("stock needing confirmation is left stale with no error", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+		lastFetched := time.Now().Add(-48 * time.Hour)
+		stock := f.seedStock(t, domain.Stock{WKN: "A1", Ticker: "AAA", PriceInCents: 1000, LastFetched: lastFetched})
+		f.buyIntoDepot(t, 1, 1, "A1", 1)
+		f.fetcher.prices["AAA"] = 1300 // +30%, needs confirmation
+
+		if err := f.portfolioSvc.RefreshStaleStockPrices(1); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		updated := f.mustGetStock(t, stock.ID)
+		if updated.PriceInCents != 1000 || !updated.LastFetched.Equal(lastFetched) {
+			t.Errorf("expected the stock to be left stale pending manual confirmation, got %+v", updated)
+		}
+	})
+
+	t.Run("another user's stock is never touched", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+		f.seedUser(t, 2, 2, 2, 2)
+		mine := f.seedStock(t, domain.Stock{WKN: "A1", Ticker: "AAA", PriceInCents: 1000, LastFetched: time.Now().Add(-48 * time.Hour)})
+		theirs := f.seedStock(t, domain.Stock{WKN: "B1", Ticker: "BBB", PriceInCents: 1000, LastFetched: time.Now().Add(-48 * time.Hour)})
+		f.buyIntoDepot(t, 1, 1, "A1", 1)
+		f.buyIntoDepot(t, 2, 2, "B1", 1)
+		f.fetcher.prices["AAA"] = 1050
+		f.fetcher.prices["BBB"] = 1050
+
+		if err := f.portfolioSvc.RefreshStaleStockPrices(1); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if updated := f.mustGetStock(t, mine.ID); updated.PriceInCents != 1050 {
+			t.Errorf("expected the caller's own stock to be refreshed, got %+v", updated)
+		}
+		if updated := f.mustGetStock(t, theirs.ID); updated.PriceInCents != 1000 {
+			t.Errorf("expected the other user's stock to be untouched, got %+v", updated)
+		}
+		if f.fetcher.calls["BBB"] != 0 {
+			t.Errorf("expected the fetcher not to be called for the other user's stock, got %d calls", f.fetcher.calls["BBB"])
+		}
+	})
+
+	t.Run("one stock's fetch failure does not block the others", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+		failing := f.seedStock(t, domain.Stock{WKN: "A1", Ticker: "AAA", PriceInCents: 1000, LastFetched: time.Now().Add(-48 * time.Hour)})
+		succeeding := f.seedStock(t, domain.Stock{WKN: "B1", Ticker: "BBB", PriceInCents: 1000, LastFetched: time.Now().Add(-48 * time.Hour)})
+		f.buyIntoDepot(t, 1, 1, "A1", 1)
+		f.buyIntoDepot(t, 1, 1, "B1", 2)
+		f.fetcher.errs["AAA"] = domain.ErrPriceFetchFailed
+		f.fetcher.prices["BBB"] = 1050
+
+		if err := f.portfolioSvc.RefreshStaleStockPrices(1); err != nil {
+			t.Fatalf("expected the pass to succeed despite one fetch failing, got %v", err)
+		}
+
+		if updated := f.mustGetStock(t, failing.ID); updated.PriceInCents != 1000 {
+			t.Errorf("expected the failing stock to be left unchanged, got %+v", updated)
+		}
+		if updated := f.mustGetStock(t, succeeding.ID); updated.PriceInCents != 1050 {
+			t.Errorf("expected the succeeding stock to still be refreshed, got %+v", updated)
+		}
+	})
+}
+
+func TestPortfolioService_GetOwnedStocks(t *testing.T) {
+	t.Run("only stocks with an open position are returned", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+		held := f.seedStock(t, domain.Stock{WKN: "A1", Ticker: "AAA", PriceInCents: 1000})
+		closed := f.seedStock(t, domain.Stock{WKN: "B1", Ticker: "BBB", PriceInCents: 1000})
+		f.buyIntoDepot(t, 1, 1, "A1", 1)
+		f.buyIntoDepot(t, 1, 1, "B1", 1)
+		f.sellFromDepot(t, 1, 1, "B1", 2)
+
+		owned, err := f.portfolioSvc.GetOwnedStocks(1)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(owned) != 1 || owned[0].ID != held.ID {
+			t.Errorf("expected only the still-held stock %d, got %+v (closed stock was %d)", held.ID, owned, closed.ID)
+		}
+	})
+
+	t.Run("another user's holdings are never returned", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+		f.seedUser(t, 2, 2, 2, 2)
+		f.seedStock(t, domain.Stock{WKN: "A1", Ticker: "AAA", PriceInCents: 1000})
+		f.seedStock(t, domain.Stock{WKN: "B1", Ticker: "BBB", PriceInCents: 1000})
+		f.buyIntoDepot(t, 1, 1, "A1", 1)
+		f.buyIntoDepot(t, 2, 2, "B1", 1)
+
+		owned, err := f.portfolioSvc.GetOwnedStocks(1)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(owned) != 1 || owned[0].WKN != "A1" {
+			t.Errorf("expected only the caller's own holding, got %+v", owned)
+		}
+	})
+
+	t.Run("no depots returns an empty slice, not nil", func(t *testing.T) {
+		f := newStaleFixture(t)
+		f.seedUser(t, 1, 1, 1, 1)
+
+		owned, err := f.portfolioSvc.GetOwnedStocks(1)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if owned == nil {
+			t.Error("expected an empty slice, got nil")
+		}
+		if len(owned) != 0 {
+			t.Errorf("expected no owned stocks, got %+v", owned)
+		}
+	})
 }

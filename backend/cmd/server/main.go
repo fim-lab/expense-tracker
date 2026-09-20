@@ -154,6 +154,8 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 
 	r.Get("/depots/{id}/portfolio", portfolioHandler.GetPortfolio)
 	r.Get("/depots/{id}/trades", portfolioHandler.GetTrades)
+	r.Get("/portfolio/owned-stocks", portfolioHandler.GetOwnedStocks)
+	r.Post("/portfolio/refresh-stale-prices", portfolioHandler.RefreshStaleStockPrices)
 	r.Post("/depots/{id}/trades", tradeHandler.CreateTrade)
 	r.Put("/trades/{id}", tradeHandler.UpdateTrade)
 	r.Delete("/trades/{id}", tradeHandler.DeleteTrade)

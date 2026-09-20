@@ -1,12 +1,16 @@
 package services
 
 import (
+	"log"
 	"math"
 	"sort"
+	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
+
+const stalePriceAge = 24 * time.Hour
 
 type portfolioService struct {
 	tradeRepo    ports.TradeRepository
@@ -90,4 +94,62 @@ func (s *portfolioService) tradesOfDepot(userID int, depotID int) ([]domain.Trad
 		return nil, err
 	}
 	return s.tradeRepo.FindTradesByDepot(depotID)
+}
+
+func (s *portfolioService) GetOwnedStocks(userID int) ([]domain.Stock, error) {
+	stockIDs, err := s.ownedStockIDs(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	stocksByID, err := s.stocksByID()
+	if err != nil {
+		return nil, err
+	}
+
+	owned := make([]domain.Stock, 0, len(stockIDs))
+	for id := range stockIDs {
+		if stock, ok := stocksByID[id]; ok {
+			owned = append(owned, stock)
+		}
+	}
+	sort.Slice(owned, func(i, j int) bool { return owned[i].WKN < owned[j].WKN })
+	return owned, nil
+}
+
+func (s *portfolioService) ownedStockIDs(userID int) (map[int]struct{}, error) {
+	depots, err := s.depotService.GetDepots(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	stockIDs := make(map[int]struct{})
+	for _, depot := range depots {
+		trades, err := s.tradeRepo.FindTradesByDepot(depot.ID)
+		if err != nil {
+			return nil, err
+		}
+		for _, position := range buildPortfolio(trades).positions(depot.ID) {
+			stockIDs[position.StockID] = struct{}{}
+		}
+	}
+	return stockIDs, nil
+}
+
+func (s *portfolioService) RefreshStaleStockPrices(userID int) error {
+	stocks, err := s.GetOwnedStocks(userID)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	for _, stock := range stocks {
+		if now.Sub(stock.LastFetched) <= stalePriceAge {
+			continue
+		}
+		if _, err := s.stockService.RefreshStockPrice(stock.ID, nil); err != nil {
+			log.Printf("background refresh of stock %d skipped: %v", stock.ID, err)
+		}
+	}
+	return nil
 }
