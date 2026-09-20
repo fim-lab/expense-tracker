@@ -9,3 +9,10 @@ type Stock struct {
 	PriceInCents int       `json:"priceInCents"`
 	LastFetched  time.Time `json:"lastFetched"`
 }
+
+type StockPriceRefresh struct {
+	NeedsConfirmation bool  `json:"needsConfirmation"`
+	Stock             Stock `json:"stock"`
+	OldPriceInCents   int   `json:"oldPriceInCents"`
+	NewPriceInCents   int   `json:"newPriceInCents"`
+}

@@ -3,7 +3,6 @@ package memory
 import (
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -27,6 +26,7 @@ func (r *TransactionRepository) SaveTransaction(t domain.Transaction) (int, erro
 				adjustment = -t.AmountInCents
 			}
 			budget.BalanceCents += adjustment
+			budget.Visible = true
 			r.repo.budgets[*t.BudgetID] = budget
 		}
 	}
@@ -404,6 +404,7 @@ func (r *TransactionRepository) UpdateTransaction(t domain.Transaction) error {
 	if t.BudgetID != nil {
 		if budget, ok := r.repo.budgets[*t.BudgetID]; ok {
 			budget.BalanceCents += newAdjustment
+			budget.Visible = true
 			r.repo.budgets[*t.BudgetID] = budget
 		}
 	}
@@ -466,15 +467,4 @@ func (r *TransactionRepository) CountTransactionsByWalletID(walletID int) (int, 
 		}
 	}
 	return count, nil
-}
-
-func (r *TransactionRepository) HasTransactionForBudgetSince(budgetID int, since time.Time) (bool, error) {
-	r.repo.mu.RLock()
-	defer r.repo.mu.RUnlock()
-	for _, t := range r.repo.transactions {
-		if t.BudgetID != nil && *t.BudgetID == budgetID && !t.Date.Before(since) {
-			return true, nil
-		}
-	}
-	return false, nil
 }

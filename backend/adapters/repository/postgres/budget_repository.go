@@ -34,8 +34,8 @@ func (r *BudgetRepository) UpdateBudget(b domain.Budget) error {
 func (r *BudgetRepository) GetBudgetByID(id int) (domain.Budget, error) {
 	var b domain.Budget
 	var groupID sql.NullInt64
-	err := r.db.QueryRow("SELECT id, user_id, name, limit_cents, group_id FROM budgets WHERE id = $1", id).
-		Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &groupID)
+	err := r.db.QueryRow("SELECT id, user_id, name, limit_cents, group_id, visible FROM budgets WHERE id = $1", id).
+		Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &groupID, &b.Visible)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.Budget{}, domain.ErrMissingBudget
@@ -47,7 +47,7 @@ func (r *BudgetRepository) GetBudgetByID(id int) (domain.Budget, error) {
 }
 
 func (r *BudgetRepository) FindBudgetsByUser(userID int) ([]domain.Budget, error) {
-	rows, err := r.db.Query("SELECT id, user_id, name, limit_cents, balance_cents, group_id FROM budgets WHERE user_id = $1 ORDER BY id ASC", userID)
+	rows, err := r.db.Query("SELECT id, user_id, name, limit_cents, balance_cents, group_id, visible FROM budgets WHERE user_id = $1 ORDER BY id ASC", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,13 +57,18 @@ func (r *BudgetRepository) FindBudgetsByUser(userID int) ([]domain.Budget, error
 	for rows.Next() {
 		var b domain.Budget
 		var groupID sql.NullInt64
-		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &b.BalanceCents, &groupID); err != nil {
+		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &b.BalanceCents, &groupID, &b.Visible); err != nil {
 			return nil, err
 		}
 		b.GroupID = intFromNullable(groupID)
 		res = append(res, b)
 	}
 	return res, nil
+}
+
+func (r *BudgetRepository) SetBudgetVisibility(id int, visible bool) error {
+	_, err := r.db.Exec("UPDATE budgets SET visible = $1 WHERE id = $2", visible, id)
+	return err
 }
 
 func (r *BudgetRepository) CreateBudgetTransfer(fromID, toID, amount int) error {

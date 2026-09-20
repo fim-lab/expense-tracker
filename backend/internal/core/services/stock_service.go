@@ -1,19 +1,27 @@
 package services
 
 import (
+	"log"
+	"math"
 	"strings"
+	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
 
+// priceChangeThreshold is how far a freshly fetched price may differ from
+// the stock's current price before RefreshStockPrice requires confirmation.
+const priceChangeThreshold = 0.10
+
 type stockService struct {
-	stockRepo ports.StockRepository
-	tradeRepo ports.TradeRepository
+	stockRepo    ports.StockRepository
+	tradeRepo    ports.TradeRepository
+	priceFetcher ports.StockPriceFetcher
 }
 
-func NewStockService(stockRepo ports.StockRepository, tradeRepo ports.TradeRepository) ports.StockService {
-	return &stockService{stockRepo: stockRepo, tradeRepo: tradeRepo}
+func NewStockService(stockRepo ports.StockRepository, tradeRepo ports.TradeRepository, priceFetcher ports.StockPriceFetcher) ports.StockService {
+	return &stockService{stockRepo: stockRepo, tradeRepo: tradeRepo, priceFetcher: priceFetcher}
 }
 
 func (s *stockService) GetStocks() ([]domain.Stock, error) {
@@ -79,4 +87,48 @@ func (s *stockService) DeleteStock(id int) error {
 		return domain.ErrNotEmpty
 	}
 	return s.stockRepo.DeleteStock(id)
+}
+
+func (s *stockService) RefreshStockPrice(id int, confirmedPriceInCents *int) (domain.StockPriceRefresh, error) {
+	stock, err := s.stockRepo.GetStockByID(id)
+	if err != nil {
+		return domain.StockPriceRefresh{}, err
+	}
+	if strings.TrimSpace(stock.Ticker) == "" {
+		return domain.StockPriceRefresh{}, domain.ErrMissingTicker
+	}
+
+	newPriceInCents := 0
+	if confirmedPriceInCents != nil {
+		newPriceInCents = *confirmedPriceInCents
+	} else {
+		fetched, err := s.priceFetcher.FetchPrice(stock.Ticker)
+		if err != nil {
+			log.Printf("could not fetch price for stock %d (%s): %v", id, stock.Ticker, err)
+			return domain.StockPriceRefresh{}, domain.ErrPriceFetchFailed
+		}
+
+		if priceChangeExceedsThreshold(stock.PriceInCents, fetched) {
+			return domain.StockPriceRefresh{
+				NeedsConfirmation: true,
+				OldPriceInCents:   stock.PriceInCents,
+				NewPriceInCents:   fetched,
+			}, nil
+		}
+		newPriceInCents = fetched
+	}
+
+	stock.PriceInCents = newPriceInCents
+	stock.LastFetched = time.Now().UTC()
+	if err := s.stockRepo.UpdateStock(stock); err != nil {
+		return domain.StockPriceRefresh{}, err
+	}
+	return domain.StockPriceRefresh{Stock: stock}, nil
+}
+
+func priceChangeExceedsThreshold(oldCents, newCents int) bool {
+	if oldCents == 0 {
+		return false
+	}
+	return math.Abs(float64(newCents-oldCents))/float64(oldCents) > priceChangeThreshold
 }

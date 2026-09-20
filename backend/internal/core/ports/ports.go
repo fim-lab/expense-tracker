@@ -1,8 +1,6 @@
 package ports
 
 import (
-	"time"
-
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
 
@@ -26,6 +24,7 @@ type BudgetService interface {
 	GetTotalOfBudgets(userID int) (int, error)
 	DeleteBudget(userID int, id int) error
 	CreateBudgetTransfer(userID, fromBudgetID, toBudgetID, amount int) error
+	SetBudgetVisibility(userID, id int, visible bool) error
 }
 
 type BudgetGroupService interface {
@@ -101,6 +100,7 @@ type StockService interface {
 	CreateStock(s domain.Stock) (domain.Stock, error)
 	UpdateStock(s domain.Stock) (domain.Stock, error)
 	DeleteStock(id int) error
+	RefreshStockPrice(id int, confirmedPriceInCents *int) (domain.StockPriceRefresh, error)
 }
 
 // --- Driven Ports  ---
@@ -125,6 +125,7 @@ type BudgetRepository interface {
 	DeleteBudget(id int) error
 	DeleteAllByUser(userID int) error
 	CreateBudgetTransfer(fromBudgetID, toBudgetID, amount int) error
+	SetBudgetVisibility(id int, visible bool) error
 }
 
 type BudgetGroupRepository interface {
@@ -175,7 +176,6 @@ type TransactionRepository interface {
 	CreateTransfer(from, to domain.Transaction) error
 	CountTransactionsByBudgetID(budgetID int) (int, error)
 	CountTransactionsByWalletID(walletID int) (int, error)
-	HasTransactionForBudgetSince(budgetID int, since time.Time) (bool, error)
 }
 
 type TradeRepository interface {
@@ -197,6 +197,13 @@ type StockRepository interface {
 	SaveStock(s domain.Stock) (int, error)
 	UpdateStock(s domain.Stock) error
 	DeleteStock(id int) error
+}
+
+// StockPriceFetcher fetches the current market price of a stock, in cents,
+// from whatever external source is configured. Ticker is the stock's own
+// Ticker field.
+type StockPriceFetcher interface {
+	FetchPrice(ticker string) (priceInCents int, err error)
 }
 
 type TransactionTemplateRepository interface {

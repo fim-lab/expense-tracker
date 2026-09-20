@@ -37,7 +37,7 @@ func newStockFixture(t *testing.T) stockFixture {
 		t.Fatalf("could not seed the depot: %v", err)
 	}
 
-	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository())
+	stockSvc := NewStockService(repos.StockRepository(), repos.TradeRepository(), nil)
 	depotSvc := NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TradeRepository(), stockSvc)
 	txSvc := NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 

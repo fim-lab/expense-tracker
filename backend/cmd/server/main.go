@@ -10,6 +10,7 @@ import (
 	"github.com/fim-lab/expense-tracker/adapters/handler/middleware"
 	"github.com/fim-lab/expense-tracker/adapters/repository/memory"
 	"github.com/fim-lab/expense-tracker/adapters/repository/postgres"
+	"github.com/fim-lab/expense-tracker/adapters/stockprice"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 	"github.com/fim-lab/expense-tracker/internal/core/services"
 	"github.com/go-chi/chi/v5"
@@ -43,7 +44,8 @@ func main() {
 	budgetService := services.NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
 	budgetGroupService := services.NewBudgetGroupService(repos.BudgetGroupRepository())
 	walletService := services.NewWalletService(repos.WalletRepository(), repos.TransactionRepository())
-	stockService := services.NewStockService(repos.StockRepository(), repos.TradeRepository())
+	priceFetcher := stockprice.NewHTTPPriceFetcher(os.Getenv("STOCK_PRICE_URL_TEMPLATE"))
+	stockService := services.NewStockService(repos.StockRepository(), repos.TradeRepository(), priceFetcher)
 	depotService := services.NewDepotService(repos.DepotRepository(), repos.WalletRepository(), repos.BudgetRepository(), repos.TradeRepository(), stockService)
 	transactionService := services.NewTransactionService(repos.TransactionRepository(), repos.BudgetRepository(), repos.WalletRepository())
 	tradeService := services.NewTradeService(repos.TradeRepository(), depotService, transactionService, stockService)
@@ -120,6 +122,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Put("/budgets/{id}", budgetHandler.UpdateBudget)
 	r.Delete("/budgets/{id}", budgetHandler.DeleteBudget)
 	r.Post("/budgets/transfer", budgetHandler.Transfer)
+	r.Patch("/budgets/{id}/visibility", budgetHandler.SetBudgetVisibility)
 
 	r.Get("/budget-groups", budgetGroupHandler.GetBudgetGroups)
 	r.Post("/budget-groups", budgetGroupHandler.CreateBudgetGroup)
@@ -170,6 +173,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Post("/stocks", stockHandler.CreateStock)
 	r.Put("/stocks/{id}", stockHandler.UpdateStock)
 	r.Delete("/stocks/{id}", stockHandler.DeleteStock)
+	r.Post("/stocks/{id}/refresh", stockHandler.RefreshStockPrice)
 
 	return r
 }

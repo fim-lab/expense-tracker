@@ -1,36 +1,30 @@
 <script lang="ts">
 	import { formatCurrency } from '$lib/utils';
 	import type { Budget, BudgetGroup } from '$lib/types';
+	import EyeIcon from '$lib/components/icons/EyeIcon.svelte';
+	import EyeOffIcon from '$lib/components/icons/EyeOffIcon.svelte';
+	import SaveIcon from '$lib/components/icons/SaveIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	let { data } = $props();
 
 	let budgets = $state<Budget[]>(
 		(data.budgets || []).map((b: Budget) => ({
 			...b,
-			isEditing: false,
-			newName: '',
+			newName: b.name,
 			newLimitEuros: b.limitCents / 100,
 			newGroupId: b.groupId ?? undefined
 		}))
 	);
 
 	let budgetGroups = $state<BudgetGroup[]>(
-		(data.budgetGroups || []).map((g: BudgetGroup) => ({ ...g, isEditing: false, newName: '' }))
+		(data.budgetGroups || []).map((g: BudgetGroup) => ({ ...g, newName: g.name }))
 	);
 
 	let newGroupName = $state('');
 
 	function groupName(groupId: number | null | undefined) {
 		return budgetGroups.find((g) => g.id === groupId)?.name || 'Ungrouped';
-	}
-
-	function startEditingGroup(group: BudgetGroup) {
-		group.isEditing = true;
-		group.newName = group.name;
-	}
-
-	function cancelEditingGroup(group: BudgetGroup) {
-		group.isEditing = false;
 	}
 
 	async function updateGroup(group: BudgetGroup) {
@@ -46,7 +40,6 @@
 
 		if (res.ok) {
 			group.name = group.newName;
-			group.isEditing = false;
 		} else {
 			console.error('Failed to update budget group');
 		}
@@ -84,23 +77,12 @@
 
 		if (res.ok) {
 			const created = await res.json();
-			budgetGroups = [...budgetGroups, { ...created, isEditing: false, newName: '' }];
+			budgetGroups = [...budgetGroups, { ...created, newName: created.name }];
 			newGroupName = '';
 		} else {
 			console.error('Failed to create budget group');
 			alert('Failed to create budget group');
 		}
-	}
-
-	function startEditing(budget: Budget) {
-		budget.isEditing = true;
-		budget.newName = budget.name;
-		budget.newLimitEuros = budget.limitCents / 100;
-		budget.newGroupId = budget.groupId ?? undefined;
-	}
-
-	function cancelEditing(budget: Budget) {
-		budget.isEditing = false;
 	}
 
 	async function updateBudget(budget: Budget) {
@@ -124,7 +106,6 @@
 			budget.name = budget.newName;
 			budget.limitCents = newLimitCents;
 			budget.groupId = budget.newGroupId ?? null;
-			budget.isEditing = false;
 		} else {
 			console.error('Failed to update budget');
 		}
@@ -141,6 +122,21 @@
 			} else {
 				console.error('Failed to delete budget');
 			}
+		}
+	}
+
+	async function toggleVisibility(budget: Budget) {
+		const newVisible = !budget.visible;
+		const res = await fetch(`/api/budgets/${budget.id}/visibility`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ visible: newVisible })
+		});
+
+		if (res.ok) {
+			budget.visible = newVisible;
+		} else {
+			console.error('Failed to update budget visibility');
 		}
 	}
 </script>
@@ -161,51 +157,61 @@
 		</thead>
 		<tbody>
 			{#each budgets as budget (budget.id)}
-				<tr>
+				<tr class:hidden-budget={!budget.visible}>
 					<td>
-						{#if budget.isEditing}
-							<input type="text" bind:value={budget.newName} />
-						{:else}
-							{budget.name}
-						{/if}
+						<input type="text" bind:value={budget.newName} />
 					</td>
 					<td>
-						{#if budget.isEditing}
-							<input type="number" step="0.01" bind:value={budget.newLimitEuros} />
-						{:else}
-							{formatCurrency(budget.limitCents)}
-						{/if}
+						<input type="number" step="0.01" bind:value={budget.newLimitEuros} />
 					</td>
 					<td>
-						{#if budget.isEditing}
-							<select bind:value={budget.newGroupId}>
-								<option value={undefined}>Ungrouped</option>
-								{#each budgetGroups as group (group.id)}
-									<option value={group.id}>{group.name}</option>
-								{/each}
-							</select>
-						{:else}
-							{groupName(budget.groupId)}
-						{/if}
+						<select bind:value={budget.newGroupId}>
+							<option value={undefined}>Ungrouped</option>
+							{#each budgetGroups as group (group.id)}
+								<option value={group.id}>{group.name}</option>
+							{/each}
+						</select>
 					</td>
 					<td>
-						{#if budget.isEditing}
-							<button onclick={() => updateBudget(budget)}>OK</button>
-							<button class="secondary" onclick={() => cancelEditing(budget)}>Cancel</button>
-						{:else}
-							<button onclick={() => startEditing(budget)}>Edit</button>
-							<span
-								title={!budget.canDelete
-									? 'Only budgets with a balance of 0 and no transactions can be deleted.'
-									: ''}
+						<button
+							type="button"
+							class="icon-button save-button"
+							onclick={() => updateBudget(budget)}
+							aria-label="Save budget"
+							title="Save budget"
+						>
+							<SaveIcon />
+						</button>
+						<button
+							type="button"
+							class="icon-button visibility-toggle"
+							class:active={budget.visible}
+							onclick={() => toggleVisibility(budget)}
+							aria-label={budget.visible ? 'Hide budget' : 'Show budget'}
+							title={budget.visible ? 'Hide budget' : 'Show budget'}
+						>
+							{#if budget.visible}
+								<EyeIcon />
+							{:else}
+								<EyeOffIcon />
+							{/if}
+						</button>
+						<span
+							title={!budget.canDelete
+								? 'Only budgets with a balance of 0 and no transactions can be deleted.'
+								: ''}
+						>
+							<button
+								type="button"
+								class="icon-button delete-button"
+								onclick={() => deleteBudget(budget.id)}
+								disabled={!budget.canDelete}
+								aria-label="Delete budget"
+								title="Delete budget"
 							>
-								<button
-									class="secondary"
-									onclick={() => deleteBudget(budget.id)}
-									disabled={!budget.canDelete}>Delete</button
-								>
-							</span>
-						{/if}
+								<DeleteIcon />
+							</button>
+						</span>
 					</td>
 				</tr>
 			{/each}
@@ -231,20 +237,27 @@
 			{#each budgetGroups as group (group.id)}
 				<tr>
 					<td>
-						{#if group.isEditing}
-							<input type="text" bind:value={group.newName} />
-						{:else}
-							{group.name}
-						{/if}
+						<input type="text" bind:value={group.newName} />
 					</td>
 					<td>
-						{#if group.isEditing}
-							<button onclick={() => updateGroup(group)}>OK</button>
-							<button class="secondary" onclick={() => cancelEditingGroup(group)}>Cancel</button>
-						{:else}
-							<button onclick={() => startEditingGroup(group)}>Edit</button>
-							<button class="secondary" onclick={() => deleteGroup(group.id)}>Delete</button>
-						{/if}
+						<button
+							type="button"
+							class="icon-button save-button"
+							onclick={() => updateGroup(group)}
+							aria-label="Save budget group"
+							title="Save budget group"
+						>
+							<SaveIcon />
+						</button>
+						<button
+							type="button"
+							class="icon-button delete-button"
+							onclick={() => deleteGroup(group.id)}
+							aria-label="Delete budget group"
+							title="Delete budget group"
+						>
+							<DeleteIcon />
+						</button>
 					</td>
 				</tr>
 			{/each}
@@ -280,5 +293,41 @@
 	}
 	input {
 		margin-bottom: 0;
+	}
+	.hidden-budget {
+		opacity: 0.5;
+	}
+	.icon-button {
+		width: auto;
+		background: none;
+		border: none;
+		padding: 0.25rem;
+		margin: 0 0.25rem;
+		cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		vertical-align: middle;
+	}
+	.visibility-toggle {
+		color: var(--pico-muted-color);
+	}
+	.visibility-toggle.active {
+		color: #000;
+	}
+	:global(html[data-theme='dark']) .visibility-toggle.active {
+		color: var(--pico-color);
+	}
+	.save-button {
+		color: var(--pico-color-green-500);
+	}
+	.delete-button {
+		color: var(--pico-del-color);
+	}
+	.delete-button:disabled {
+		color: var(--pico-muted-color);
+		cursor: not-allowed;
+	}
+	:global(html[data-theme='dark']) .save-button {
+		color: var(--pico-color-green-350);
 	}
 </style>

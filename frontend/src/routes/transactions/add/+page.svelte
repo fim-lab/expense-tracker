@@ -2,9 +2,11 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import TransactionTemplateCard from '$lib/components/TransactionTemplateCard.svelte';
-	import type { TemplateGroup, TransactionTemplate } from '$lib/types';
+	import type { Budget, TemplateGroup, TransactionTemplate } from '$lib/types';
 	import { formatCurrency } from '$lib/utils';
 	let { data } = $props();
+
+	const visibleBudgets = $derived((data.budgets || []).filter((b: Budget) => b.visible));
 
 	const urlParams = page.url.searchParams;
 
@@ -451,7 +453,7 @@
 			Budget
 			<select bind:value={budgetId} disabled={isDebt} required={!isDebt}>
 				<option value={0} disabled>Select Budget Category</option>
-				{#each data.budgets || [] as budget}
+				{#each visibleBudgets as budget}
 					<option value={budget.id}>{budget.name}</option>
 				{/each}
 			</select>

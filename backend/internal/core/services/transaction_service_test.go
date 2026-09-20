@@ -137,3 +137,37 @@ func TestGetTransactions_PaginationAndMapping(t *testing.T) {
 		}
 	})
 }
+
+func TestSaveTransaction_RevivesHiddenBudget(t *testing.T) {
+	repos := memory.NewCleanRepositories()
+	budgetSvc := NewBudgetService(repos.BudgetRepository(), repos.TransactionRepository())
+
+	userID := 1
+	budgetSvc.CreateBudget(userID, domain.Budget{Name: "Groceries", LimitCents: 10000})
+	budgets, _ := repos.BudgetRepository().FindBudgetsByUser(userID)
+	budget := budgets[0]
+
+	if err := budgetSvc.SetBudgetVisibility(userID, budget.ID, false); err != nil {
+		t.Fatalf("Expected no error hiding budget, got %v", err)
+	}
+
+	_, err := repos.TransactionRepository().SaveTransaction(domain.Transaction{
+		UserID:        userID,
+		BudgetID:      &budget.ID,
+		AmountInCents: 500,
+		Description:   "Groceries run",
+		Date:          time.Now(),
+		Type:          domain.Expense,
+	})
+	if err != nil {
+		t.Fatalf("Expected no error saving transaction, got %v", err)
+	}
+
+	fetched, err := budgetSvc.GetBudget(userID, budget.ID)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if !fetched.Visible {
+		t.Errorf("Expected budget to be revived (visible) after new transaction, still hidden")
+	}
+}

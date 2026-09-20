@@ -18,7 +18,7 @@
 	const hasDebts = $derived((page.data?.debtTotal ?? 0) > 0);
 
 	const budgetGroups: BudgetGroup[] = $derived(page.data?.budgetGroups ?? []);
-	const visibleBudgets = $derived((page.data?.budgets ?? []).filter((b: Budget) => !b.isDormant));
+	const visibleBudgets = $derived((page.data?.budgets ?? []).filter((b: Budget) => b.visible));
 	const hasBudgets = $derived(visibleBudgets.length > 0);
 
 	type BudgetListItem =

@@ -30,4 +30,6 @@ var (
 	ErrBudgetGroupNotFound         = errors.New("budget group not found or unauthorized")
 	ErrMissingTemplateGroup        = errors.New("template group name is required")
 	ErrTemplateGroupNotFound       = errors.New("template group not found or unauthorized")
+	ErrMissingTicker               = errors.New("stock has no ticker set")
+	ErrPriceFetchFailed            = errors.New("could not fetch the current stock price")
 )
