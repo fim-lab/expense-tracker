@@ -3,7 +3,6 @@ package stockprice
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -21,7 +20,6 @@ type HTTPPriceFetcher struct {
 }
 
 func NewHTTPPriceFetcher(urlTemplate string) *HTTPPriceFetcher {
-	log.Printf("Setup with url %v", urlTemplate)
 	return &HTTPPriceFetcher{
 		urlTemplate: urlTemplate,
 		client:      &http.Client{Timeout: 5 * time.Second},

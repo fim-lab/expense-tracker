@@ -38,6 +38,39 @@ func (h *PortfolioHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(portfolio)
 }
 
+func (h *PortfolioHandler) GetOwnedStocks(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromContext(w, r)
+	if !ok {
+		return
+	}
+
+	stocks, err := h.service.GetOwnedStocks(userID)
+	if err != nil {
+		log.Printf("Error fetching owned stocks for user %d: %v", userID, err)
+		writeStockError(w, err, "Could not fetch stocks")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(stocks)
+}
+
+func (h *PortfolioHandler) RefreshStaleStockPrices(w http.ResponseWriter, r *http.Request) {
+	userID, ok := userIDFromContext(w, r)
+	if !ok {
+		return
+	}
+
+	if err := h.service.RefreshStaleStockPrices(userID); err != nil {
+		log.Printf("Error refreshing stale stock prices for user %d: %v", userID, err)
+		http.Error(w, "Could not refresh stock prices", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *PortfolioHandler) GetTrades(w http.ResponseWriter, r *http.Request) {
 	userID, ok := userIDFromContext(w, r)
 	if !ok {

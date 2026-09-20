@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { Depot, Portfolio, Stock } from '$lib/types';
+import type { Stock } from '$lib/types';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const cookieHeader = cookies
@@ -22,18 +22,9 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	};
 
 	const wallets = (await authedApiFetch('/wallets')) ?? [];
-	const depots: Depot[] = (await authedApiFetch('/depots')) ?? [];
+	const depots = (await authedApiFetch('/depots')) ?? [];
 	const budgets = (await authedApiFetch('/budgets')) ?? [];
-	const allStocks: Stock[] = (await authedApiFetch('/stocks')) ?? [];
-
-	const portfolios: Portfolio[] = [];
-	for (const depot of depots) {
-		portfolios.push((await authedApiFetch(`/depots/${depot.id}/portfolio`)) ?? { positions: [] });
-	}
-	const heldStockIds = new Set(
-		portfolios.flatMap((portfolio) => portfolio.positions.map((p) => p.stockId))
-	);
-	const stocks = allStocks.filter((stock: Stock) => heldStockIds.has(stock.id));
+	const stocks: Stock[] = (await authedApiFetch('/portfolio/owned-stocks')) ?? [];
 
 	return {
 		wallets,

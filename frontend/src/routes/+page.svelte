@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto, invalidateAll, preloadData } from '$app/navigation';
 	import { page } from '$app/state';
 	import BudgetCard from '$lib/components/BudgetCard.svelte';
@@ -108,6 +109,14 @@
 	$effect(() => {
 		if (pageNr > 1) preloadOnce(pageUrl(pageNr - 1));
 		if (pageNr < totalPages) preloadOnce(pageUrl(pageNr + 1));
+	});
+
+	onMount(() => {
+		if (hasDepots) {
+			fetch('/api/portfolio/refresh-stale-prices', { method: 'POST' }).catch((err) => {
+				console.error('Failed to refresh stale stock prices', err);
+			});
+		}
 	});
 
 	let widgetsOpen = $state(false);

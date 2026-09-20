@@ -78,6 +78,8 @@ type TradeService interface {
 type PortfolioService interface {
 	GetPortfolio(userID int, depotID int) (domain.Portfolio, error)
 	GetTrades(userID int, depotID int) ([]domain.TradeDTO, error)
+	GetOwnedStocks(userID int) ([]domain.Stock, error)
+	RefreshStaleStockPrices(userID int) error
 }
 
 type TransactionTemplateService interface {
