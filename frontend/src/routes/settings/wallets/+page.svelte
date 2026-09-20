@@ -2,6 +2,7 @@
 	import type { Wallet, Depot, Budget, Stock } from '$lib/types';
 	import SaveIcon from '$lib/components/icons/SaveIcon.svelte';
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import RefreshIcon from '$lib/components/icons/RefreshIcon.svelte';
 
 	let { data } = $props();
 
@@ -115,12 +116,13 @@
 	let newStockWkn = $state('');
 	let newStockTicker = $state('');
 	let newStockPriceEuros = $state<number | undefined>(undefined);
+	let refreshingStockId = $state<number | null>(null);
 
 	function formatLastFetched(lastFetched: string | null) {
 		if (!lastFetched) return 'never';
 		const date = new Date(lastFetched);
 		if (Number.isNaN(date.getTime()) || date.getFullYear() <= 1) return 'never';
-		return date.toLocaleString();
+		return date.toLocaleDateString();
 	}
 
 	async function updateStock(stock: Stock) {
@@ -148,6 +150,46 @@
 		} else {
 			console.error('Failed to update stock');
 			alert('Failed to update stock');
+		}
+	}
+
+	async function refreshStockPrice(stock: Stock, confirmPriceInCents?: number) {
+		refreshingStockId = stock.id;
+		try {
+			const res = await fetch(`/api/stocks/${stock.id}/refresh`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(confirmPriceInCents !== undefined ? { confirmPriceInCents } : {})
+			});
+
+			if (!res.ok) {
+				const reason = await res.text();
+				alert(reason || 'Could not fetch the current price for this stock.');
+				return;
+			}
+
+			const result = await res.json();
+			if (result.needsConfirmation) {
+				const oldEuros = (result.oldPriceInCents / 100).toFixed(2);
+				const newEuros = (result.newPriceInCents / 100).toFixed(2);
+				if (
+					confirm(
+						`The fetched price (€${newEuros}) differs by more than 10% from the current price (€${oldEuros}). Update anyway?`
+					)
+				) {
+					await refreshStockPrice(stock, result.newPriceInCents);
+				}
+				return;
+			}
+
+			stock.priceInCents = result.stock.priceInCents;
+			stock.lastFetched = result.stock.lastFetched;
+			stock.newPriceEuros = result.stock.priceInCents / 100;
+		} catch (err) {
+			console.error('Failed to refresh stock price', err);
+			alert('Could not fetch the current price for this stock.');
+		} finally {
+			refreshingStockId = null;
 		}
 	}
 
@@ -353,6 +395,16 @@
 						<td>
 							<button
 								type="button"
+								class="icon-button refresh-button"
+								onclick={() => refreshStockPrice(stock)}
+								disabled={refreshingStockId === stock.id}
+								aria-label="Refresh price"
+								title="Refresh price"
+							>
+								<RefreshIcon />
+							</button>
+							<button
+								type="button"
 								class="icon-button save-button"
 								onclick={() => updateStock(stock)}
 								aria-label="Save stock"
@@ -427,6 +479,13 @@
 	.save-button {
 		color: var(--pico-color-green-500);
 	}
+	.refresh-button {
+		color: var(--pico-color-blue-500);
+	}
+	.refresh-button:disabled {
+		color: var(--pico-muted-color);
+		cursor: not-allowed;
+	}
 	.delete-button {
 		color: var(--pico-del-color);
 	}
@@ -436,5 +495,8 @@
 	}
 	:global(html[data-theme='dark']) .save-button {
 		color: var(--pico-color-green-350);
+	}
+	:global(html[data-theme='dark']) .refresh-button {
+		color: var(--pico-color-blue-350);
 	}
 </style>

@@ -100,6 +100,7 @@ type StockService interface {
 	CreateStock(s domain.Stock) (domain.Stock, error)
 	UpdateStock(s domain.Stock) (domain.Stock, error)
 	DeleteStock(id int) error
+	RefreshStockPrice(id int, confirmedPriceInCents *int) (domain.StockPriceRefresh, error)
 }
 
 // --- Driven Ports  ---
@@ -196,6 +197,13 @@ type StockRepository interface {
 	SaveStock(s domain.Stock) (int, error)
 	UpdateStock(s domain.Stock) error
 	DeleteStock(id int) error
+}
+
+// StockPriceFetcher fetches the current market price of a stock, in cents,
+// from whatever external source is configured. Ticker is the stock's own
+// Ticker field.
+type StockPriceFetcher interface {
+	FetchPrice(ticker string) (priceInCents int, err error)
 }
 
 type TransactionTemplateRepository interface {

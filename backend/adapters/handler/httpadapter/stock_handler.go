@@ -2,6 +2,7 @@ package httpadapter
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -112,4 +113,42 @@ func (h *StockHandler) DeleteStock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *StockHandler) RefreshStockPrice(w http.ResponseWriter, r *http.Request) {
+	stockID := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(stockID)
+	if err != nil {
+		http.Error(w, "Id is not valid", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		ConfirmPriceInCents *int `json:"confirmPriceInCents"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		log.Printf("JSON decode error: %v", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	result, err := h.service.RefreshStockPrice(id, req.ConfirmPriceInCents)
+	if err != nil {
+		log.Printf("Error refreshing stock price %d: %v", id, err)
+		switch err {
+		case domain.ErrStockNotFound:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		case domain.ErrMissingTicker:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		case domain.ErrPriceFetchFailed:
+			http.Error(w, err.Error(), http.StatusBadGateway)
+		default:
+			http.Error(w, "Could not refresh stock price", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(result)
 }
