@@ -18,6 +18,8 @@
 	let budgetId = $state(Number(urlParams.get('budgetId')) || 0);
 	let type = $state(urlParams.get('type') || 'EXPENSE');
 	let isDebt = $state(false);
+	let isShared = $state(false);
+	let shareAmount = $state(0);
 	let errorMessage = $state('');
 
 	let templates: TransactionTemplate[] = $state(data.templates || []);
@@ -291,7 +293,8 @@
 			type: type,
 			isPending: false,
 			isDebt: isDebt,
-			tags: []
+			tags: [],
+			shareInCents: isShared ? Math.round(shareAmount * 100) : null
 		};
 
 		if (payload.amountInCents <= 0) {
@@ -304,6 +307,10 @@
 		}
 		if (!isDebt && payload.budgetId === 0) {
 			errorMessage = 'Please select a budget.';
+			return;
+		}
+		if (isShared && (payload.shareInCents ?? 0) === 0) {
+			errorMessage = 'Share cannot be zero.';
 			return;
 		}
 
@@ -429,8 +436,36 @@
 
 		<label>
 			<input type="checkbox" bind:checked={isDebt} />
-			This is a debt transaction
+			Debt
 		</label>
+
+		<label>
+			<input
+				type="checkbox"
+				bind:checked={isShared}
+				onchange={() => {
+					if (isShared) shareAmount = -amount;
+				}}
+			/>
+			Shared
+		</label>
+
+		{#if isShared}
+			<label>
+				Share (EUR)
+				<div class="signed-amount-input">
+					<input type="number" step="0.01" bind:value={shareAmount} />
+					<button
+						type="button"
+						class="sign-toggle"
+						title="Switch sign"
+						onclick={() => (shareAmount = -shareAmount)}
+					>
+						±
+					</button>
+				</div>
+			</label>
+		{/if}
 
 		<label>
 			Budget
@@ -580,6 +615,23 @@
 		color: var(--pico-del-color);
 		margin-top: 1rem;
 		margin-bottom: 0;
+	}
+
+	.signed-amount-input {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.signed-amount-input input {
+		margin: 0;
+	}
+
+	.sign-toggle {
+		flex-shrink: 0;
+		width: 2.5rem;
+		padding: 0;
+		margin: 0;
 	}
 
 	.tooltip-info {

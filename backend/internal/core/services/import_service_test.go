@@ -118,7 +118,7 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 				Date:          time.Now(),
 				Budget:        "Übertrag",
 				Wallet:        "Main Wallet",
-				Description:   "Splitwise",
+				Description:   "Share",
 				AmountInCents: -1030,
 				Type:          "expense",
 				IsDebt:        true,
@@ -174,10 +174,10 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 		t.Fatalf("expected 3 transactions, got %d", len(dtos))
 	}
 
-	var splitwiseID int
+	var shareID int
 	for _, dto := range dtos {
-		if dto.Description == "Splitwise" {
-			splitwiseID = dto.ID
+		if dto.Description == "Share" {
+			shareID = dto.ID
 			if dto.BudgetName != "" {
 				t.Errorf("expected 'Übertrag' to import with no budget, got %q", dto.BudgetName)
 			}
@@ -186,16 +186,16 @@ func TestImportTransactions_TradesAndSpecialCases(t *testing.T) {
 			t.Errorf("expected imported amounts to always be positive, got %d for %q", dto.AmountInCents, dto.Description)
 		}
 	}
-	if splitwiseID == 0 {
-		t.Fatalf("could not find the Splitwise transaction")
+	if shareID == 0 {
+		t.Fatalf("could not find the Share transaction")
 	}
 
-	splitwise, err := f.txSvc.GetTransactionByID(f.userID, splitwiseID)
+	share, err := f.txSvc.GetTransactionByID(f.userID, shareID)
 	if err != nil {
-		t.Fatalf("could not read the Splitwise transaction: %v", err)
+		t.Fatalf("could not read the Share transaction: %v", err)
 	}
-	if splitwise.IsDebt == nil || !*splitwise.IsDebt {
-		t.Errorf("expected the Splitwise transaction to keep isDebt=true")
+	if share.IsDebt == nil || !*share.IsDebt {
+		t.Errorf("expected the Share transaction to keep isDebt=true")
 	}
 }
 

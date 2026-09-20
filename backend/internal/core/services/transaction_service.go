@@ -2,11 +2,15 @@ package services
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 	"github.com/fim-lab/expense-tracker/internal/core/ports"
 )
+
+// this is hardcoded for now, definitely only viable in a single-user-setup. But good enough for now
+const shareTransactionDescription = "Shared"
 
 type transactionService struct {
 	transactionRepo ports.TransactionRepository
@@ -148,6 +152,57 @@ func (s *transactionService) DeleteTransaction(userID int, id int) error {
 		return domain.ErrUnauthorized
 	}
 	return s.transactionRepo.DeleteTransaction(id)
+}
+
+func (s *transactionService) AddToShareDebt(userID int, deltaInCents int) error {
+	if deltaInCents == 0 {
+		return domain.ErrInvalidAmount
+	}
+
+	term := shareTransactionDescription
+	results, err := s.transactionRepo.SearchTransactions(userID, domain.TransactionSearchCriteria{
+		SearchTerm: &term,
+		Page:       1,
+		PageSize:   50,
+	})
+	if err != nil {
+		return err
+	}
+
+	matchID := 0
+	for _, r := range results {
+		if strings.EqualFold(r.Description, shareTransactionDescription) {
+			if matchID != 0 {
+				return domain.ErrTransactionNotFound
+			}
+			matchID = r.ID
+		}
+	}
+	if matchID == 0 {
+		return domain.ErrTransactionNotFound
+	}
+
+	existing, err := s.transactionRepo.GetTransactionByID(matchID)
+	if err != nil || existing.UserID != userID {
+		return domain.ErrUnauthorized
+	}
+
+	net := existing.AmountInCents
+	if existing.Type == domain.Expense {
+		net = -net
+	}
+	net += deltaInCents
+
+	if net <= 0 {
+		existing.Type = domain.Expense
+		existing.AmountInCents = -net
+	} else {
+		existing.Type = domain.Income
+		existing.AmountInCents = net
+	}
+	existing.Date = time.Now()
+
+	return s.UpdateTransaction(userID, existing)
 }
 
 func (s *transactionService) GetTransactionByID(userID int, id int) (domain.Transaction, error) {

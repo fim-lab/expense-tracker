@@ -14,6 +14,7 @@ type TransactionService interface {
 	UpdateTransaction(userID int, t domain.Transaction) error
 	DeleteTransaction(userID int, id int) error
 	GetTransactionByID(userID int, id int) (domain.Transaction, error)
+	AddToShareDebt(userID int, amountInCents int) error
 }
 
 type BudgetService interface {
