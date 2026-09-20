@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import TransactionTemplateCard from '$lib/components/TransactionTemplateCard.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 	import type { Budget, TemplateGroup, TransactionTemplate } from '$lib/types';
 	import { formatCurrency } from '$lib/utils';
 	let { data } = $props();
@@ -20,9 +21,7 @@
 	let errorMessage = $state('');
 
 	let templates: TransactionTemplate[] = $state(data.templates || []);
-	let templateGroups: TemplateGroup[] = $state(
-		(data.templateGroups || []).map((g: TemplateGroup) => ({ ...g, isEditing: false, newName: '' }))
-	);
+	let templateGroups: TemplateGroup[] = $state(data.templateGroups || []);
 	let fireSummary = $state('');
 
 	function sortByPosition(list: TransactionTemplate[]) {
@@ -59,40 +58,12 @@
 
 		if (res.ok) {
 			const created = await res.json();
-			templateGroups = [...templateGroups, { ...created, isEditing: false, newName: '' }];
+			templateGroups = [...templateGroups, created];
 			expandedGroups[created.id] = true;
 			newGroupName = '';
 		} else {
 			console.error('Failed to create template group');
 			alert('Failed to create template group');
-		}
-	}
-
-	function startEditingGroup(group: TemplateGroup) {
-		group.isEditing = true;
-		group.newName = group.name;
-	}
-
-	function cancelEditingGroup(group: TemplateGroup) {
-		group.isEditing = false;
-	}
-
-	async function updateGroup(group: TemplateGroup) {
-		if (!group.newName) {
-			alert('Enter a name.');
-			return;
-		}
-		const res = await fetch(`/api/template-groups/${group.id}`, {
-			method: 'PUT',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ ...group, name: group.newName })
-		});
-
-		if (res.ok) {
-			group.name = group.newName;
-			group.isEditing = false;
-		} else {
-			console.error('Failed to update template group');
 		}
 	}
 
@@ -137,7 +108,7 @@
 		moveTemplate(groupId, null);
 	}
 
-	async function persistTemplateOrder(template: TransactionTemplate) {
+	async function persistTemplate(template: TransactionTemplate) {
 		const res = await fetch(`/api/transaction-templates/${template.id}`, {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
@@ -154,7 +125,7 @@
 	) {
 		for (const t of changed) {
 			try {
-				await persistTemplateOrder(t);
+				await persistTemplate(t);
 			} catch (err) {
 				console.error(err);
 				templates = previousTemplates;
@@ -231,6 +202,20 @@
 		);
 	}
 
+	async function handleSaveTemplateAmount(templateId: number, amountInCents: number) {
+		const template = templates.find((t) => t.id === templateId);
+		if (!template) return;
+		const updated = { ...template, amountInCents };
+		try {
+			await persistTemplate(updated);
+			templates = templates.map((t) => (t.id === templateId ? updated : t));
+			draftAmounts[templateId] = amountInCents;
+		} catch (err) {
+			console.error(err);
+			alert('Failed to save template amount.');
+		}
+	}
+
 	$effect(() => {
 		if (isDebt) budgetId = 0;
 	});
@@ -262,17 +247,33 @@
 		}
 	}
 
-	function handleUse(template: TransactionTemplate) {
+	async function createTransactionFromTemplate(template: TransactionTemplate): Promise<boolean> {
 		const newDate = new Date();
 		newDate.setDate(template.day);
-		date = newDate.toISOString().split('T')[0];
-		description = template.description;
-		amount = amountForTemplate(template) / 100;
-		walletId = template.walletId;
-		if (template.budgetId) {
-			budgetId = template.budgetId;
-		}
-		type = template.type;
+		const payload = {
+			date: newDate.toISOString(),
+			description: template.description,
+			amountInCents: amountForTemplate(template),
+			walletId: template.walletId,
+			budgetId: template.budgetId ?? null,
+			type: template.type,
+			isPending: false,
+			isDebt: false,
+			tags: template.tags ?? []
+		};
+		const res = await fetch('/api/transactions', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(payload)
+		});
+		return res.ok;
+	}
+
+	async function handleUse(template: TransactionTemplate) {
+		const ok = await createTransactionFromTemplate(template);
+		fireSummary = ok
+			? `Created "${template.description}" (${formatCurrency(amountForTemplate(template))}).`
+			: `Failed to create transaction from "${template.description}".`;
 	}
 
 	async function handleSubmit(e: Event) {
@@ -326,25 +327,7 @@
 		let succeeded = 0;
 		let failed = 0;
 		for (const template of groupTemplates) {
-			const newDate = new Date();
-			newDate.setDate(template.day);
-			const payload = {
-				date: newDate.toISOString(),
-				description: template.description,
-				amountInCents: amountForTemplate(template),
-				walletId: template.walletId,
-				budgetId: template.budgetId ?? null,
-				type: template.type,
-				isPending: false,
-				isDebt: false,
-				tags: template.tags ?? []
-			};
-			const res = await fetch('/api/transactions', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
-			});
-			if (res.ok) {
+			if (await createTransactionFromTemplate(template)) {
 				succeeded++;
 			} else {
 				failed++;
@@ -486,36 +469,48 @@
 		ondrop={(e) => handleContainerDrop(e, entry.group.id)}
 	>
 		<div class="group-header">
-			{#if entry.group.isEditing}
-				<input type="text" class="group-name-input" bind:value={entry.group.newName} />
-				<div class="group-actions">
-					<button type="button" onclick={() => updateGroup(entry.group)}>OK</button>
-					<button type="button" class="secondary" onclick={() => cancelEditingGroup(entry.group)}>
-						Cancel
-					</button>
-				</div>
-			{:else}
-				<button type="button" class="group-toggle" onclick={() => toggleGroup(entry.group.id)}>
-					<span class="chevron">{expandedGroups[entry.group.id] ? '▼' : '▶'}</span>
-					<span class="group-name">{entry.group.name}</span>
-					<span class="group-meta">
-						{entry.templates.length} template{entry.templates.length === 1 ? '' : 's'} · net {formatCurrency(
-							netSumInCents(entry.templates)
-						)}
-					</span>
+			<button type="button" class="group-toggle" onclick={() => toggleGroup(entry.group.id)}>
+				<span class="chevron">{expandedGroups[entry.group.id] ? '▼' : '▶'}</span>
+				<span class="group-name">{entry.group.name}</span>
+				<span class="group-meta">
+					{entry.templates.length} template{entry.templates.length === 1 ? '' : 's'} · net {formatCurrency(
+						netSumInCents(entry.templates)
+					)}
+				</span>
+			</button>
+			<div class="group-actions">
+				<button
+					type="button"
+					class="group-icon-btn create-icon"
+					onclick={() => handleFireGroup(entry.templates)}
+					aria-label="Create transactions for group"
+					title="Create transactions for group"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M12 5v14" />
+						<path d="M5 12h14" />
+					</svg>
 				</button>
-				<div class="group-actions">
-					<button type="button" class="secondary" onclick={() => startEditingGroup(entry.group)}>
-						Rename
-					</button>
-					<button type="button" class="secondary" onclick={() => deleteGroup(entry.group.id)}>
-						Delete
-					</button>
-					<button type="button" class="create-btn" onclick={() => handleFireGroup(entry.templates)}>
-						Create
-					</button>
-				</div>
-			{/if}
+				<button
+					type="button"
+					class="group-icon-btn delete-icon"
+					onclick={() => deleteGroup(entry.group.id)}
+					aria-label="Delete group"
+					title="Delete group"
+				>
+					<DeleteIcon />
+				</button>
+			</div>
 		</div>
 		{#if expandedGroups[entry.group.id]}
 			<div
@@ -529,8 +524,8 @@
 						{template}
 						ondelete={handleDelete}
 						onuse={handleUse}
-						editable
 						onamountchange={handleAmountChange}
+						onsave={handleSaveTemplateAmount}
 						draggable={true}
 						dragging={draggedTemplateId === template.id}
 						ondragstart={handleDragStart}
@@ -564,6 +559,8 @@
 				{template}
 				ondelete={handleDelete}
 				onuse={handleUse}
+				onamountchange={handleAmountChange}
+				onsave={handleSaveTemplateAmount}
 				draggable={true}
 				dragging={draggedTemplateId === template.id}
 				ondragstart={handleDragStart}
@@ -630,11 +627,6 @@
 		font-size: 0.9rem;
 	}
 
-	.create-btn {
-		flex-shrink: 0;
-		width: auto;
-	}
-
 	.group-templates {
 		margin-top: 1rem;
 		min-height: 2rem;
@@ -657,19 +649,41 @@
 		white-space: nowrap;
 	}
 
-	.group-name-input {
-		flex: 1;
-		margin: 0;
-	}
-
 	.group-actions {
 		display: flex;
 		gap: 0.5rem;
 		flex-shrink: 0;
 	}
 
-	.group-actions button {
+	.group-icon-btn {
+		background: transparent;
+		border: none;
+		padding: 0.35rem;
+		margin: 0;
 		width: auto;
+		opacity: 0.6;
+		transition: opacity 0.2s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.group-icon-btn:hover {
+		background: transparent;
+		opacity: 1;
+	}
+
+	.group-icon-btn.create-icon {
+		color: var(--pico-ins-color);
+	}
+
+	.group-icon-btn.delete-icon {
+		color: var(--pico-del-color);
+	}
+
+	.group-icon-btn.delete-icon :global(svg) {
+		width: 22px;
+		height: 22px;
 	}
 
 	.empty-drop-hint {

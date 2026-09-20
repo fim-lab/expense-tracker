@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { formatCurrency } from '$lib/utils';
+	import SaveIcon from '$lib/components/icons/SaveIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	let {
 		template,
 		ondelete,
 		onuse,
-		editable = false,
+		onsave = undefined,
 		onamountchange = undefined,
 		draggable = false,
 		dragging = false,
@@ -35,22 +36,16 @@
 	<div class="tx-info">
 		<p class="tx-title">
 			{template.description}
-			{#if editable}
-				<span class="tx-amount-edit">
-					({isExpense ? '-' : '+'}
-					<input
-						class="amount-input"
-						type="number"
-						step="0.01"
-						bind:value={amountEuros}
-						oninput={handleAmountInput}
-					/>)
-				</span>
-			{:else}
-				<span class="tx-amount"
-					>({isExpense ? '-' : '+'}{formatCurrency(template.amountInCents)})</span
-				>
-			{/if}
+			<span class="tx-amount-edit">
+				({isExpense ? '-' : '+'}
+				<input
+					class="amount-input"
+					type="number"
+					step="0.01"
+					bind:value={amountEuros}
+					oninput={handleAmountInput}
+				/>)
+			</span>
 		</p>
 		<p class="tx-meta">
 			{template.budgetName}
@@ -61,7 +56,20 @@
 	</div>
 
 	<div class="tx-actions">
-		<button class="action-icon use-icon" onclick={() => onuse(template)} aria-label="Use">
+		<button
+			class="action-icon save-icon"
+			onclick={() => onsave?.(template.id, Math.round(amountEuros * 100))}
+			aria-label="Save as default"
+			title="Save as default amount"
+		>
+			<SaveIcon />
+		</button>
+		<button
+			class="action-icon use-icon"
+			onclick={() => onuse(template)}
+			aria-label="Use"
+			title="Create transaction now"
+		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="24"
@@ -77,22 +85,13 @@
 				<path d="M5 12h14" />
 			</svg>
 		</button>
-		<button class="action-icon delete-icon" onclick={() => ondelete(template.id)} aria-label="Delete">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d="M3 6h18"></path>
-				<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-				<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-			</svg>
+		<button
+			class="action-icon delete-icon"
+			onclick={() => ondelete(template.id)}
+			aria-label="Delete"
+			title="Delete template"
+		>
+			<DeleteIcon />
 		</button>
 	</div>
 </div>
@@ -121,11 +120,6 @@
 	.tx-title {
 		font-weight: bold;
 		margin-bottom: 0;
-	}
-
-	.tx-amount {
-		font-weight: normal;
-		font-size: 0.9em;
 	}
 
 	.tx-amount-edit {
@@ -188,5 +182,14 @@
 	}
 	.use-icon:hover {
 		color: var(--pico-ins-color);
+	}
+	.save-icon {
+		color: var(--pico-color-green-500);
+	}
+	.save-icon:hover {
+		color: var(--pico-color-green-500);
+	}
+	:global(html[data-theme='dark']) .save-icon {
+		color: var(--pico-color-green-350);
 	}
 </style>

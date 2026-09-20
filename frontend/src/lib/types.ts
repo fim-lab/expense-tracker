@@ -118,8 +118,6 @@ export interface TemplateGroup {
 	id: number;
 	userId: number;
 	name: string;
-	isEditing?: boolean;
-	newName?: string;
 }
 
 export type TradeType = 'BUY' | 'SELL';
