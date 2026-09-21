@@ -136,20 +136,31 @@ func (h *TransactionHandler) SearchTransactions(w http.ResponseWriter, r *http.R
 
 func (h *TransactionHandler) CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(int)
-	var transaction domain.Transaction
+	var req struct {
+		domain.Transaction
+		ShareInCents *int `json:"shareInCents,omitempty"`
+	}
 
-	err := json.NewDecoder(r.Body).Decode(&transaction)
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
+	transaction := req.Transaction
 	transaction.UserID = userID
 
 	_, err = h.service.CreateTransaction(userID, transaction)
 	if err != nil {
 		http.Error(w, "Error creating transaction", http.StatusInternalServerError)
 		return
+	}
+
+	if req.ShareInCents != nil {
+		if err := h.service.AddToShareDebt(userID, *req.ShareInCents); err != nil {
+			http.Error(w, "Transaction saved, but failed to update Share debt: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)
