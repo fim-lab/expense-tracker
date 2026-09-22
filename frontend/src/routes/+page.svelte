@@ -140,6 +140,16 @@
 
 <div class="grid">
 	<aside>
+		{#if hasWallets || hasDepots || hasDebts}
+			<WealthGroupCard
+				totalWealthCents={totalWealth}
+				wallets={page.data.wallets}
+				depots={page.data.depots}
+				{hasDebts}
+				debtSumInCents={page.data.debtSumInCents}
+				{walletName}
+			/>
+		{/if}
 		{#if hasBudgets || hasWallets || hasDepots || hasDebts}
 			<button
 				type="button"
@@ -147,20 +157,10 @@
 				aria-expanded={widgetsOpen}
 				onclick={() => (widgetsOpen = !widgetsOpen)}
 			>
-				<span class="caret">{widgetsOpen ? '▾' : '▸'}</span> Overview
+				<span class="caret">{widgetsOpen ? '▾' : '▸'}</span> Budgets
 			</button>
 			<div class="collapsible" class:collapsed={!widgetsOpen}>
 				<article>
-					{#if hasWallets || hasDepots || hasDebts}
-						<WealthGroupCard
-							totalWealthCents={totalWealth}
-							wallets={page.data.wallets}
-							depots={page.data.depots}
-							{hasDebts}
-							debtSumInCents={page.data.debtSumInCents}
-							{walletName}
-						/>
-					{/if}
 					{#if hasBudgets}
 						{#each budgetListItems as item (item.kind === 'group' ? `group-${item.group.id}` : `budget-${item.budget.id}`)}
 							{#if item.kind === 'group'}
