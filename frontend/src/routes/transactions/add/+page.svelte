@@ -250,10 +250,8 @@
 	}
 
 	async function createTransactionFromTemplate(template: TransactionTemplate): Promise<boolean> {
-		const newDate = new Date();
-		newDate.setDate(template.day);
 		const payload = {
-			date: newDate.toISOString(),
+			date: new Date().toISOString(),
 			description: template.description,
 			amountInCents: amountForTemplate(template),
 			walletId: template.walletId,
@@ -347,10 +345,7 @@
 		e.preventDefault();
 		errorMessage = '';
 
-		const day = new Date(date).getDate();
-
 		const payload = {
-			day: day,
 			description: description,
 			amountInCents: Math.round(amount * 100),
 			walletId: Number(walletId),
@@ -406,7 +401,7 @@
 			Description
 			<span
 				class="tooltip-info"
-				title="Use '$lastmonth' or '$nextmonth' in templates for the previous or next month, in the form 'Februar 26'"
+				title="Use '$lastmonth', '$nextmonth' or '$twomonthsago' in templates for the previous, next, or two months ago month, in the form 'Februar 26'"
 				>ⓘ</span
 			>
 			<input type="text" bind:value={description} placeholder="Grocery shopping..." required />

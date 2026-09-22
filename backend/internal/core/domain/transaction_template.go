@@ -5,7 +5,6 @@ import "fmt"
 type TransactionTemplate struct {
 	ID            int             `json:"id"`
 	UserID        int             `json:"userId"`
-	Day           int             `json:"day"` // Day of the month (1-31)
 	BudgetID      *int            `json:"budgetId"`
 	GroupID       *int            `json:"groupId"`
 	WalletID      int             `json:"walletId"`
@@ -19,9 +18,6 @@ type TransactionTemplate struct {
 func (tt *TransactionTemplate) Validate() error {
 	if tt.UserID == 0 {
 		return fmt.Errorf("transaction template must have a user ID")
-	}
-	if tt.Day < 1 || tt.Day > 31 {
-		return fmt.Errorf("day must be between 1 and 31")
 	}
 	if tt.WalletID == 0 {
 		return fmt.Errorf("transaction template must have a wallet ID")

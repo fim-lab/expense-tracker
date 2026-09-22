@@ -132,6 +132,25 @@ func (h *WalletHandler) DeleteWallet(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *WalletHandler) RecalculateWalletBalances(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	wallets, err := h.service.RecalculateWalletBalances(userID)
+	if err != nil {
+		log.Printf("Error recalculating wallet balances for user %d: %v", userID, err)
+		http.Error(w, "Could not recalculate wallet balances", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(wallets)
+}
+
 func (h *WalletHandler) UpdateWallet(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("userID").(int)
 	if !ok {

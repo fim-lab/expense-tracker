@@ -109,3 +109,34 @@ func (r *BudgetRepository) SetBudgetVisibility(id int, visible bool) error {
 	r.repo.budgets[id] = existingBudget
 	return nil
 }
+
+func (r *BudgetRepository) RecalculateBudgetBalances(userID int) ([]domain.Budget, error) {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+
+	sums := make(map[int]int)
+	for _, t := range r.repo.transactions {
+		if t.BudgetID == nil {
+			continue
+		}
+		amount := t.AmountInCents
+		if t.Type == domain.Expense {
+			amount = -amount
+		}
+		sums[*t.BudgetID] += amount
+	}
+
+	var res []domain.Budget
+	for id, b := range r.repo.budgets {
+		if b.UserID != userID {
+			continue
+		}
+		b.BalanceCents = sums[id]
+		r.repo.budgets[id] = b
+		res = append(res, b)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].ID < res[j].ID
+	})
+	return res, nil
+}

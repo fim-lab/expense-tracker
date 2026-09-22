@@ -4,7 +4,8 @@ import type { Budget, TransactionTemplate, Wallet } from '$lib/types';
 import {
 	getLastMonthShortMonthYearString,
 	getNextMonthShortMonthYearString,
-	getShortMonthYearString
+	getShortMonthYearString,
+	getTwoMonthsAgoShortMonthYearString
 } from '$lib/utils';
 
 const DAY_OF_MONTH_UNTIL_LAST_MONTH_IS_USED = 10;
@@ -34,17 +35,21 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const templateGroups = (await authedApiFetch('/template-groups')) || [];
 	let lastMonthString: string;
 	let nextMonthString: string;
+	let twoMonthsAgoString: string;
 	if (displayLastMonthString()) {
 		lastMonthString = getLastMonthShortMonthYearString(new Date());
 		nextMonthString = getShortMonthYearString(new Date());
+		twoMonthsAgoString = getTwoMonthsAgoShortMonthYearString(new Date());
 	} else {
 		lastMonthString = getShortMonthYearString(new Date());
 		nextMonthString = getNextMonthShortMonthYearString(new Date());
+		twoMonthsAgoString = getLastMonthShortMonthYearString(new Date());
 	}
 	templates.forEach((tt: TransactionTemplate) => {
 		tt.description = tt.description
 			.replace('$lastmonth', lastMonthString)
-			.replace('$nextmonth', nextMonthString);
+			.replace('$nextmonth', nextMonthString)
+			.replace('$twomonthsago', twoMonthsAgoString);
 		tt.budgetName = budgets.find((b: Budget) => b.id === tt.budgetId)?.name;
 		tt.walletName = wallets.find((w: Wallet) => w.id === tt.walletId)?.name;
 	});

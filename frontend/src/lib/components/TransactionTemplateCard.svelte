@@ -52,7 +52,6 @@
 			{template.budgetName ? ' • ' : ''}
 			{template.walletName}
 		</p>
-		<p class="tx-date">Repeats on day {template.day} of the month</p>
 	</div>
 
 	<div class="tx-actions">
@@ -139,12 +138,6 @@
 		color: var(--pico-muted-color);
 		text-transform: uppercase;
 		letter-spacing: 0.05rem;
-		margin-bottom: 0;
-	}
-
-	.tx-date {
-		font-size: 0.75rem;
-		color: var(--pico-muted-color);
 		margin-bottom: 0;
 	}
 

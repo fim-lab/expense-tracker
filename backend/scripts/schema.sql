@@ -93,7 +93,6 @@ CREATE TABLE IF NOT EXISTS trades (
 CREATE TABLE IF NOT EXISTS transaction_templates (
     id SERIAL PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    day INT NOT NULL,
     budget_id INT REFERENCES budgets(id) ON DELETE SET NULL,
     group_id INT REFERENCES template_groups(id) ON DELETE SET NULL,
     wallet_id INT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,

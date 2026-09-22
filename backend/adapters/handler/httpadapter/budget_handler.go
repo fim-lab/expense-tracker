@@ -177,6 +177,25 @@ func (h *BudgetHandler) SetBudgetVisibility(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *BudgetHandler) RecalculateBudgetBalances(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(int)
+	if !ok {
+		http.Error(w, "Unauthorized: Invalid user ID session", http.StatusUnauthorized)
+		return
+	}
+
+	budgets, err := h.service.RecalculateBudgetBalances(userID)
+	if err != nil {
+		log.Printf("Error recalculating budget balances for user %d: %v", userID, err)
+		http.Error(w, "Could not recalculate budget balances", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(budgets)
+}
+
 func (h *BudgetHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value("userID").(int)
 	var req struct {

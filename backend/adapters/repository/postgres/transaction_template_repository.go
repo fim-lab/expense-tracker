@@ -18,15 +18,14 @@ func NewTransactionTemplateRepository(db *sql.DB) *TransactionTemplateRepository
 
 func (r *TransactionTemplateRepository) SaveTransactionTemplate(tt domain.TransactionTemplate) error {
 	query := `
-		INSERT INTO transaction_templates (user_id, day, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO transaction_templates (user_id, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
 	`
 	var id int
 	err := r.db.QueryRow(
 		query,
 		tt.UserID,
-		tt.Day,
 		tt.BudgetID,
 		nullableInt(tt.GroupID),
 		tt.WalletID,
@@ -46,7 +45,7 @@ func (r *TransactionTemplateRepository) SaveTransactionTemplate(tt domain.Transa
 
 func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (domain.TransactionTemplate, error) {
 	query := `
-		SELECT id, user_id, day, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position
+		SELECT id, user_id, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position
 		FROM transaction_templates
 		WHERE id = $1
 	`
@@ -58,7 +57,6 @@ func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (doma
 	err := r.db.QueryRow(query, id).Scan(
 		&tt.ID,
 		&tt.UserID,
-		&tt.Day,
 		&budgetID,
 		&groupID,
 		&tt.WalletID,
@@ -88,7 +86,7 @@ func (r *TransactionTemplateRepository) GetTransactionTemplateByID(id int) (doma
 
 func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID int) ([]domain.TransactionTemplate, error) {
 	query := `
-		SELECT id, user_id, day, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position
+		SELECT id, user_id, budget_id, group_id, wallet_id, description, amount_in_cents, type, tags, position
 		FROM transaction_templates
 		WHERE user_id = $1
 		ORDER BY position ASC, id ASC
@@ -109,7 +107,6 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 		if err := rows.Scan(
 			&tt.ID,
 			&tt.UserID,
-			&tt.Day,
 			&budgetID,
 			&groupID,
 			&tt.WalletID,
@@ -142,13 +139,12 @@ func (r *TransactionTemplateRepository) FindTransactionTemplatesByUser(userID in
 func (r *TransactionTemplateRepository) UpdateTransactionTemplate(tt domain.TransactionTemplate) error {
 	query := `
 		UPDATE transaction_templates
-		SET day = $1, budget_id = $2, group_id = $3, wallet_id = $4, description = $5, amount_in_cents = $6, type = $7, tags = $8, position = $9
-		WHERE id = $10 AND user_id = $11
+		SET budget_id = $1, group_id = $2, wallet_id = $3, description = $4, amount_in_cents = $5, type = $6, tags = $7, position = $8
+		WHERE id = $9 AND user_id = $10
 	`
 
 	res, err := r.db.Exec(
 		query,
-		tt.Day,
 		tt.BudgetID,
 		nullableInt(tt.GroupID),
 		tt.WalletID,

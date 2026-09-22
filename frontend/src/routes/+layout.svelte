@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import SunIcon from '$lib/components/icons/SunIcon.svelte';
 	import MoonIcon from '$lib/components/icons/MoonIcon.svelte';
+	import LogoutIcon from '$lib/components/icons/LogoutIcon.svelte';
 
 	async function handleLogout() {
 		const res = await fetch('/auth/logout', { method: 'POST' });
@@ -33,7 +34,6 @@
 
 {#if page.url.pathname !== '/login'}
 	<nav class="container">
-		<ul><li><strong>FinanceTracker</strong></li></ul>
 		<ul>
 			<li><a href="/">Dashboard</a></li>
 			<li><a href="/transactions/add">Add TX</a></li>
@@ -42,7 +42,7 @@
 			<li><a href="/settings">Settings</a></li>
 			<li>
 				<button
-					class="theme-toggle"
+					class="icon-btn"
 					onclick={toggleTheme}
 					aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
 					title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -55,7 +55,9 @@
 				</button>
 			</li>
 			<li>
-				<button class="secondary outline" onclick={handleLogout}> Logout </button>
+				<button class="icon-btn" onclick={handleLogout} aria-label="Logout" title="Logout">
+					<LogoutIcon />
+				</button>
 			</li>
 		</ul>
 	</nav>
@@ -69,12 +71,28 @@
 		margin-bottom: 2rem;
 	}
 
+	nav ul {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+	}
+
+	nav ul::-webkit-scrollbar {
+		display: none;
+	}
+
+	nav ul li {
+		flex: 0 0 auto;
+	}
+
 	button {
 		padding: 0.25rem 0.75rem;
 		margin-bottom: 0;
 	}
 
-	.theme-toggle {
+	.icon-btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
