@@ -75,3 +75,31 @@ func (r *WalletRepository) UpdateWallet(w domain.Wallet) error {
 	r.repo.wallets[w.ID] = existingWallet
 	return nil
 }
+
+func (r *WalletRepository) RecalculateWalletBalances(userID int) ([]domain.Wallet, error) {
+	r.repo.mu.Lock()
+	defer r.repo.mu.Unlock()
+
+	sums := make(map[int]int)
+	for _, t := range r.repo.transactions {
+		amount := t.AmountInCents
+		if t.Type == domain.Expense {
+			amount = -amount
+		}
+		sums[t.WalletID] += amount
+	}
+
+	var res []domain.Wallet
+	for id, w := range r.repo.wallets {
+		if w.UserID != userID {
+			continue
+		}
+		w.BalanceCents = sums[id]
+		r.repo.wallets[id] = w
+		res = append(res, w)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].ID < res[j].ID
+	})
+	return res, nil
+}

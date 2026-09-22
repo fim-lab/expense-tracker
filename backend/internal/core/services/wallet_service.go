@@ -107,6 +107,26 @@ func (s *walletService) UpdateWallet(userID int, wallet domain.Wallet) error {
 	return s.walletRepo.UpdateWallet(wallet)
 }
 
+func (s *walletService) RecalculateWalletBalances(userID int) ([]domain.Wallet, error) {
+	wallets, err := s.walletRepo.RecalculateWalletBalances(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range wallets {
+		wallets[i].CanDelete = wallets[i].BalanceCents == 0
+		if wallets[i].CanDelete {
+			count, err := s.transactionRepo.CountTransactionsByWalletID(wallets[i].ID)
+			if err != nil {
+				return nil, err
+			}
+			wallets[i].CanDelete = count == 0
+		}
+	}
+
+	return wallets, nil
+}
+
 func (s *walletService) DeleteWallet(userID int, id int) error {
 	existing, err := s.walletRepo.GetWalletByID(id)
 	if err != nil {

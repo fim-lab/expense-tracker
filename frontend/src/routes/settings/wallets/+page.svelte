@@ -59,6 +59,29 @@
 		}
 	}
 
+	let recalculatingWallets = $state(false);
+
+	async function recalculateAllWallets() {
+		if (!confirm('Recalculate all wallet balances from the transaction ledger?')) return;
+		recalculatingWallets = true;
+		try {
+			const res = await fetch('/api/wallets/recalculate', { method: 'POST' });
+			if (!res.ok) {
+				console.error('Failed to recalculate wallets');
+				alert('Could not recalculate wallet balances.');
+				return;
+			}
+			const updated: Wallet[] = await res.json();
+			const byId = new Map(updated.map((w) => [w.id, w]));
+			wallets = wallets.map((w) => ({ ...w, ...byId.get(w.id) }));
+		} catch (err) {
+			console.error('Failed to recalculate wallets', err);
+			alert('Could not recalculate wallet balances.');
+		} finally {
+			recalculatingWallets = false;
+		}
+	}
+
 	// Depots logic
 	async function updateDepot(depot: Depot) {
 		if (!depot.newName) {
@@ -248,7 +271,19 @@
 <h1>Wallets & Depots</h1>
 
 <section>
-	<h2>Wallets</h2>
+	<div class="section-header">
+		<h2>Wallets</h2>
+		<button
+			type="button"
+			class="icon-button refresh-button"
+			onclick={recalculateAllWallets}
+			disabled={recalculatingWallets}
+			aria-label="Recalculate all wallet balances"
+			title="Recalculate all wallet balances from the transaction ledger"
+		>
+			<RefreshIcon />
+		</button>
+	</div>
 	{#if wallets.length > 0}
 		<table>
 			<thead>
@@ -475,6 +510,11 @@
 		display: inline-flex;
 		align-items: center;
 		vertical-align: middle;
+	}
+	.section-header {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 	.save-button {
 		color: var(--pico-color-green-500);

@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -34,8 +35,8 @@ func (r *BudgetRepository) UpdateBudget(b domain.Budget) error {
 func (r *BudgetRepository) GetBudgetByID(id int) (domain.Budget, error) {
 	var b domain.Budget
 	var groupID sql.NullInt64
-	err := r.db.QueryRow("SELECT id, user_id, name, limit_cents, group_id, visible FROM budgets WHERE id = $1", id).
-		Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &groupID, &b.Visible)
+	err := r.db.QueryRow("SELECT id, user_id, name, limit_cents, balance_cents, group_id, visible FROM budgets WHERE id = $1", id).
+		Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &b.BalanceCents, &groupID, &b.Visible)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return domain.Budget{}, domain.ErrMissingBudget
@@ -69,6 +70,47 @@ func (r *BudgetRepository) FindBudgetsByUser(userID int) ([]domain.Budget, error
 func (r *BudgetRepository) SetBudgetVisibility(id int, visible bool) error {
 	_, err := r.db.Exec("UPDATE budgets SET visible = $1 WHERE id = $2", visible, id)
 	return err
+}
+
+func (r *BudgetRepository) RecalculateBudgetBalances(userID int) ([]domain.Budget, error) {
+	query := `
+		UPDATE budgets b
+		SET balance_cents = sub.total
+		FROM (
+			SELECT b2.id AS budget_id,
+			       COALESCE(SUM(CASE WHEN t.type = 'EXPENSE' THEN -t.amount_in_cents ELSE t.amount_in_cents END), 0) AS total
+			FROM budgets b2
+			LEFT JOIN transactions t ON t.budget_id = b2.id
+			WHERE b2.user_id = $1
+			GROUP BY b2.id
+		) sub
+		WHERE b.id = sub.budget_id
+		RETURNING b.id, b.user_id, b.name, b.limit_cents, b.balance_cents, b.group_id, b.visible
+	`
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to recalculate budget balances for user %d: %w", userID, err)
+	}
+	defer rows.Close()
+
+	var res []domain.Budget
+	for rows.Next() {
+		var b domain.Budget
+		var groupID sql.NullInt64
+		if err := rows.Scan(&b.ID, &b.UserID, &b.Name, &b.LimitCents, &b.BalanceCents, &groupID, &b.Visible); err != nil {
+			return nil, err
+		}
+		b.GroupID = intFromNullable(groupID)
+		res = append(res, b)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].ID < res[j].ID
+	})
+	return res, nil
 }
 
 func (r *BudgetRepository) CreateBudgetTransfer(fromID, toID, amount int) error {

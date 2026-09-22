@@ -150,6 +150,26 @@ func (s *budgetService) CreateBudgetTransfer(userID, fromBudgetID, toBudgetID, a
 	return s.budgetRepo.CreateBudgetTransfer(fromBudgetID, toBudgetID, amount)
 }
 
+func (s *budgetService) RecalculateBudgetBalances(userID int) ([]domain.Budget, error) {
+	budgets, err := s.budgetRepo.RecalculateBudgetBalances(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range budgets {
+		budgets[i].CanDelete = budgets[i].BalanceCents == 0
+		if budgets[i].CanDelete {
+			count, err := s.transactionRepo.CountTransactionsByBudgetID(budgets[i].ID)
+			if err != nil {
+				return nil, err
+			}
+			budgets[i].CanDelete = count == 0
+		}
+	}
+
+	return budgets, nil
+}
+
 func (s *budgetService) DeleteBudget(userID int, id int) error {
 	existing, err := s.budgetRepo.GetBudgetByID(id)
 	if err != nil {

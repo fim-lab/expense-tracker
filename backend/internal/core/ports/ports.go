@@ -26,6 +26,7 @@ type BudgetService interface {
 	DeleteBudget(userID int, id int) error
 	CreateBudgetTransfer(userID, fromBudgetID, toBudgetID, amount int) error
 	SetBudgetVisibility(userID, id int, visible bool) error
+	RecalculateBudgetBalances(userID int) ([]domain.Budget, error)
 }
 
 type BudgetGroupService interface {
@@ -49,6 +50,7 @@ type WalletService interface {
 	GetWallets(userID int) ([]domain.Wallet, error)
 	GetTotalOfWallets(userID int) (int, error)
 	DeleteWallet(userID int, id int) error
+	RecalculateWalletBalances(userID int) ([]domain.Wallet, error)
 }
 
 type UserService interface {
@@ -129,6 +131,7 @@ type BudgetRepository interface {
 	DeleteAllByUser(userID int) error
 	CreateBudgetTransfer(fromBudgetID, toBudgetID, amount int) error
 	SetBudgetVisibility(id int, visible bool) error
+	RecalculateBudgetBalances(userID int) ([]domain.Budget, error)
 }
 
 type BudgetGroupRepository interface {
@@ -154,6 +157,7 @@ type WalletRepository interface {
 	FindWalletsByUser(userID int) ([]domain.Wallet, error)
 	DeleteWallet(id int) error
 	DeleteAllByUser(userID int) error
+	RecalculateWalletBalances(userID int) ([]domain.Wallet, error)
 }
 
 type DepotRepository interface {

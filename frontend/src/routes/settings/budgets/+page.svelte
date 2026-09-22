@@ -5,6 +5,7 @@
 	import EyeOffIcon from '$lib/components/icons/EyeOffIcon.svelte';
 	import SaveIcon from '$lib/components/icons/SaveIcon.svelte';
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import RefreshIcon from '$lib/components/icons/RefreshIcon.svelte';
 
 	let { data } = $props();
 
@@ -139,11 +140,46 @@
 			console.error('Failed to update budget visibility');
 		}
 	}
+
+	let recalculatingBudgets = $state(false);
+
+	async function recalculateAllBudgets() {
+		if (!confirm('Recalculate all budget balances from the transaction ledger?')) return;
+		recalculatingBudgets = true;
+		try {
+			const res = await fetch('/api/budgets/recalculate', { method: 'POST' });
+			if (!res.ok) {
+				console.error('Failed to recalculate budgets');
+				alert('Could not recalculate budget balances.');
+				return;
+			}
+			const updated: Budget[] = await res.json();
+			const byId = new Map(updated.map((b) => [b.id, b]));
+			budgets = budgets.map((b) => ({ ...b, ...byId.get(b.id) }));
+		} catch (err) {
+			console.error('Failed to recalculate budgets', err);
+			alert('Could not recalculate budget balances.');
+		} finally {
+			recalculatingBudgets = false;
+		}
+	}
 </script>
 
 <h1>Budgets</h1>
 
-<h2>Budgets</h2>
+<div class="section-header">
+	<h2>Budgets</h2>
+	<button
+		type="button"
+		class="icon-button refresh-button"
+		onclick={recalculateAllBudgets}
+		disabled={recalculatingBudgets}
+		aria-label="Recalculate all budget balances"
+		title="Recalculate all budget balances from the transaction ledger"
+	>
+		<RefreshIcon />
+	</button>
+</div>
 
 {#if budgets.length > 0}
 	<table>
@@ -297,6 +333,11 @@
 	.hidden-budget {
 		opacity: 0.5;
 	}
+	.section-header {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
 	.icon-button {
 		width: auto;
 		background: none;
@@ -320,6 +361,13 @@
 	.save-button {
 		color: var(--pico-color-green-500);
 	}
+	.refresh-button {
+		color: var(--pico-color-blue-500);
+	}
+	.refresh-button:disabled {
+		color: var(--pico-muted-color);
+		cursor: not-allowed;
+	}
 	.delete-button {
 		color: var(--pico-del-color);
 	}
@@ -329,5 +377,8 @@
 	}
 	:global(html[data-theme='dark']) .save-button {
 		color: var(--pico-color-green-350);
+	}
+	:global(html[data-theme='dark']) .refresh-button {
+		color: var(--pico-color-blue-350);
 	}
 </style>

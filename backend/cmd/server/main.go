@@ -123,6 +123,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Delete("/budgets/{id}", budgetHandler.DeleteBudget)
 	r.Post("/budgets/transfer", budgetHandler.Transfer)
 	r.Patch("/budgets/{id}/visibility", budgetHandler.SetBudgetVisibility)
+	r.Post("/budgets/recalculate", budgetHandler.RecalculateBudgetBalances)
 
 	r.Get("/budget-groups", budgetGroupHandler.GetBudgetGroups)
 	r.Post("/budget-groups", budgetGroupHandler.CreateBudgetGroup)
@@ -134,6 +135,7 @@ func apiRouter(env string, sessionService *ports.SessionService, budgetService *
 	r.Post("/wallets", walletHandler.CreateWallet)
 	r.Put("/wallets/{id}", walletHandler.UpdateWallet)
 	r.Delete("/wallets/{id}", walletHandler.DeleteWallet)
+	r.Post("/wallets/recalculate", walletHandler.RecalculateWalletBalances)
 
 	r.Get("/depots", depotHandler.GetDepots)
 	r.Get("/depots/{id}", depotHandler.GetDepot)
