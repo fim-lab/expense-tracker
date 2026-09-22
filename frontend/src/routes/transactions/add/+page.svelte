@@ -401,7 +401,7 @@
 			Description
 			<span
 				class="tooltip-info"
-				title="Use '$lastmonth' or '$nextmonth' in templates for the previous or next month, in the form 'Februar 26'"
+				title="Use '$lastmonth', '$nextmonth' or '$twomonthsago' in templates for the previous, next, or two months ago month, in the form 'Februar 26'"
 				>ⓘ</span
 			>
 			<input type="text" bind:value={description} placeholder="Grocery shopping..." required />

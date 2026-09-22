@@ -42,6 +42,11 @@ export function getLastMonthShortMonthYearString(date: Date): string {
 	return getShortMonthYearString(date);
 }
 
+export function getTwoMonthsAgoShortMonthYearString(date: Date): string {
+	getLastMonthShortMonthYearString(date);
+	return getLastMonthShortMonthYearString(date);
+}
+
 export function getNextMonthShortMonthYearString(date: Date): string {
 	if (date.getMonth() == 11) {
 		date.setMonth(0);
