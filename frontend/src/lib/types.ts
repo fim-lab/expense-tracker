@@ -100,7 +100,6 @@ export interface Depot {
 export interface TransactionTemplate {
 	id: number;
 	userId: number;
-	day: number; // Day of the month (1-31)
 	budgetId: number | null;
 	groupId?: number | null;
 	walletId: number;

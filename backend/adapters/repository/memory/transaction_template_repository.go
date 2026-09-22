@@ -55,7 +55,6 @@ func (r *TransactionTemplateRepository) UpdateTransactionTemplate(tt domain.Tran
 	if !ok {
 		return domain.ErrTransactionTemplateNotFound
 	}
-	existingTemplate.Day = tt.Day
 	existingTemplate.BudgetID = tt.BudgetID
 	existingTemplate.GroupID = tt.GroupID
 	existingTemplate.WalletID = tt.WalletID

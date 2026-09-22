@@ -34,7 +34,6 @@ func TestTransactionTemplateService(t *testing.T) {
 	t.Run("CreateTransactionTemplate - Valid", func(t *testing.T) {
 		template := domain.TransactionTemplate{
 			UserID:        user.ID,
-			Day:           15,
 			BudgetID:      &budgetId,
 			WalletID:      walletId,
 			Description:   "Monthly Subscription",
@@ -62,10 +61,9 @@ func TestTransactionTemplateService(t *testing.T) {
 	t.Run("CreateTransactionTemplate - Invalid Template Data", func(t *testing.T) {
 		template := domain.TransactionTemplate{
 			UserID:        user.ID,
-			Day:           0,
 			WalletID:      walletId,
-			Description:   "Invalid Day",
-			AmountInCents: 100,
+			Description:   "Invalid Amount",
+			AmountInCents: 0,
 			Type:          domain.Expense,
 		}
 		err := svc.CreateTransactionTemplate(user.ID, template)
@@ -77,7 +75,6 @@ func TestTransactionTemplateService(t *testing.T) {
 	t.Run("CreateTransactionTemplate - Invalid Wallet", func(t *testing.T) {
 		template := domain.TransactionTemplate{
 			UserID:        user.ID,
-			Day:           1,
 			WalletID:      999,
 			Description:   "Invalid Wallet",
 			AmountInCents: 100,
@@ -96,7 +93,6 @@ func TestTransactionTemplateService(t *testing.T) {
 		invalidBudgetID := 999
 		template := domain.TransactionTemplate{
 			UserID:        user.ID,
-			Day:           1,
 			WalletID:      walletId,
 			BudgetID:      &invalidBudgetID,
 			Description:   "Invalid Budget",
@@ -125,7 +121,6 @@ func TestTransactionTemplateService(t *testing.T) {
 
 		template := domain.TransactionTemplate{
 			UserID:        user.ID,
-			Day:           1,
 			WalletID:      walletId,
 			GroupID:       &otherGroupID,
 			Description:   "Cross-user group",
