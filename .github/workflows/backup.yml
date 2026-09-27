@@ -1,0 +1,114 @@
+name: Monthly Database Backup
+
+on:
+  schedule:
+    # 03:00 UTC on the 1st of every month
+    - cron: "0 3 1 * *"
+
+  # Allows manual testing from the GitHub Actions UI
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    env:
+      NEON_DB_CONNECTION: ${{ secrets.NEON_DB_CONNECTION }}
+      DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+      DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+      DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+      BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}
+
+    steps:
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl \
+            ca-certificates \
+            gnupg \
+            gzip
+
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor \
+            -o /usr/share/keyrings/postgresql.gpg
+
+          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+
+          sudo apt-get update
+
+          sudo apt-get install -y postgresql-client-16
+
+          echo "Installed PostgreSQL client:"
+          pg_dump --version
+
+      - name: Dump database
+        env:
+          NEON_DB_CONNECTION: ${{ secrets.NEON_DB_CONNECTION }}
+        run: |
+          set -euo pipefail
+
+          pg_dump "$NEON_DB_CONNECTION" --format=custom --file=db.dump
+
+      - name: Compress and encrypt backup
+        run: |
+          set -euo pipefail
+
+          gzip -9 db.dump
+
+          gpg \
+            --batch \
+            --yes \
+            --pinentry-mode loopback \
+            --passphrase "$BACKUP_ENCRYPTION_PASSWORD" \
+            --symmetric \
+            --cipher-algo AES256 \
+            --output db.gz.gpg \
+            db.dump.gz
+
+          rm db.dump.gz
+
+      - name: Upload backup to Dropbox
+        run: |
+          set -euo pipefail
+
+          MONTH=$(date -u +%m)
+          REMOTE_PATH="/backups/db-${MONTH}.gz.gpg"
+
+          echo "Uploading backup to ${REMOTE_PATH}"
+
+          # Obtain a fresh Dropbox access token from the refresh token.
+          TOKEN_RESPONSE=$(curl -sS https://api.dropbox.com/oauth2/token \
+            -d grant_type=refresh_token \
+            -d refresh_token="$DROPBOX_REFRESH_TOKEN" \
+            -d client_id="$DROPBOX_APP_KEY" \
+            -d client_secret="$DROPBOX_APP_SECRET")
+
+          ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+
+          if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
+            echo "Failed to obtain Dropbox access token:"
+            echo "$TOKEN_RESPONSE"
+            exit 1
+          fi
+
+          # Upload with overwrite mode.
+          curl -sS -X POST \
+            https://content.dropboxapi.com/2/files/upload \
+            --header "Authorization: Bearer ${ACCESS_TOKEN}" \
+            --header "Content-Type: application/octet-stream" \
+            --header "Dropbox-API-Arg: {\"path\":\"${REMOTE_PATH}\",\"mode\":\"overwrite\",\"autorename\":false,\"mute\":true}" \
+            --data-binary @db.gz.gpg
+
+          echo "Backup uploaded successfully."
+
+      - name: Clean up
+        if: always()
+        run: |
+          rm -f db.dump db.dump.gz db.gz.gpg
