@@ -67,7 +67,12 @@
 	<div class="grid">
 		<label for="search">
 			Description
-			<input type="search" value={searchTerm} id="search" name="search" 
+			<span
+				class="tooltip-info"
+				title="Combine terms with AND, OR and NOT (all capitals), e.g. 'coffee AND NOT starbucks'. Precedence: NOT > AND > OR."
+				>ⓘ</span
+			>
+			<input type="search" value={searchTerm} id="search" name="search"
 				oninput={(e) => debouncedUpdateParams(e.currentTarget.value)} />
 		</label>
 		<div></div>
@@ -132,5 +137,12 @@
 	.quick-range-buttons button {
 		padding: 0.25rem 0.75rem;
 		font-size: 0.85rem;
+	}
+
+	.tooltip-info {
+		cursor: help;
+		font-weight: bold;
+		color: var(--pico-secondary);
+		margin-left: 0.5rem;
 	}
 </style>
