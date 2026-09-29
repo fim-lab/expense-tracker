@@ -222,9 +222,7 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 	argID := 2
 
 	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
-		args = append(args, "%"+*criteria.SearchTerm+"%")
-		argID++
+		whereClause += " AND " + domain.ParseSearchQuery(*criteria.SearchTerm).SQLCondition("t.description", &args, &argID)
 	}
 	if criteria.FromDate != nil {
 		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)
@@ -303,9 +301,7 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 	argID := 2
 
 	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
-		args = append(args, "%"+*criteria.SearchTerm+"%")
-		argID++
+		whereClause += " AND " + domain.ParseSearchQuery(*criteria.SearchTerm).SQLCondition("t.description", &args, &argID)
 	}
 	if criteria.FromDate != nil {
 		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)
@@ -354,9 +350,7 @@ func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criter
 	argID := 2
 
 	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-		whereClause += fmt.Sprintf(" AND t.description ILIKE $%d", argID)
-		args = append(args, "%"+*criteria.SearchTerm+"%")
-		argID++
+		whereClause += " AND " + domain.ParseSearchQuery(*criteria.SearchTerm).SQLCondition("t.description", &args, &argID)
 	}
 	if criteria.FromDate != nil {
 		whereClause += fmt.Sprintf(" AND t.date >= $%d", argID)

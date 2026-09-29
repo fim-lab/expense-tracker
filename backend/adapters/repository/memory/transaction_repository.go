@@ -2,7 +2,6 @@ package memory
 
 import (
 	"sort"
-	"strings"
 
 	"github.com/fim-lab/expense-tracker/internal/core/domain"
 )
@@ -125,17 +124,19 @@ func (r *TransactionRepository) SearchTransactions(userID int, criteria domain.T
 	r.repo.mu.RLock()
 	defer r.repo.mu.RUnlock()
 
+	var searchQuery *domain.SearchQueryNode
+	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+		searchQuery = domain.ParseSearchQuery(*criteria.SearchTerm)
+	}
+
 	var filtered []domain.Transaction
 	for _, t := range r.repo.transactions {
 		if t.UserID != userID {
 			continue
 		}
 
-		if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-			term := strings.ToLower(*criteria.SearchTerm)
-			if !strings.Contains(strings.ToLower(t.Description), term) {
-				continue
-			}
+		if searchQuery != nil && !searchQuery.Matches(t.Description) {
+			continue
 		}
 
 		if criteria.FromDate != nil && t.Date.Before(*criteria.FromDate) {
@@ -220,17 +221,19 @@ func (r *TransactionRepository) CountSearchedTransactions(userID int, criteria d
 	r.repo.mu.RLock()
 	defer r.repo.mu.RUnlock()
 
+	var searchQuery *domain.SearchQueryNode
+	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+		searchQuery = domain.ParseSearchQuery(*criteria.SearchTerm)
+	}
+
 	var count int
 	for _, t := range r.repo.transactions {
 		if t.UserID != userID {
 			continue
 		}
 
-		if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-			term := strings.ToLower(*criteria.SearchTerm)
-			if !strings.Contains(strings.ToLower(t.Description), term) {
-				continue
-			}
+		if searchQuery != nil && !searchQuery.Matches(t.Description) {
+			continue
 		}
 
 		if criteria.FromDate != nil && t.Date.Before(*criteria.FromDate) {
@@ -274,17 +277,19 @@ func (r *TransactionRepository) SumSearchedTransactionAmounts(userID int, criter
 	r.repo.mu.RLock()
 	defer r.repo.mu.RUnlock()
 
+	var searchQuery *domain.SearchQueryNode
+	if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
+		searchQuery = domain.ParseSearchQuery(*criteria.SearchTerm)
+	}
+
 	var sum int
 	for _, t := range r.repo.transactions {
 		if t.UserID != userID {
 			continue
 		}
 
-		if criteria.SearchTerm != nil && *criteria.SearchTerm != "" {
-			term := strings.ToLower(*criteria.SearchTerm)
-			if !strings.Contains(strings.ToLower(t.Description), term) {
-				continue
-			}
+		if searchQuery != nil && !searchQuery.Matches(t.Description) {
+			continue
 		}
 
 		if criteria.FromDate != nil && t.Date.Before(*criteria.FromDate) {
